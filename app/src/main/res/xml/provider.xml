@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!--<external-path name="external_files" path="."/>-->
+    <external-path
+        name="files_root"
+        path="Android/data/${applicationId}"/>
+    <external-path
+        name="external_storage_root"
+        path="."/>
+    <external-path
+        name="my_images"
+        path="Android/data/com.grzwolf.grzlog/files/Images" />
+    <external-files-path
+        name="my_images"
+        path="my_images" />
+    <external-files
+        name="external_files"
+        path="." />
+</paths>
+

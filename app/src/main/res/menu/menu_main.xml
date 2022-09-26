@@ -1,0 +1,49 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.grzwolf.grzlog.MainActivity">
+    <item
+        android:id="@+id/action_Undo"
+        android:title=""
+        app:showAsAction="always"
+        android:icon="@mipmap/grz_undo_foreground"
+        />
+    <!-- instead of: android:actionViewClass="android.widget.SearchView" use app:actionViewClass="android.widget.SearchView" -->
+    <item
+        android:id="@+id/action_search"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="search"
+        app:actionViewClass="android.widget.SearchView"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_ChangeFolder"
+        android:title=""
+        app:showAsAction="always"
+        android:icon="@mipmap/grz_folder_foreground"
+        />
+    <item
+        android:id="@+id/action_Share"
+        android:title=""
+        app:showAsAction="always"
+        android:icon="@android:drawable/ic_menu_share"
+        />
+    <item
+        android:id="@+id/action_Hamburger"
+        android:title=""
+        app:showAsAction="always"
+        android:icon="@mipmap/grz_hamburger_foreground"
+        />
+    <item
+        android:id="@+id/action_searchUp"
+        android:title=""
+        app:showAsAction="always"
+        android:icon="@android:drawable/arrow_up_float"
+        />
+    <item
+        android:id="@+id/action_searchDown"
+        android:title=""
+        app:showAsAction="always"
+        android:icon="@android:drawable/arrow_down_float"
+        />
+    <group />
+</menu>

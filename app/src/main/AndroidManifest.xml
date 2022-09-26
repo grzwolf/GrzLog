@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.grzwolf.grzlog">
+
+    <!-- API 33 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+     <!-- https://stackoverflow.com/questions/62535856/intent-resolveactivity-returns-null-in-api-30 -->
+    <queries>
+        <!-- Camera -->
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <!-- Gallery -->
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+        </intent>
+        <!-- PICK -->
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
+    <!-- android:requestLegacyExternalStorage="true" -->
+    <application
+        android:requestLegacyExternalStorage="true"
+        android:screenOrientation="portrait"
+        android:allowBackup="true"
+        android:icon="@mipmap/grz_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/grz_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name="com.grzwolf.grzlog.SettingsActivity"
+            android:label="@string/title_activity_settings"
+            android:screenOrientation="portrait"
+            android:parentActivityName="com.grzwolf.grzlog.MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.grzwolf.grzlog.MainActivity" />
+        </activity>
+        <activity
+            android:name="com.grzwolf.grzlog.GalleryActivity"
+            android:label="@string/title_activity_gallery"
+            android:screenOrientation="portrait"
+            android:parentActivityName="com.grzwolf.grzlog.MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.grzwolf.grzlog.MainActivity" />
+        </activity>
+
+        <receiver android:name="com.grzwolf.grzlog.GrzLogAppWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/grzlog_app_widget_info" />
+        </receiver>
+
+        <!-- https://stackoverflow.com/questions/56598480/couldnt-find-meta-data-for-provider-with-authority -->
+        <!-- android:exported="false" unknown attribute BUT exception if set to true -->
+        <!-- android:grantUriPermissions unknown attribute BUT exception if missing -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider"/>
+        </provider>
+
+        <activity
+            android:name="com.grzwolf.grzlog.MainActivity"
+            android:launchMode="singleInstance"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

@@ -1,0 +1,96 @@
+<!--
+  ~ Copyright 2018 The app Open Source Project
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory app:title="@string/messages_header">
+
+        <EditTextPreference
+            android:selectable="false"
+            android:enabled="true"
+            android:key="signature"
+            android:title="@string/signature_title"
+            android:summary="@string/signature_summary" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/extra_header">
+
+        <SwitchPreferenceCompat
+            app:key="newAtBottom"
+            app:summaryOn="@string/newInputBottom"
+            app:summaryOff="@string/newInputTop"
+            app:title="@string/newInputPlace" />
+
+        <SwitchPreferenceCompat
+            app:key="widgetJumpInput"
+            app:summaryOff="@string/widgetJumpInput_summary_off"
+            app:summaryOn="@string/widgetJumpInput_summary_on"
+            app:title="@string/widgetJumpInput_title" />
+
+        <SwitchPreferenceCompat
+            app:key="autoClosePreview"
+            app:summaryOff="@string/previewAutoCloseOff"
+            app:summaryOn="@string/previewAutoCloseOn"
+            app:title="@string/previewAutoClose" />
+
+        <SwitchPreferenceCompat
+            app:key="darkMode"
+            app:title="@string/darkMode" />
+
+        <SwitchPreferenceCompat
+            app:key="useGoogleCamera"
+            app:summaryOff="@string/sysCam"
+            app:summaryOn="@string/GCam"
+            app:title="@string/useGCam" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/BackupRestore">
+        <Preference
+            android:selectable="false"
+            android:title="@string/BackupInfo"
+            android:key="BackupInfo"
+            android:summary="@string/notExisting" />
+        <Preference
+            android:title="@string/BackupData"
+            android:key="Backup"
+            android:summary="@string/clickToBackup" />
+        <Preference
+            android:title="@string/RestoreData"
+            android:key="Restore"
+            android:summary="@string/clickToRestore" />
+        <Preference
+            android:title="@string/importBackup"
+            android:key="RestoreFromFiles"
+            android:summary="@string/clickToImport" />
+        <Preference
+            android:title="@string/showAppGallery"
+            android:key="ShowAppGallery" />
+        <Preference
+            android:title="@string/tidyOrphanes"
+            android:key="TidyOrphanes" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Reset">
+        <Preference
+            android:title="@string/resetAppPreferences"
+            android:key="Reset"
+            android:summary="@string/resetAppPreferencesSummary" />
+    </PreferenceCategory>
+
+</PreferenceScreen>
