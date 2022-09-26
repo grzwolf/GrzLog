@@ -26,6 +26,10 @@
             android:title="@string/signature_title"
             android:summary="@string/signature_summary" />
 
+        <Preference
+            android:title="@string/appHelp"
+            android:key="AppHelp" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/extra_header">

@@ -141,6 +141,17 @@ class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
                     true
                 }
 
+            // action after help
+            val showHelp = findPreference("AppHelp") as Preference?
+            showHelp!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                try {
+                    requireActivity().startActivity(Intent(context, HelpActivity::class.java))
+                } catch (e: Exception) {
+                    centeredToast(appContext!!, "Help error: " + e.message.toString(), 3000)
+                }
+                true
+            }
+
             // tricky fake buttons in preferences: https://stackoverflow.com/questions/2697233/how-to-add-a-button-to-preferencescreen
             // action after backup
             val backup = findPreference("Backup") as Preference?

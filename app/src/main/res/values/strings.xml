@@ -8,7 +8,7 @@
     <string name="extra_header">Extra</string>
 
     <!-- Messages Preferences -->
-    <string name="signature_title">GrzLog 1.0.0</string>
+    <string name="signature_title">GrzLog 1.0.1</string>
     <string name="signature_summary">\nContact: grzwolf.app@gmail.com</string>
 
     <!-- Sync Preferences -->
@@ -195,4 +195,6 @@
     <string name="CopyLine">Copy line</string>
     <string name="noMediaPermission">No media access permission</string>
     <string name="inputOneSpace">Input at least one space</string>
+    <string name="appHelp">Help</string>
+    <string name="title_activity_help">Help</string>
 </resources>

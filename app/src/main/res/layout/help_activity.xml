@@ -1,0 +1,48 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="2dp"
+        android:layout_marginLeft="2dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginRight="2dp"
+        android:fillViewport="true">
+
+        <ScrollView
+            android:id="@+id/scrollView1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginRight="19dp">
+
+            <EditText
+                android:id="@+id/helpView"
+                android:layout_width="2500sp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_marginBottom="10dp"
+                android:autofillHints=""
+                android:enabled="false"
+                android:fontFamily="monospace"
+                android:gravity="top"
+                android:inputType="none|textMultiLine"
+                android:isScrollContainer="true"
+                android:overScrollMode="always"
+                android:scrollbarStyle="insideOverlay"
+                android:scrollbars="vertical|horizontal"
+                android:scrollHorizontally="true"
+                android:textColor="#ffffff"
+                android:textIsSelectable="true"
+                android:textSize="14dp" />
+
+        </ScrollView>
+
+    </HorizontalScrollView>
+
+</LinearLayout>
