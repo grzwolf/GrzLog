@@ -760,8 +760,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builderItemMore?.setPositiveButton(
             R.string.cancel,
             DialogInterface.OnClickListener { dialog, which ->
-                shareBody = lvMain.arrayList!![position].fullTitle
-                clipboard = shareBody
+// on one hand a nice, handy feature, on the other hand it might confuse                
+//                shareBody = lvMain.arrayList!![position].fullTitle
+//                clipboard = shareBody
                 dialog.dismiss()
             }
         )
