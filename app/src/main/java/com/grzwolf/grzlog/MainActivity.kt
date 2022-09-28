@@ -3074,7 +3074,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (capturedPhotoUri != null) {
                 fabPlus.imageCapture = true
                 fabPlus.pickAttachment = true
-                fabPlus.attachmentUri = getRealPathFromUri(capturedPhotoUri)
+//                var unusableImage = getRealPathFromUri(capturedPhotoUri) // image is not correctly resolved into a real path
+                fabPlus.attachmentUri = FileUtils.getPath(this, capturedPhotoUri!!)
                 fabPlus.attachmentName = getString(R.string.capture)
             } else {
 // after GCam ???
