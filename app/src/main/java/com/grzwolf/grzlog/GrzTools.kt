@@ -1085,14 +1085,14 @@ fun getFolderFiles(path: String): List<GalleryActivity.GrzThumbNail> {
 
 // get list of thumbnail images silently - called from MainActivity ideally before GalleryActivity is called
 fun getAppGalleryThumbsSilent(context: Context) {
-    val appImagesPath = context.getExternalFilesDir(null)!!.absolutePath + "/Images/"
-    val listGrzThumbNail = getFolderFiles(appImagesPath)
-    MainActivity.appScanTotal = listGrzThumbNail.size
-    MainActivity.appScanCurrent = 0
-    MainActivity.appGalleryScanning = true
-    var list = mutableListOf<GalleryActivity.GrzThumbNail>()
     try {
         Thread {
+            val appImagesPath = context.getExternalFilesDir(null)!!.absolutePath + "/Images/"
+            val listGrzThumbNail = getFolderFiles(appImagesPath)
+            MainActivity.appScanTotal = listGrzThumbNail.size
+            MainActivity.appScanCurrent = 0
+            MainActivity.appGalleryScanning = true
+            var list = mutableListOf<GalleryActivity.GrzThumbNail>()
             val sdfIn = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
             val sdfOutDate = SimpleDateFormat("yyyy MMM dd, EEE", Locale.getDefault())
             var lastDateStamp = ""
