@@ -900,7 +900,7 @@ fun showAppLinkedAttachment(context: Context, title: String, fileName: String?) 
                 if (mimeExt == "txt") {
                     intent.setDataAndType(uriFile, "text/*")
                 } else {
-                    okBox(context, "No file association", uriFile.path.toString(), null)
+                    okBox(context, context.getString(R.string.missingFileAssociation), uriFile.path.toString(), null)
                     return
                 }
             }

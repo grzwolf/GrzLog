@@ -199,6 +199,7 @@
     <string name="mayNotWork">Funktioniert möglicherweise nicht</string>
     <string name="androidIssue">Ungelöstes Android 10 Problem</string>
     <string name="useFilesPicker">Auswahl Video nicht von \'Photos\', besser von \'Dateien\'</string>
+    <string name="missingFileAssociation">Keine Datei Verknüpfung vorhanden</string>
 
 </resources>
 
