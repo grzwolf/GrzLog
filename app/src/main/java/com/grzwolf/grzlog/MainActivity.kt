@@ -482,25 +482,26 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     // ListView click handler implementation
     fun lvMainOnItemClick(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+        var title = ""
+        var fileName = ""
         try {
-            if (verifyExifPermission()) {
-                // show clicked item's linked attachment
-                val fullItemText = lvMain.arrayList!![position].fullTitle
-                // search for attachment link
-                var title = ""
-                var fileName = ""
-                val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
-                if (m?.find() == true) {
-                    val result = m.group()
-                    val key = result.substring(1, result.length - 1)
-                    val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                    if (lnkParts != null && lnkParts.size == 2) {
-                        title = lnkParts[0]
-                        fileName = lnkParts[1]
-                    }
+            // show clicked item's linked attachment
+            val fullItemText = lvMain.arrayList!![position].fullTitle
+            // search for attachment link
+            val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+            if (m?.find() == true) {
+                val result = m.group()
+                val key = result.substring(1, result.length - 1)
+                val lnkParts = key.split("::::".toRegex()).toTypedArray()
+                if (lnkParts != null && lnkParts.size == 2) {
+                    title = lnkParts[0]
+                    fileName = lnkParts[1]
                 }
-                showAppLinkedAttachment(this, title, fileName)
             }
+            if (!verifyExifPermission()) {
+                centeredToast(this, getString(R.string.mayNotWork), 3000)
+            }
+            showAppLinkedAttachment(this, title, fileName)
         } catch (e: Exception) {
             Toast.makeText(baseContext, e.message, Toast.LENGTH_LONG).show()
         }
@@ -2867,12 +2868,16 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
     }
     fun verifyExifPermission(): Boolean {
-        return if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION ) == PackageManager.PERMISSION_GRANTED) {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 //            Toast.makeText(baseContext, "Access EXIF data was already granted", Toast.LENGTH_LONG).show()
-            true
+                true
+            } else {
+                requestPermissions(this, arrayOf(Manifest.permission.ACCESS_MEDIA_LOCATION), PERMISSION_REQUEST_EXIFDATA)
+                false
+            }
         } else {
-            requestPermissions(this, arrayOf(Manifest.permission.ACCESS_MEDIA_LOCATION), PERMISSION_REQUEST_EXIFDATA )
-            false
+            true
         }
     }
 
@@ -3062,8 +3067,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         super.onActivityResult(requestCode, resultCode, data)
         fabPlus.imageCapture = false
         if (resultCode != RESULT_OK) {
-            // restart file picker, bc usually the user cancelled the pich file procedure
-//            fabPlus.button!!.performClick()
             startFilePickerDialog()
             return
         }

@@ -196,6 +196,7 @@
     <string name="inputOneSpace">Minimaler Input ist ein Leerzeichen</string>
     <string name="appHelp">Hilfe</string>
     <string name="title_activity_help">Hilfe</string>
+    <string name="mayNotWork">Funktioniert möglicherweise nicht</string>
 
 </resources>
 

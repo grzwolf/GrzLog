@@ -326,11 +326,9 @@ class GalleryActivity : AppCompatActivity() {
                                     thumbsList.add(GrzThumbNail(item.fileName, item.fileDate, this.getDrawable(android.R.drawable.gallery_thumb)!!))
                                 }
                             } else {
-                                TODO("VERSION.SDK_INT < Q")
                                 thumbsList.add(GrzThumbNail(item.fileName, item.fileDate, this.getDrawable(android.R.drawable.gallery_thumb)!!))
                             }
                         } else {
-                            TODO("VERSION.SDK_INT < LOLLIPOP")
                             thumbsList.add(GrzThumbNail(item.fileName, item.fileDate, ContextCompat.getDrawable(this, android.R.drawable.gallery_thumb)!!))
                         }
                         // just the current index

@@ -5,7 +5,7 @@ android {
     compileSdkVersion 33
     defaultConfig {
         applicationId "com.grzwolf.grzlog"
-        minSdkVersion 19
+        minSdkVersion 29
         targetSdkVersion 33
         versionCode 1
         versionName "1.0.4"

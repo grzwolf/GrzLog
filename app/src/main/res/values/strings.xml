@@ -197,4 +197,5 @@
     <string name="inputOneSpace">Input at least one space</string>
     <string name="appHelp">Help</string>
     <string name="title_activity_help">Help</string>
+    <string name="mayNotWork">May not work properly</string>
 </resources>

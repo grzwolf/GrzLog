@@ -1149,11 +1149,9 @@ fun getAppGalleryThumbsSilent(context: Context) {
                             list.add(GalleryActivity.GrzThumbNail(item.fileName, item.fileDate, context.getDrawable(android.R.drawable.gallery_thumb)!!))
                         }
                     } else {
-                        TODO("VERSION.SDK_INT < Q")
                         list.add(GalleryActivity.GrzThumbNail(item.fileName, item.fileDate, context.getDrawable(android.R.drawable.gallery_thumb)!!))
                     }
                 } else {
-                    TODO("VERSION.SDK_INT < LOLLIPOP")
                     list.add(GalleryActivity.GrzThumbNail(item.fileName, item.fileDate, ContextCompat.getDrawable(context, android.R.drawable.gallery_thumb)!!))
                 }
                 // just the current index
