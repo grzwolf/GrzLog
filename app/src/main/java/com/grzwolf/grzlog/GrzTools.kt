@@ -777,7 +777,7 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
         .override(500, 500) // keeps aspect ratio, but drastically reduces load time
         .addListener(object : RequestListener<Drawable> {
             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
-                okBox(context, context.getString(R.string.note), context.getString(R.string.FileNotFound))
+                okBox(context, context.getString(R.string.FileNotFound), imageUri.path.toString())
                 return false
             }
 
@@ -786,7 +786,7 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
                     // in the 2nd step, the dialog dimensions are adjusted and the image is rendered
                     show(resource)
                 } else {
-                    okBox(context, context.getString(R.string.note), context.getString(R.string.FileNotFound))
+                    okBox(context, context.getString(R.string.FileNotFound), imageUri.path.toString())
                 }
                 return false
             }
@@ -806,7 +806,7 @@ fun showImageInAndroidGalleryViewer(context: Context, imageUri: Uri) {
     // convert
     val file = getFileFromUri(context.applicationContext, imageUri)
     if (file == null) {
-        okBox(context, context.getString(R.string.Failure), context.getString(R.string.FileNotFound))
+        okBox(context, context.getString(R.string.FileNotFound), imageUri.path.toString())
         return
     }
     // prepare Android gallery viewer via intent
@@ -873,7 +873,7 @@ fun showAppLinkedAttachment(context: Context, title: String, fileName: String?) 
     // common intent preparations
     val file = getFileFromUri(context, uri)
     if (file == null) {
-        okBox(context, context.getString(R.string.Failure), context.getString(R.string.FileNotFound))
+        okBox(context, context.getString(R.string.FileNotFound), fullFileName)
         return
     }
     val uriFile = FileProvider.getUriForFile(
