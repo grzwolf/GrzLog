@@ -4915,13 +4915,19 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 // measure of last resort: if uriString is a real file
                 inputPath = uriString
             }
-            val fileName = inputPath.substring(inputPath.lastIndexOf("/"))
+            var fileName = ""
+            var pos = inputPath.lastIndexOf("/")
+            if (pos != -1) {
+                fileName = inputPath.substring(pos)
+            } else {
+                return "file-error"
+            }
             val outputPath = appAttachmentPath + fileName
             // no override if file already exists
             val file = File(outputPath)
             if (file.exists()) {
                 // return the filename of the copied file with a leading /
-                return uriString!!.substring(uriString.lastIndexOf("/"))
+                return fileName
             }
             // create /Images folder if needed
             val folder = File(appAttachmentPath)
