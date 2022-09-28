@@ -887,18 +887,24 @@ fun showAppLinkedAttachment(context: Context, title: String, fileName: String?) 
     // default video player
     if (VIDEO_EXT.contains(mimeExt, ignoreCase = true)) {
         intent.setDataAndType(uriFile, "video/*")
-    }
-    // default audio player
-    if (AUDIO_EXT.contains(mimeExt, ignoreCase = true)) {
-        intent.setDataAndType(uriFile, "audio/*")
-    }
-    // default PDF viewer
-    if (mimeExt == "pdf") {
-        intent.setDataAndType(uriFile, "application/pdf")
-    }
-    // default TXT viewer
-    if (mimeExt == "txt") {
-        intent.setDataAndType(uriFile, "text/*")
+    } else {
+        // default audio player
+        if (AUDIO_EXT.contains(mimeExt, ignoreCase = true)) {
+            intent.setDataAndType(uriFile, "audio/*")
+        } else {
+            // default PDF viewer
+            if (mimeExt == "pdf") {
+                intent.setDataAndType(uriFile, "application/pdf")
+            } else {
+                // default TXT viewer
+                if (mimeExt == "txt") {
+                    intent.setDataAndType(uriFile, "text/*")
+                } else {
+                    okBox(context, "No file association", uriFile.path.toString(), null)
+                    return
+                }
+            }
+        }
     }
 
     // start intent
