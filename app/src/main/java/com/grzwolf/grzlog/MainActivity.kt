@@ -1194,19 +1194,19 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     if (!matcher.find()) {
                         Toast.makeText(
                             applicationContext,
-                            R.string.attachmentLink.toString() + fabPlus.attachmentName + R.string.notValid,
+                            R.string.attachmentLink.toString() + R.string.notValid,
                             Toast.LENGTH_SHORT
                         ).show()
                         fabPlus.attachmentUri = ""
                         fabPlus.attachmentName = ""
-                        // since link is gone, restart fabPlus dialog
-                        fabPlus.inputAlertText = fabPlus.inputAlertView!!.text.toString()
+                        // since link is gone, restarted fabPlus dialog shall show corrected content
+                        var tmp = fabPlus.inputAlertView!!.text.toString()
+                        tmp = tmp.replace("[", "")
+                        tmp = tmp.replace("]", "")
+                        fabPlus.inputAlertText = tmp
                         // restart fabPlus.mainDialog with the activated ability to insert a new attachment link
+                        fabPlus.mainDialog?.dismiss()
                         fabPlus.button!!.performClick()
-                        // place caret
-                        fabPlus.inputAlertView!!.requestFocus()
-                        fabPlus.inputAlertView!!.setSelection(0, 0)
-                        fabPlus.inputAlertView!!.isCursorVisible = true
                         return
                     } else {
                         // memorize potential changed fabPlus.attachmentName
