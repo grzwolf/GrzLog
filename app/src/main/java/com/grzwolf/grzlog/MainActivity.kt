@@ -3088,57 +3088,70 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
         }
         if (requestCode == PICK.IMAGE) {
-            var uriOri = data!!.data
-            var uri = uriOri
-            var imageUriString: String? = uriOri.toString()
-            if (imageUriString!!.contains("com.google.android.apps.photos.contentprovider", ignoreCase = true)) {
-                // GooglePhoto needs extra some care
-                val imagepath = getRealPathFromUri(uri) // get real path from GooglePhoto URL
-                val imagefile = File(imagepath.toString())
-                uri = Uri.fromFile(imagefile)
-                imageUriString = uri.toString()
-            } else {
-                // documents & content
-                if (imageUriString.startsWith("content://")) {
-                    imageUriString = getPath(this, uri!!)
+            try {
+                var uriOri = data!!.data
+                var uri = uriOri
+                var imageUriString: String? = uriOri.toString()
+                if (imageUriString!!.contains("com.google.android.apps.photos.contentprovider", ignoreCase = true)) {
+                    // GooglePhoto needs extra care
+                    val imagepath = FileUtils.getPath(this, uri!!)
+                    val imagefile = File(imagepath.toString())
+                    uri = Uri.fromFile(imagefile)
+                    imageUriString = uri.toString()
+                } else {
+                    // documents & content
+                    if (imageUriString.startsWith("content://")) {
+                        imageUriString = getPath(this, uri!!)
+                    }
                 }
-            }
-            if (uri != null) {
-                fabPlus.pickAttachment = true
-                fabPlus.attachmentUri = imageUriString
-                fabPlus.attachmentUriUri = uriOri
-                fabPlus.attachmentName = getString(R.string.image)
-            } else {
+                if (uri != null) {
+                    fabPlus.pickAttachment = true
+                    fabPlus.attachmentUri = imageUriString
+                    fabPlus.attachmentUriUri = uriOri
+                    fabPlus.attachmentName = getString(R.string.image)
+                } else {
+                    startFilePickerDialog()
+                    return
+                }
+            } catch (e: Exception) {
+                centeredToast(this, e.message.toString(), 3000)
                 startFilePickerDialog()
                 return
             }
         }
         if (requestCode == PICK.VIDEO) {
-            var uriOri = data!!.data
-            // GooglePhoto needs extra some care
-            var uri = uriOri
-            if (uriOri.toString().contains("com.google.android.apps.photos.contentprovider", ignoreCase = true)) {
-                var path = getRealPathFromUri(uriOri) // get real path from GooglePhoto URL
-                if (path?.isEmpty() == true) {
-                    try {
-                        path = getPath(this, uri!!)
-                    } catch (e: IllegalArgumentException) {
-                        // API 29 Emulator + pick from Photos lands here
-                        path = null
+            try {
+                var uriOri = data!!.data
+                var uri = uriOri
+                var imageUriString: String? = uriOri.toString()
+                if (imageUriString!!.contains("com.google.android.apps.photos.contentprovider", ignoreCase = true)) {
+                    // GooglePhoto needs extra care
+                    val imagepath = FileUtils.getPath(this, uri!!)
+                    val imagefile = File(imagepath.toString())
+                    uri = Uri.fromFile(imagefile)
+                    imageUriString = uri.toString()
+                } else {
+                    // documents & content
+                    if (imageUriString.startsWith("content://")) {
+                        imageUriString = getPath(this, uri!!)
                     }
                 }
-                if (path!=null && path.isNotEmpty()) {
-                    val file = File(path.toString())
-                    uri = Uri.fromFile(file)
+                if (uri != null) {
+                    fabPlus.pickAttachment = true
+                    fabPlus.attachmentUri = imageUriString
+                    fabPlus.attachmentUriUri = uriOri
+                    fabPlus.attachmentName = getString(R.string.video)
+                } else {
+                    startFilePickerDialog()
+                    return
                 }
-            }
-            if (uri != null) {
-                fabPlus.pickAttachment = true
-                fabPlus.attachmentUri = uri.toString()
-                fabPlus.attachmentUriUri = uriOri
-                fabPlus.attachmentName = getString(R.string.video)
-            } else {
-                startFilePickerDialog()
+            } catch (e: Exception) {
+                centeredToast(this, e.message.toString(), 5000)
+                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+                    okBox(this, getString(R.string.androidIssue),getString(R.string.useFilesPicker), { startFilePickerDialog() })
+                } else {
+                    startFilePickerDialog()
+                }
                 return
             }
         }
