@@ -8,7 +8,7 @@
     <string name="extra_header">Extra</string>
 
     <!-- Messages Preferences -->
-    <string name="signature_title">GrzLog 1.0.5</string>
+    <string name="signature_title">GrzLog 1.0.6</string>
     <string name="signature_summary">\nKontakt: grzwolf.app@gmail.com</string>
 
     <!-- Sync Preferences -->
@@ -200,6 +200,8 @@
     <string name="androidIssue">Ungelöstes Android 10 Problem</string>
     <string name="useFilesPicker">Auswahl Video nicht von \'Photos\', besser von \'Dateien\'</string>
     <string name="missingFileAssociation">Keine Datei Verknüpfung vorhanden</string>
+    <string name="wwwLink">WWW Link unten einfügen</string>
+    <string name="choose">App Auswählen</string>
 
 </resources>
 

@@ -854,6 +854,26 @@ fun showAppLinkedAttachment(context: Context, title: String, fileName: String?) 
     if (fileName!!.isEmpty()) {
         return
     }
+
+    // fileName not starting with a '/' is a www link: fire default browser and return
+    if (fileName!!.startsWith("/") == false) {
+        // take link as it is
+        var uri = Uri.parse(fileName)
+        // check link for https and replace it with http
+        if (fileName.startsWith("https://") == true) {
+            uri = Uri.parse(fileName.replace("https://", "http://"))
+        } else {
+            // link starts NOT with https and MIGHT NOT start with http: most likely starts with www or not even this
+            if (fileName.startsWith("http://") == false) {
+                uri = Uri.parse("http://$fileName")
+            }
+        }
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        val chooseIntent = Intent.createChooser(intent, context.getString(R.string.choose))
+        startActivity(context, chooseIntent, null)
+        return
+    }
+
     // only deal with app local attachments
     var appAttachmentStoragePath = context.getExternalFilesDir(null)!!.absolutePath + "/Images"
     var fullFileName = "file://" + appAttachmentStoragePath + fileName

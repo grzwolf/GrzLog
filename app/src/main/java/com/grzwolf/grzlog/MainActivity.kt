@@ -1339,15 +1339,21 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 val key = result.substring(1, result.length - 1)
                 // any input with link is needed to copy app local
                 if (fabPlus.attachmentUri!!.length != 0) {
-                    // execute the copy
-                    val appUriFile = copyAttachmentToApp(this, fabPlus.attachmentUri!!, fabPlus.attachmentUriUri, appStoragePath + "/Images")
-                    if (fabPlus.attachmentUri!!.endsWith(appUriFile)) {
-                        newText = newText.replace(result, "[$key::::$appUriFile]")
+                    // distinguish between www links and real attachments
+                    if (fabPlus.attachmentUri!!.startsWith("/") == false) {
+                        val lnk = fabPlus.attachmentUri!!
+                        newText = newText.replace(result, "[$key::::$lnk]")
                     } else {
-                        newText = newText.replace(result,"[$key --> $appUriFile::::$appUriFile]")
+                        // execute the file attachment copy
+                        val appUriFile = copyAttachmentToApp(this, fabPlus.attachmentUri!!, fabPlus.attachmentUriUri, appStoragePath + "/Images")
+                        if (fabPlus.attachmentUri!!.endsWith(appUriFile)) {
+                            newText = newText.replace(result, "[$key::::$appUriFile]")
+                        } else {
+                            newText = newText.replace(result, "[$key --> $appUriFile::::$appUriFile]")
+                        }
+                        // silently scan app gallery data to show the recently added file
+                        getAppGalleryThumbsSilent(this)
                     }
-                    // silently scan app gallery data to show the recently added file
-                    getAppGalleryThumbsSilent(this)
                 }
                 // any inserted text could contain links after paste from clipboard BUT with no attachmentUri
                 if (newText.contains("::::") && fabPlus.attachmentUri!!.length == 0) {
@@ -2944,7 +2950,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             "Video",
             "Audio",
             "PDF",
-            "TXT"
+            "TXT",
+            "WWW"
         )
         builder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
             var intent: Intent?
@@ -3043,6 +3050,69 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     intent.type = "text/plain"
                     intent.addCategory(Intent.CATEGORY_OPENABLE)
                     startActivityForResult(intent, PICK.TXT)
+                }
+                7 -> { // WWW link
+                    lateinit var wwwDialog: AlertDialog
+                    var tv = GrzEditText(this)
+                    tv.inputType = InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                    tv.setSingleLine(false)
+                    tv.gravity = Gravity.LEFT or Gravity.TOP
+                    tv.addTextChangedListener(object : TextWatcher {
+                        // modify text input window according to text length
+                        val fontSize = tv.textSize
+                        val lineSpacingExtra = Math.max(tv.lineSpacingExtra, 25f)
+                        val lineSpacingMultiplier = tv.lineSpacingMultiplier
+                        val lineHeight = fontSize * lineSpacingMultiplier + lineSpacingExtra
+                        val heightMax = resources.displayMetrics.heightPixels * 0.50f
+                        fun setParentSize() {
+                            if (wwwDialog != null) {
+                                val wnd = (wwwDialog)?.getWindow()!!
+                                if (wnd != null) {
+                                    val corr = Math.min((tv.getLineCount() - 1) * lineHeight + 600, heightMax)
+                                    wnd.setLayout(WindowManager.LayoutParams.MATCH_PARENT, corr.toInt())
+                                }
+                            }
+                        }
+                        override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
+                        }
+                        override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                        }
+                        override fun afterTextChanged(s: Editable) {
+                            setParentSize()
+                        }
+                    })
+                    var wwwBuilder: AlertDialog.Builder
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        wwwBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
+                        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                        if (!sharedPref.getBoolean("darkMode", false)) {
+                            tv.setTextColor(Color.WHITE)
+                        }
+                    } else {
+                        wwwBuilder = AlertDialog.Builder(this@MainActivity)
+                        tv.setTextColor(Color.BLACK)
+                    }
+                    wwwBuilder.setTitle(getString(R.string.wwwLink))
+                    wwwBuilder.setPositiveButton(
+                        getString(R.string.ok),
+                        DialogInterface.OnClickListener { dlg, which ->
+                            fabPlus.pickAttachment = true
+                            fabPlus.attachmentUri = tv.text.toString()
+                            fabPlus.attachmentUriUri = null
+                            fabPlus.attachmentName = "[www]"
+                            fabPlus.button!!.performClick()
+                        })
+                    wwwBuilder.setNegativeButton(
+                        R.string.cancel,
+                        DialogInterface.OnClickListener { dlg, which ->
+                            fabPlus.button?.show()
+                            return@OnClickListener
+                        })
+                    wwwBuilder.setView(tv)
+                    wwwDialog = wwwBuilder.create()
+                    wwwDialog.show()
+                    wwwDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 600)
+                    wwwDialog.setCanceledOnTouchOutside(false)
                 }
             }
             dialog.dismiss()
@@ -4939,7 +5009,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             // no override if file already exists
             val file = File(outputPath)
             if (file.exists()) {
-                // return the filename of the copied file with a leading /
+                // return the filename of the existing file with a leading /
                 return fileName
             }
             // create /Images folder if needed
