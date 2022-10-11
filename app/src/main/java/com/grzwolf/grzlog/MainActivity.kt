@@ -5632,6 +5632,7 @@ internal class LvAdapter : BaseAdapter {
 //            var stop = 1
 //            text = " " + text
             // set icon via spannable
+            res = android.R.drawable.ic_dialog_alert
             val mime = getFileExtension(items!![position].fullTitle!!.substring(0, items!![position].fullTitle!!.lastIndexOf("]")))
             if (mime.length > 0) {
                 if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
@@ -5648,6 +5649,21 @@ internal class LvAdapter : BaseAdapter {
                             } else {
                                 if (mime.equals("txt", ignoreCase = true)) {
                                     res = android.R.drawable.ic_dialog_email
+                                } else {
+                                    val fullItemText = items!![position].fullTitle
+                                    val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                                    if (m?.find() == true) {
+                                        val result = m.group()
+                                        val key = result.substring(1, result.length - 1)
+                                        val lnkParts = key.split("::::".toRegex()).toTypedArray()
+                                        if (lnkParts != null && lnkParts.size == 2) {
+                                            var title = lnkParts[0]
+                                            var fileName = lnkParts[1]
+                                            if (fileName!!.startsWith("/") == false) {
+                                                res = android.R.drawable.ic_menu_compass
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
