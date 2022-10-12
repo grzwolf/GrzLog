@@ -1613,7 +1613,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         // fabPlus button CANCEL
         fabPlusBuilder.setNegativeButton(
             R.string.cancel,
-            DialogInterface.OnClickListener { dialog, which -> localCancel(dialog, context) })
+            DialogInterface.OnClickListener { dialog, which ->
+                localCancel(dialog, context)
+            }
+        )
 
         // handle editor
         fabPlusBuilder.setView(fabPlus.inputAlertView)
@@ -1632,10 +1635,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         (fabPlus.mainDialog)?.setCanceledOnTouchOutside(false)
         // to detect Alert Dialog cancel: Android back button OR dlg quit
         (fabPlus.mainDialog)?.setOnCancelListener { dialog ->
-            localCancel(
-                dialog,
-                context
-            )
+            localCancel(dialog, context)
         }
         // button shall be hidden when AlertDialog.Builder is shown
         fabPlus.button!!.hide()
@@ -1690,6 +1690,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         lvMain.editLongPress = false
         fabPlus.editInsertLine = false
         fabPlus.imageCapture = false
+        fabPlus.attachmentName = ""
         fabPlus.attachmentUri = ""
         fabPlus.inputAlertText = ""
         fabPlus.inputAlertTextSelStart = -1
