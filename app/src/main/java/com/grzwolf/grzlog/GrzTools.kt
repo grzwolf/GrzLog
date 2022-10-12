@@ -24,6 +24,7 @@ import android.view.View
 import android.view.Window
 import android.webkit.MimeTypeMap
 import android.widget.*
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
 import androidx.core.content.FileProvider
@@ -34,7 +35,6 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
-import com.grzwolf.grzlog.PATTERN.DatePattern
 import java.io.*
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -50,6 +50,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+
 
 // import a complete ZIP containing data + attached files into app's files folder
 fun unpackZipArchive(
@@ -868,9 +869,10 @@ fun showAppLinkedAttachment(context: Context, title: String, fileName: String?) 
                 uri = Uri.parse("http://$fileName")
             }
         }
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        val chooseIntent = Intent.createChooser(intent, context.getString(R.string.choose))
-        startActivity(context, chooseIntent, null)
+        // open in browser tabs: https://stackoverflow.com/questions/7197133/android-open-browser-from-service-avoiding-multiple-tabs
+        val builder = CustomTabsIntent.Builder()
+        val customTabsIntent = builder.build()
+        customTabsIntent.launchUrl(context, uri)
         return
     }
 
@@ -1062,7 +1064,7 @@ fun getFolderFiles(path: String): List<GalleryActivity.GrzThumbNail> {
             if (item.fileDate.isEmpty()) {
                 // now parse the date from item.fileName
                 var fileDateStr = ""
-                var m = DatePattern.matcher(item.fileName) // out of experience: usual filename Pattern.compile("[_-]\\d{8}[_-]")
+                var m = PATTERN.DatePattern.matcher(item.fileName) // out of experience: usual filename Pattern.compile("[_-]\\d{8}[_-]")
                 if (m.find()) {
                     try {
                         var group = m.group()
@@ -1212,4 +1214,14 @@ fun getExifInterface(context: Context, uri: Uri): ExifInterface? {
         e.printStackTrace()
     }
     return null
+}
+
+// extract urls from string: https://stackoverflow.com/questions/5713558/detect-and-extract-url-from-a-string
+fun getAllLinksFromString(text: String): ArrayList<String>? {
+    val links: ArrayList<String> = ArrayList()
+    val m = PATTERN.UrlsPattern.matcher(text)
+    while (m.find()) {
+        links.add(m.group())
+    }
+    return links
 }

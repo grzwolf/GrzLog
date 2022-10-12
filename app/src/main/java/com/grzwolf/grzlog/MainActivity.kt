@@ -497,11 +497,19 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     title = lnkParts[0]
                     fileName = lnkParts[1]
                 }
+                if (!verifyExifPermission()) {
+                    centeredToast(this, getString(R.string.mayNotWork), 3000)
+                }
+                showAppLinkedAttachment(this, title, fileName)
+            } else {
+                // try to find regular urls in item's text and execute them in the default browser
+                var urls: ArrayList<String>? = getAllLinksFromString(fullItemText!!)
+                if (urls != null && urls.size > 0) {
+                    for (url in urls) {
+                        showAppLinkedAttachment(this, url!!, url!!)
+                    }
+                }
             }
-            if (!verifyExifPermission()) {
-                centeredToast(this, getString(R.string.mayNotWork), 3000)
-            }
-            showAppLinkedAttachment(this, title, fileName)
         } catch (e: Exception) {
             Toast.makeText(baseContext, e.message, Toast.LENGTH_LONG).show()
         }
@@ -521,8 +529,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (item.isSpacer) {
                 return true
             }
-//            // execute the long click as edit ListView item
-//            onLongClickEditItem(position)
             // execute the long click as more item options dialog
             moreOptionsOnLongClickItem(position)
         } catch (e: Exception) {
@@ -5703,10 +5709,12 @@ class FabPlus {
 
 // compile regex patterns once in advance to detect: "blah[uriLink]blah", "YYYY-MM-DD", "YYYY-MM-DD Mon"
 internal object PATTERN {
-    val UriLink = Pattern.compile("\\[(.*?)\\]")              // uri link is enclosed in []
+    private val URLS_REGEX = "((http:\\/\\/|https:\\/\\/)?(www.)?(([a-zA-Z0-9-]){2,2083}\\.){1,4}([a-zA-Z]){2,6}(\\/(([a-zA-Z-_\\/\\.0-9#:?=&;,]){0,2083})?){0,2083}?[^ \\n]*)"
+    val UriLink = Pattern.compile("\\[(.*?)\\]")                       // uri link is enclosed in []
     val Date = Pattern.compile("\\d{4}-\\d{2}-\\d{2}")
-    val DateDay = Pattern.compile("\\d{4}-\\d{2}-\\d{2}.*")   // header section with date
-    val DatePattern = Pattern.compile("[_-]\\d{8}[_-]")       // file date stamp pattern
+    val DateDay = Pattern.compile("\\d{4}-\\d{2}-\\d{2}.*")            // header section with date
+    val DatePattern = Pattern.compile("[_-]\\d{8}[_-]")                // file date stamp pattern
+    val UrlsPattern = Pattern.compile(URLS_REGEX, Pattern.CASE_INSENSITIVE)  // find urls in string
 }
 
 // showOrder
