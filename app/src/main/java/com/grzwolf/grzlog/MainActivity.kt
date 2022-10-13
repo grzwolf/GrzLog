@@ -480,15 +480,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
     }
 
-    // ListView click handler implementation
+    // ListView click handler implementation shows the item's linked content
     fun lvMainOnItemClick(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
         var title = ""
         var fileName = ""
         try {
-            // show clicked item's linked attachment
-            val itemText = lvMain.arrayList!![position].title
+            // clicked item's full text
             val fullItemText = lvMain.arrayList!![position].fullTitle
-            // search for attachment link
+            var itemTextNoAttachment = fullItemText
+            // 1. search for an attachment link (image, video, audio, txt, pdf, www)
             val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
             if (m?.find() == true) {
                 val result = m.group()
@@ -502,11 +502,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     centeredToast(this, getString(R.string.mayNotWork), 3000)
                 }
                 showAppLinkedAttachment(this, title, fileName)
+                // avoid potential confusion in getAllLinksFromString() by removing the already handled attachment
+                itemTextNoAttachment = fullItemText.replace(result, "")
             }
-            // try to find regular urls in item's text and execute them in the default browser
+            // 2. find regular urls in an item's text outside of the attachment link and show them in the default browser
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
             if (sharedPref.getBoolean("openLinks", false)) {
-                var urls: ArrayList<String>? = getAllLinksFromString(itemText!!)
+                var urls: ArrayList<String>? = getAllLinksFromString(itemTextNoAttachment!!)
                 if (urls != null && urls.size > 0) {
                     for (url in urls) {
                         showAppLinkedAttachment(this, url!!, url!!)
