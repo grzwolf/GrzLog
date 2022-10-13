@@ -297,20 +297,21 @@ class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
             val reset = findPreference("Reset") as Preference?
             reset!!.onPreferenceClickListener =
                 Preference.OnPreferenceClickListener { // ... are you sure ...
-                    val builder =
-                        AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+                    val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
                     builder.setTitle("Reset")
                     builder.setMessage(R.string.resetSharedPrefs)
                     // YES
                     builder.setPositiveButton(
                         R.string.yes,
                         DialogInterface.OnClickListener { dialog, which -> // clear all shared preferences
-                            val sharedPref = PreferenceManager.getDefaultSharedPreferences(
-                                appContext!!
-                            )
-                            val spe = sharedPref.edit()
-                            spe.clear()
-                            spe.apply()
+                            val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
+                            try {
+                                val spe = sharedPref.edit()
+                                spe.clear()
+                                spe.apply()
+                            } catch (e: Exception) {
+                                Log.d("GrzLog Settings reset: ", e.message!!)
+                            }
                             // definitely need to re read all data from scratch
                             MainActivity.reReadAppFileData = true
                             dialog.dismiss()
