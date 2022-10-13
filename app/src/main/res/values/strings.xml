@@ -8,7 +8,7 @@
     <string name="extra_header">Extra</string>
 
     <!-- Messages Preferences -->
-    <string name="signature_title">GrzLog 1.0.6</string>
+    <string name="signature_title">GrzLog 1.0.7</string>
     <string name="signature_summary">\nContact: grzwolf.app@gmail.com</string>
 
     <!-- Sync Preferences -->
@@ -203,4 +203,5 @@
     <string name="missingFileAssociation">No file association</string>
     <string name="wwwLink">Insert www link below</string>
     <string name="choose">Choose from below</string>
+    <string name="openLinksInBrowser">Open text links with browser</string>
 </resources>

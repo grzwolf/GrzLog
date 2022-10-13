@@ -486,6 +486,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         var fileName = ""
         try {
             // show clicked item's linked attachment
+            val itemText = lvMain.arrayList!![position].title
             val fullItemText = lvMain.arrayList!![position].fullTitle
             // search for attachment link
             val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
@@ -501,9 +502,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     centeredToast(this, getString(R.string.mayNotWork), 3000)
                 }
                 showAppLinkedAttachment(this, title, fileName)
-            } else {
-                // try to find regular urls in item's text and execute them in the default browser
-                var urls: ArrayList<String>? = getAllLinksFromString(fullItemText!!)
+            }
+            // try to find regular urls in item's text and execute them in the default browser
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+            if (sharedPref.getBoolean("openLinks", false)) {
+                var urls: ArrayList<String>? = getAllLinksFromString(itemText!!)
                 if (urls != null && urls.size > 0) {
                     for (url in urls) {
                         showAppLinkedAttachment(this, url!!, url!!)

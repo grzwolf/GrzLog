@@ -1221,7 +1221,8 @@ fun getAllLinksFromString(text: String): ArrayList<String>? {
     val links: ArrayList<String> = ArrayList()
     val m = PATTERN.UrlsPattern.matcher(text)
     while (m.find()) {
-        links.add(m.group())
+        var hit = m.group()
+        links.add(hit)
     }
     return links
 }

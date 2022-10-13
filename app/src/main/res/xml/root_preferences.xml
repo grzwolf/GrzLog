@@ -53,6 +53,10 @@
             app:title="@string/previewAutoClose" />
 
         <SwitchPreferenceCompat
+            app:key="openLinks"
+            app:title="@string/openLinksInBrowser" />
+
+        <SwitchPreferenceCompat
             app:key="darkMode"
             app:title="@string/darkMode" />
 
