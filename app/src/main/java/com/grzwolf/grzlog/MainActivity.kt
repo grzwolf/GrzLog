@@ -632,9 +632,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     fabPlus.attachmentName = ""
                     // update DataStore dataSection
                     ds!!.dataSection[ds!!.selectedSection] = finalStr
-                    // direct jump to line edit input
+                    // flag to indicate, where the call came from
                     lvMain.editLongPress = true
-                    fabPlus.editInsertLine = true // flag: 1) insert line 2) do not override undo data
+                    // flag: 1) insert line 2) do not override undo data
+                    fabPlus.editInsertLine = true
+                    // provide the item position for the 'jump back to this dialog'
+                    fabPlus.moreOptionsOnLongClickItemPos = position
+                    // direct jump to line edit input
                     fabPlus.button!!.performClick()
                 }
 
@@ -670,9 +674,12 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     fabPlus.attachmentName = ""
                     // update DataStore
                     ds!!.dataSection[ds!!.selectedSection] = finalStr
-                    // direct jump to line edit input
+                    // logic control flags
                     lvMain.editLongPress = true
                     fabPlus.editInsertLine = true
+                    // provide the item position for the 'jump back to this dialog'
+                    fabPlus.moreOptionsOnLongClickItemPos = position
+                    // direct jump to line edit input
                     fabPlus.button!!.performClick()
                 }
 
@@ -830,6 +837,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
         }
         lvMain.selectedRowNoSpacers = position - spacers
+        // provide the item position for the 'jump back to this dialog'
+        fabPlus.moreOptionsOnLongClickItemPos = position
         // continue with regular user data input --> jump to fabPlus click handler
         fabPlus.button!!.performClick()
     }
@@ -1626,6 +1635,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             R.string.cancel,
             DialogInterface.OnClickListener { dialog, which ->
                 localCancel(dialog, context)
+                // if the item edit call came from fabPlus.moreOptionsOnLongClickItem, then jump back to it
+                if (fabPlus.moreOptionsOnLongClickItemPos != -1) {
+                    moreOptionsOnLongClickItem(fabPlus.moreOptionsOnLongClickItemPos)
+                    fabPlus.moreOptionsOnLongClickItemPos = -1
+                }
             }
         )
 
@@ -5710,6 +5724,7 @@ class FabPlus {
     var pickAttachment = false               // flag indicates, fabPlus was called from onActivityResult
     var imageCapture = false                 // flag indicates, an image was captured
     var mainDialog: AlertDialog? = null      // main edit dlg after click on button +
+    var moreOptionsOnLongClickItemPos = -1   // allows to return to moreOptionsOnLongClickItem at given item position
 }
 
 // compile regex patterns once in advance to detect: "blah[uriLink]blah", "YYYY-MM-DD", "YYYY-MM-DD Mon"
