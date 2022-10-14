@@ -1357,10 +1357,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (m.find()) {
                 val result = m.group()
                 val key = result.substring(1, result.length - 1)
-                // any input with link is needed to copy app local
+                // any attachment file is needed to copy app local
                 if (fabPlus.attachmentUri!!.length != 0) {
                     // distinguish between www links and real attachments
-                    if (fabPlus.attachmentUri!!.startsWith("/") == false) {
+                    if ((fabPlus.attachmentUri!!.startsWith("/") == false) && (fabPlus.attachmentUri!!.startsWith("file") == false)) {
                         val lnk = fabPlus.attachmentUri!!
                         newText = newText.replace(result, "[$key::::$lnk]")
                     } else {
