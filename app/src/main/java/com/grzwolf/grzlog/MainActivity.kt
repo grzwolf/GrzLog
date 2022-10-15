@@ -39,6 +39,7 @@ import android.widget.AdapterView.OnItemLongClickListener
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.appcompat.widget.AppCompatTextView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.requestPermissions
@@ -1310,17 +1311,50 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         fabPlusBuilder.setNeutralButton(
             R.string.InsertFile,
             DialogInterface.OnClickListener { dlg, which ->
+                // save current content of input
+                fabPlus.inputAlertTextSelStart = Selection.getSelectionStart(fabPlus.inputAlertView!!.text)
+                fabPlus.inputAlertText = fabPlus.inputAlertView!!.text.toString()
+                // don't go ahead, if permissions are not granted
                 if (!verifyMediaPermission()) {
                     centeredToast(this, getString(R.string.noMediaPermission), 3000)
                     Handler(Looper.getMainLooper()).postDelayed({
                         fabPlus.button!!.performClick()
                     }, 100)
+                    dlg.dismiss()
+                    return@OnClickListener
                 }
-                // save current content of input
-                fabPlus.inputAlertTextSelStart = Selection.getSelectionStart(fabPlus.inputAlertView!!.text)
-                fabPlus.inputAlertText = fabPlus.inputAlertView!!.text.toString()
-                // fire attachment picker dlg, which finally end at onActivityResult
-                startFilePickerDialog()
+                // allow to attach a file or not
+                val attachmentAllowed = !PATTERN.UriLink.matcher(fabPlus.inputAlertView!!.text).find()
+                var linkText = ""
+                // only if attachment is not allowed, there is something to edit: prepare input for attachment link editor
+                if (!attachmentAllowed) {
+                    // get current text from input editor: extract the part with the brackets bla[foo]bla
+                    linkText = fabPlus.inputAlertText!!
+                    val matchLnk = linkText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                    if (matchLnk?.find() == true) {
+                        linkText = matchLnk.group()
+                    } else {
+                        linkText = ""
+                    }
+                    // clicked item's original full text: extract the part after :::: within the brackets
+                    var fullLink = lvMain.arrayList!![fabPlus.moreOptionsOnLongClickItemPos].fullTitle
+                    val matchOri = fullLink?.let { PATTERN.UriLink.matcher(it.toString()) }
+                    var oriLink = ""
+                    if (matchOri?.find() == true) {
+                        var noBrackets = matchOri.group()
+                        noBrackets = noBrackets.substring(1, noBrackets.length - 1)
+                        var parts = noBrackets.split("::::")
+                        if (parts != null && parts.size > 1) {
+                            oriLink = parts[1]
+                        }
+                    }
+                    // add oriLink to linkText
+                    if (linkText.toString().isNotEmpty() && oriLink.isNotEmpty()) {
+                        linkText = linkText.substring(0, linkText.length-1) + "::::" + oriLink + "]"
+                    }
+                }
+                // fire attachment picker dlg, which finally ends at onActivityResult
+                startFilePickerDialog(attachmentAllowed, linkText.toString())
             })
 
         // fabPlus button OK
@@ -1364,12 +1398,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         val lnk = fabPlus.attachmentUri!!
                         newText = newText.replace(result, "[$key::::$lnk]")
                     } else {
+                        // full filename
+                        var fn = fabPlus.attachmentUri!!
                         // execute the file attachment copy
                         val appUriFile = copyAttachmentToApp(this, fabPlus.attachmentUri!!, fabPlus.attachmentUriUri, appStoragePath + "/Images")
                         if (fabPlus.attachmentUri!!.endsWith(appUriFile)) {
                             newText = newText.replace(result, "[$key::::$appUriFile]")
                         } else {
-                            newText = newText.replace(result, "[$key --> $appUriFile::::$appUriFile]")
+                            newText = newText.replace(result, "[$key --> $appUriFile::::$fn]")
                         }
                         // silently scan app gallery data to show the recently added file
                         getAppGalleryThumbsSilent(this)
@@ -1651,9 +1687,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         fabPlus.mainDialog = fabPlusBuilder.create()
         // show AlertBuilder dialog
         (fabPlus.mainDialog)?.show()
-        // is it allowed to attach a file ?
-        val button: Button = fabPlus.mainDialog!!.getButton(AlertDialog.BUTTON_NEUTRAL)
-        button.isEnabled = !PATTERN.UriLink.matcher(fabPlus.inputAlertView!!.text).find()
         // match dialog width to screen width & height showing one text line: increase/shrink fabPlus.mainDialog via text listener setParentSize()
         (fabPlus.mainDialog)?.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 600)
         // prevent dlg from disappear, when tap outside: https://stackoverflow.com/questions/42254443/alertdialog-disappears-when-touch-is-outside-android
@@ -2959,15 +2992,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // file picker dlg for fabPlus
-    fun startFilePickerDialog() {
+    fun startFilePickerDialog(attachmentAllowed: Boolean = true, linkText: String = "") {
         // build a dialog
-        var builder: AlertDialog.Builder?
-        builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        var pickerBuilder: AlertDialog.Builder?
+        pickerBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         } else {
             AlertDialog.Builder(this@MainActivity)
         }
-        builder.setTitle(R.string.Select)
+        pickerBuilder.setTitle(R.string.Select)
         // file picker dialog OPTIONS
         val options = arrayOf<CharSequence>(
             getString(R.string.Image),
@@ -2977,9 +3010,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             "Audio",
             "PDF",
             "TXT",
-            "WWW"
+            "WWW",
+            getString(R.string.editExistingLink)
         )
-        builder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
+        pickerBuilder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
             var intent: Intent?
             when (item) {
                 0 -> { // IMAGE from Android
@@ -3078,7 +3112,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     startActivityForResult(intent, PICK.TXT)
                 }
                 7 -> { // WWW link
-                    lateinit var wwwDialog: AlertDialog
+                    var wwwDialog: AlertDialog? = null
                     var tv = GrzEditText(this)
                     tv.inputType = InputType.TYPE_TEXT_FLAG_MULTI_LINE
                     tv.setSingleLine(false)
@@ -3131,7 +3165,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     wwwBuilder.setNegativeButton(
                         R.string.cancel,
                         DialogInterface.OnClickListener { dlg, which ->
-                            fabPlus.button?.show()
+                            dlg.dismiss()
+                            startFilePickerDialog()
                             return@OnClickListener
                         })
                     wwwBuilder.setView(tv)
@@ -3139,23 +3174,157 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     wwwDialog.show()
                     wwwDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 600)
                     wwwDialog.setCanceledOnTouchOutside(false)
+                    tv.requestFocus()
+                    showKeyboard(tv, 0, 0, 250)
+                }
+                8 -> { // edit existing link
+                    // edit dialog
+                    var editLinkDialog: AlertDialog? = null
+                    // text editor
+                    var tv = GrzEditText(this)
+                    tv.inputType = InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                    tv.setSingleLine(false)
+                    tv.gravity = Gravity.LEFT or Gravity.TOP
+                    tv.addTextChangedListener(object : TextWatcher {
+                        // modify text input window according to text length
+                        val fontSize = tv.textSize
+                        val lineSpacingExtra = Math.max(tv.lineSpacingExtra, 25f)
+                        val lineSpacingMultiplier = tv.lineSpacingMultiplier
+                        val lineHeight = fontSize * lineSpacingMultiplier + lineSpacingExtra
+                        val heightMax = resources.displayMetrics.heightPixels * 0.50f
+                        fun setParentSize() {
+                            if (editLinkDialog != null) {
+                                val wnd = (editLinkDialog)?.getWindow()!!
+                                if (wnd != null) {
+                                    val corr = Math.min((tv.getLineCount() - 1) * lineHeight + 700, heightMax)
+                                    wnd.setLayout(WindowManager.LayoutParams.MATCH_PARENT, corr.toInt())
+                                }
+                            }
+                        }
+                        override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
+                        }
+                        override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                        }
+                        override fun afterTextChanged(s: Editable) {
+                            setParentSize()
+                        }
+                    })
+                    // edit builder
+                    var editLinkBuilder: AlertDialog.Builder
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        editLinkBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
+                        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                        if (!sharedPref.getBoolean("darkMode", false)) {
+                            tv.setTextColor(Color.WHITE)
+                        }
+                    } else {
+                        editLinkBuilder = AlertDialog.Builder(this@MainActivity)
+                        tv.setTextColor(Color.BLACK)
+                    }
+                    // edit builder title
+                    editLinkBuilder.setTitle(getString(R.string.editExistingLink))
+                    // edit builder positive button
+                    editLinkBuilder.setPositiveButton(
+                        getString(R.string.ok),
+                        DialogInterface.OnClickListener { dlg, which ->
+                            // get edited text
+                            var newLink = tv.text
+                            // prepare input for fabPlus edit dialog
+                            val m = newLink?.let { PATTERN.UriLink.matcher(it.toString()) }
+                            if (m?.find() == true) {
+                                val result = m.group()
+                                val key = result.substring(1, result.length - 1)
+                                val lnkParts = key.split("::::".toRegex()).toTypedArray()
+                                if (lnkParts != null && lnkParts.size == 2) {
+                                    // prepare replace link internals in full string
+                                    var oldReplace = ""
+                                    var oldFullText = fabPlus.inputAlertText
+                                    val old = oldFullText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                                    if (old?.find() == true) {
+                                        oldReplace = old.group()
+                                    }
+                                    oldFullText = oldFullText!!.replace(oldReplace, "[" + lnkParts[0] + "]")
+                                    fabPlus.inputAlertText = oldFullText
+                                    fabPlus.attachmentName = "[" + lnkParts[0] + "]"
+                                    fabPlus.attachmentUri = lnkParts[1]
+                                    fabPlus.attachmentUriUri = null
+                                    fabPlus.pickAttachment = true
+                                    fabPlus.button!!.performClick()
+                                } else {
+                                    // no link --> cancel
+                                    centeredToast(this, getString(R.string.linkDestroyed), 3000)
+                                    dialog.cancel()
+                                    return@OnClickListener
+                                }
+                            } else {
+                                // no link --> cancel
+                                centeredToast(this, getString(R.string.linkDestroyed), 3000)
+                                dialog.cancel()
+                                return@OnClickListener
+                            }
+                        })
+                    // edit builder Negative button
+                    editLinkBuilder.setNegativeButton(
+                        R.string.cancel,
+                        DialogInterface.OnClickListener { dlg, which ->
+                            dialog.cancel()
+                            return@OnClickListener
+                        })
+                    // edit builder show
+                    editLinkBuilder.setView(tv)
+                    editLinkDialog = editLinkBuilder.create()
+                    editLinkDialog.show()
+                    editLinkDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 700)
+                    editLinkDialog.setCanceledOnTouchOutside(false)
+                    tv.setText(linkText)
+                    tv.requestFocus()
+                    showKeyboard(tv, 0, 0, 250)
+                    // detect cancel: Android back button OR editLinkBuilder NegativeButton
+                    editLinkDialog.setOnCancelListener { dialog ->
+                        fabPlus.button!!.performClick()
+                    }
                 }
             }
+            // close picker dialog
             dialog.dismiss()
         })
-        // CANCEL button
-        builder.setPositiveButton(
+        // picker CANCEL button
+        pickerBuilder.setPositiveButton(
             R.string.cancel,
             DialogInterface.OnClickListener { dialog, which ->
-                fabPlus.button!!.performClick()
-                dialog.dismiss()
+                dialog.cancel()
             })
-        val dialog = builder.create()
-        val listView = dialog.listView
+        val pickerDialog = pickerBuilder.create()
+        val listView = pickerDialog.listView
         listView.divider = ColorDrawable(Color.GRAY)
         listView.dividerHeight = 2
-        dialog.show()
-        dialog.setCanceledOnTouchOutside(false)
+        // certain items shall be disabled, depending on the flag 'attachmentAllowed'
+        listView!!.setOnHierarchyChangeListener(
+            object : ViewGroup.OnHierarchyChangeListener {
+                override fun onChildViewAdded(parent: View?, child: View) {
+                    val text = (child as AppCompatTextView).text
+                    val itemIndex: Int = options.indexOf(text)
+                    child.setEnabled(true)
+                    if (attachmentAllowed) {
+                        if (itemIndex == 8) {
+                            child.setEnabled(false)
+                            child.setOnClickListener(null)
+                        }
+                    } else {
+                        if (itemIndex < 8) {
+                            child.setEnabled(false)
+                            child.setOnClickListener(null)
+                        }
+                    }
+                }
+                override fun onChildViewRemoved(view: View?, view1: View?) {}
+            })
+        pickerDialog.show()
+        pickerDialog.setCanceledOnTouchOutside(false)
+        // detect cancel: Android back button OR editLinkBuilder NegativeButton
+        pickerDialog.setOnCancelListener { dialog ->
+            fabPlus.button!!.performClick()
+        }
     }
 
     // startFilePickerDialog() will end up here, Manifest --> android:launchMode="singleInstance"
@@ -4903,8 +5072,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     // deal with a line containing a link pattern
                     if (m.find()) {
                         val lnkFull = m.group()
-                        // only deal with lines containing "::::"
-                        if (lnkFull.contains("::::")) {
+                        // only deal with lines containing "::::/", which is a file, not a www link
+                        if (lnkFull.contains("::::/")) {
                             // get link parts: key and uri
                             val lnkStr = lnkFull.substring(1, lnkFull.length - 1)
                             var keyStrOri = ""

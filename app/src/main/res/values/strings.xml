@@ -204,4 +204,6 @@
     <string name="wwwLink">Insert www link below</string>
     <string name="choose">Choose from below</string>
     <string name="openLinksInBrowser">Open text links with browser</string>
+    <string name="editExistingLink">Edit existing attachment</string>
+    <string name="linkDestroyed">Cancel, due to destroyed attachment link</string>
 </resources>

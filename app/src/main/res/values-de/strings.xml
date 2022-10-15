@@ -54,7 +54,7 @@
     <string name="ChoosePrintQuality">Druckqualität wählen.</string>
     <string name="dontShowAgain">Nicht wieder zeigen.</string>
     <string name="CleanupFiles">Bereinigen verwaiste Bilder</string>
-    <string name="unusedFilesDeleted">verwaiste Attachments entfernt.</string>
+    <string name="unusedFilesDeleted">verwaiste Dateianhänge entfernt.</string>
     <string name="LockscreenReminder">Zeile als Erinnerung auf Sperrschirm</string>
     <string name="Reminder">Erinnerung</string>
     <string name="willShow">wird auf dem Sperrschirm gezeigt</string>
@@ -187,7 +187,7 @@
     <string name="refresh">Refresh?</string>
     <string name="waitForFinish">Einen Moment warten</string>
     <string name="showAppGallery">Show app gallery</string>
-    <string name="tidyOrphanes">Bereinigen verwaister Attachments</string>
+    <string name="tidyOrphanes">Bereinigen verwaister Dateianhänge</string>
     <string name="cutToClipboard">Ausschneiden in Zwischenablage</string>
     <string name="cutSelectedItems">Ausschneiden in die Zwischenablage?</string>
     <string name="EditLine">Zeile editieren</string>
@@ -203,6 +203,7 @@
     <string name="wwwLink">WWW Link unten einfügen</string>
     <string name="choose">App Auswählen</string>
     <string name="openLinksInBrowser">Öffnen von Text Links mit Browser</string>
-
+    <string name="editExistingLink">Edit Dateianhang</string>
+    <string name="linkDestroyed">Abbruch, weil Link zu Dateianhang zerstört</string>
 </resources>
 
