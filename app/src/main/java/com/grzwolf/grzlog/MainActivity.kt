@@ -25,9 +25,7 @@ import android.print.PrintAttributes.Resolution
 import android.print.pdf.PrintedPdfDocument
 import android.provider.MediaStore
 import android.text.*
-import android.text.style.BackgroundColorSpan
-import android.text.style.ImageSpan
-import android.text.style.RelativeSizeSpan
+import android.text.style.*
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.*
@@ -226,15 +224,16 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
             // DOWN event
             if (event.action == MotionEvent.ACTION_DOWN) {
-                lvMain.touchDownPosY = event.y
                 if (event.x < 200) {
                     // switch to 'select item mode'
                     lvMain.touchSelectItem = true
                 }
+                // memorize the touch event coordinates
+                lvMain.touchEventPoint = Point(event.x.toInt(), event.y.toInt())
             }
             // UP event
             if (event.action == MotionEvent.ACTION_UP) {
-                if (event.y < lvMain.touchDownPosY - 10 || event.y > lvMain.touchDownPosY + 10) {
+                if (event.y < lvMain.touchEventPoint.y - 10 || event.y > lvMain.touchEventPoint.y + 10) {
                     // revert 'select item mode', if scroll did happen, aka y positions at touch up differs too much from down event
                     lvMain.touchSelectItem = false
                     // scrolling did happen while search menu is active --> allows to skip over search hits
@@ -255,7 +254,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 lvMain.arrayList!![position].setSelected(isSelected)
                 lvMain.adapter!!.notifyDataSetChanged()
             } else {
-                // show item link (only works, if item contains an attachment)
+                // show item attachment OR www text link
                 lvMainOnItemClick(parent, view, position, id)
             }
         })
@@ -481,30 +480,95 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
     }
 
+    // https://stackoverflow.com/questions/41648180/how-to-display-each-clicked-words-from-textview
+    private fun getWordInStringAtOffset(str: String, offset: Int): String? {
+        var offset = offset
+        if (str.length == offset) {
+            offset--
+        }
+        if (str[offset] == ' ') {
+            offset--
+        }
+        var startIndex = offset
+        var endIndex = offset
+        try {
+            while (str[startIndex] != ' ' && str[startIndex] != '\n') {
+                startIndex--
+            }
+        } catch (e: StringIndexOutOfBoundsException) {
+            startIndex = 0
+        }
+        try {
+            while (str[endIndex] != ' ' && str[endIndex] != '\n') {
+                endIndex++
+            }
+        } catch (e: StringIndexOutOfBoundsException) {
+            endIndex = str.length
+        }
+        val last = str[endIndex - 1]
+        if (last == ',' || last == '.' || last == '!' || last == '?' || last == ':' || last == ';') {
+            endIndex--
+        }
+        var word = ""
+        try {
+            if (startIndex != -1 && endIndex != -1) {
+                word = str.substring(startIndex, endIndex)
+            }
+        } catch (e: Exception) {}
+
+        // check if word is enclosed by a pair of [] brackets
+        var attachment = ""
+        var tmp = word.trim()
+        var wordPos = str.indexOf(tmp)
+        var openBracketPos = str.indexOf("[")
+        var closeBracketPos = str.indexOf("]")
+        if (openBracketPos!=-1 && openBracketPos<=wordPos && closeBracketPos!=-1 && closeBracketPos>=wordPos) {
+            attachment = str.substring(openBracketPos, closeBracketPos+1)
+        }
+        if (attachment.isNotEmpty()) {
+            word = attachment
+        }
+
+        return word
+    }
+
     // ListView click handler implementation shows the item's linked content
     fun lvMainOnItemClick(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+
+        // get word at touch position
+        var tv: TextView = view!!.findViewById(R.id.tvItemTitle)
+        var offset = tv.getOffsetForPosition(lvMain.touchEventPoint.x.toFloat(), lvMain.touchEventPoint.y.toFloat())
+        var word = getWordInStringAtOffset(tv.getText().toString(), offset)
+        if (word!!.isNotEmpty()) {
+            centeredToast(this, word, 1000)
+        }
+
         var title = ""
         var fileName = ""
         try {
             // clicked item's full text
             val fullItemText = lvMain.arrayList!![position].fullTitle
             var itemTextNoAttachment = fullItemText
-            // 1. search for an attachment link (image, video, audio, txt, pdf, www)
-            val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
-            if (m?.find() == true) {
-                val result = m.group()
+            // 1. search for an attachment link (image, video, audio, txt, pdf, www) in fullItemText AND word
+            val mFull = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+            val mWord = word.let { PATTERN.UriLink.matcher(it.toString()) }
+            if ((mFull?.find() == true) && (mWord.find() == true)) {
+                val result = mFull.group()
                 val key = result.substring(1, result.length - 1)
                 val lnkParts = key.split("::::".toRegex()).toTypedArray()
                 if (lnkParts != null && lnkParts.size == 2) {
-                    title = lnkParts[0]
-                    fileName = lnkParts[1]
+                    var wordNoBrackets = word.substring(2, word.length-1) // !! word always has a leading ' ' due to the icon space
+                    if (wordNoBrackets.endsWith(lnkParts[0])) {
+                        title = lnkParts[0]
+                        fileName = lnkParts[1]
+                        if (!verifyExifPermission()) {
+                            centeredToast(this, getString(R.string.mayNotWork), 3000)
+                        }
+                        showAppLinkedAttachment(this, title, fileName)
+                        // avoid potential confusion in getAllLinksFromString() by removing the already handled attachment
+                        itemTextNoAttachment = fullItemText.replace(result, "")
+                    }
                 }
-                if (!verifyExifPermission()) {
-                    centeredToast(this, getString(R.string.mayNotWork), 3000)
-                }
-                showAppLinkedAttachment(this, title, fileName)
-                // avoid potential confusion in getAllLinksFromString() by removing the already handled attachment
-                itemTextNoAttachment = fullItemText.replace(result, "")
             }
             // 2. find regular urls in an item's text outside of the attachment link and show them in the default browser
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
@@ -512,7 +576,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 var urls: ArrayList<String>? = getAllLinksFromString(itemTextNoAttachment!!)
                 if (urls != null && urls.size > 0) {
                     for (url in urls) {
-                        showAppLinkedAttachment(this, url!!, url!!)
+                        if (url.equals(word.trim())) {
+                            showAppLinkedAttachment(this, url!!, url!!)
+                        }
                     }
                 }
             }
@@ -5337,8 +5403,8 @@ class GrzListView {
     var fstVisPos = 0                                 // memorize 1st position item position
     var lstVisPos = 0                                 // memorize last position item position
     var touchSelectItem = false                       // touch event x < 200 allows to select an item at long press
-    var touchDownPosY = 0f                            // y down position of last touch event, needed to detect scrolling
     var scrollWhileSearch = false                     // allows to skip search hits when scrolling before Up / Down
+    var touchEventPoint = Point(-1, -1)         // point coordinates of the latest touch event: needed to detect scrolling AND get word in string
 
     // generate ArrayList from a DataStore raw text to later populate the listview
     internal fun makeArrayList(rawText: String, lvShowOrder: SHOW_ORDER): ArrayList<ListViewItem> {
@@ -5815,17 +5881,16 @@ internal class LvAdapter : BaseAdapter {
             tv.setTextColor(Color.BLACK)
             cv.setBackgroundColor(Color.GREEN)
         }
-        // attachment links and icons
+        // handle attachment links and their icons
+        var text = items!![position].title
+        var spanStr = SpannableString(text)
         if (items!![position].title?.contains("[") == true) {
-            // place icon left to key
-            var text = items!![position].title
+            // place icon left to key and after the opening bracket
             val start = text?.indexOf('[')?.plus(1)
             val stop = text?.indexOf(']')?.plus(1)
+            // insert a " " as icon placeholder
             text = text?.substring(0, start!!) + " " + text?.substring(start!!)
-            // place icon at begin of row
-//            var start = 0
-//            var stop = 1
-//            text = " " + text
+            spanStr = SpannableString(text)
             // set icon via spannable
             res = android.R.drawable.ic_dialog_alert
             val mime = getFileExtension(items!![position].fullTitle!!.substring(0, items!![position].fullTitle!!.lastIndexOf("]")))
@@ -5869,12 +5934,26 @@ internal class LvAdapter : BaseAdapter {
             drawable?.setBounds(0, 0, tv.lineHeight, tv.lineHeight)
             drawable?.colorFilter = BlendModeColorFilterCompat.createBlendModeColorFilterCompat(ContextCompat.getColor(context!!, iconColor), BlendModeCompat.SRC_ATOP)
             val icon = ImageSpan(drawable!!, ImageSpan.ALIGN_BOTTOM)
-            val spanStr = SpannableString(text)
             if (stop != null) {
                 spanStr.setSpan(icon, start!!, start + 1, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
                 tv.text = spanStr
             }
         }
+        // www links in item text: change color & underline !!reuse: text and spanStr as above, bc. of the pontentially added " "
+        var urls: ArrayList<String>? = getAllLinksFromString(text.toString())
+        if (urls != null && urls.size > 0) {
+            for (url in urls) {
+                spanStr.apply {
+                    var start = text!!.indexOf(url)
+                    if (start != -1) {
+                        setSpan(ForegroundColorSpan(ContextCompat.getColor(context!!, R.color.cadetblue)), start, start + url.length, 0)
+                        setSpan(UnderlineSpan(), start, start + url.length, 0)
+                    }
+                }
+            }
+            tv.text = spanStr
+        }
+
         return cv
     }
 } //
