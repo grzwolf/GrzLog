@@ -69,7 +69,7 @@ class GalleryActivity : AppCompatActivity() {
                 return@OnItemClickListener
             }
             val fn = "/" + adapter!!.list[position].fileName
-            showAppLinkedAttachment(this, "", fn)
+            showAppLinkOrAttachment(this, "", fn)
         }
         // long press shall select item
         gridView.setOnItemLongClickListener(AdapterView.OnItemLongClickListener { parent, view, position, id ->

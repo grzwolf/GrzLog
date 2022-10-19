@@ -480,111 +480,213 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
     }
 
-    // https://stackoverflow.com/questions/41648180/how-to-display-each-clicked-words-from-textview
-    private fun getWordInStringAtOffset(str: String, offset: Int): String? {
-        var offset = offset
-        if (str.length == offset) {
-            offset--
-        }
-        if (str[offset] == ' ') {
-            offset--
-        }
-        var startIndex = offset
-        var endIndex = offset
-        try {
-            while (str[startIndex] != ' ' && str[startIndex] != '\n') {
-                startIndex--
-            }
-        } catch (e: StringIndexOutOfBoundsException) {
-            startIndex = 0
-        }
-        try {
-            while (str[endIndex] != ' ' && str[endIndex] != '\n') {
-                endIndex++
-            }
-        } catch (e: StringIndexOutOfBoundsException) {
-            endIndex = str.length
-        }
-        val last = str[endIndex - 1]
-        if (last == ',' || last == '.' || last == '!' || last == '?' || last == ':' || last == ';') {
-            endIndex--
-        }
-        var word = ""
-        try {
-            if (startIndex != -1 && endIndex != -1) {
-                word = str.substring(startIndex, endIndex)
-            }
-        } catch (e: Exception) {}
-
-        // check if word is enclosed by a pair of [] brackets
-        var attachment = ""
-        var tmp = word.trim()
-        var wordPos = str.indexOf(tmp)
-        var openBracketPos = str.indexOf("[")
-        var closeBracketPos = str.indexOf("]")
-        if (openBracketPos!=-1 && openBracketPos<=wordPos && closeBracketPos!=-1 && closeBracketPos>=wordPos) {
-            attachment = str.substring(openBracketPos, closeBracketPos+1)
-        }
-        if (attachment.isNotEmpty()) {
-            word = attachment
-        }
-
-        return word
-    }
-
     // ListView click handler implementation shows the item's linked content
     fun lvMainOnItemClick(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-
-        // get word at touch position
-        var tv: TextView = view!!.findViewById(R.id.tvItemTitle)
-        var offset = tv.getOffsetForPosition(lvMain.touchEventPoint.x.toFloat(), lvMain.touchEventPoint.y.toFloat())
-        var word = getWordInStringAtOffset(tv.getText().toString(), offset)
-        if (word!!.isNotEmpty()) {
-            centeredToast(this, word, 1000)
+        // no view is a no go
+        if (view == null) {
+            return
         }
-
+        // text view is either title or section, dismiss spacer
+        var tv: TextView
+        try {
+            tv = view!!.findViewById(R.id.tvItemTitle)
+        } catch (e: Exception) {
+            try {
+                tv = view!!.findViewById(R.id.tvSectionTitle)
+            } catch (e: Exception) {
+                return
+            }
+        }
+        // text line count: text could be wrapped w/o a new line, still it has multiple lines
+        var lineCount = tv.getLineCount()
+        // full item coordinates containing the wrapped lines
+        var vTop = view.top
+        var vHeight = view.height
+        var vHeightPerLine = vHeight / lineCount
+        // user touch position
+        var touchX = lvMain.touchEventPoint.x.toFloat() - tv.left // x corrected, bc. header is X centered
+        var touchY = lvMain.touchEventPoint.y.toFloat()
+        // loop wrapped lines
+        var text = ""
+        var wrappedLineIndex = -1
+        var wrappedLines : MutableList<String> = ArrayList()
+        for (i in 0 until lineCount) {
+            // character indexes of a line in the text are used to extract sequentially one wrapped line
+            var lineBeg = tv.getLayout().getLineStart(i)
+            var lineEnd = tv.getLayout().getLineEnd(i)
+            var line = tv.getText().toString().substring(lineBeg, lineEnd)
+            // memorize wrapped lines: needed later, to complete a partial www-link or attachment
+            wrappedLines.add(line)
+            // identify the extracted line matching to the Y touch event
+            var top = vTop + vHeightPerLine * i
+            if ((top <= touchY) && (top + vHeightPerLine >= touchY)) {
+                text = line
+                wrappedLineIndex = i
+            }
+        }
+        // if there is an attachment link, ofsPxl needs correction due the icon pixel width
+        val iconWidth = if (PATTERN.UriLink.matcher(text).find()) 35 else 0
+        // get the character offset at the X touch coordinate
+        var ofs = text.length
+        for (i in 1 until text.length) {
+            // extend the measured text until the touchX coordinate is hit
+            var ofsPxl = tv.paint.measureText(text, 0, i) + iconWidth
+            if (ofsPxl >= touchX) {
+                ofs = i
+                break;
+            }
+        }
+        // obtain the link (attachment or www-link) from text
+        var link = getWordAtOffset(text, ofs)
+        // link could be a fragmented attachment, get the real attachment name with both enclosing brackets
+        var attachment = getAttachmentFromText(lvMain.arrayList!![position].title.toString(), link)
+        // so far, we only know what word/link was clicked on, it's time to show the content
         var title = ""
         var fileName = ""
         try {
-            // clicked item's full text
+            // get the clicked item's full text
             val fullItemText = lvMain.arrayList!![position].fullTitle
-            var itemTextNoAttachment = fullItemText
-            // 1. search for an attachment link (image, video, audio, txt, pdf, www) in fullItemText AND word
-            val mFull = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
-            val mWord = word.let { PATTERN.UriLink.matcher(it.toString()) }
-            if ((mFull?.find() == true) && (mWord.find() == true)) {
-                val result = mFull.group()
+            // 1. get attachment link (image, video, audio, txt, pdf, www) in fullItemText
+            val matchFull = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+            // get the full item, what was clicked on by user
+            val matchLink = attachment.let { PATTERN.UriLink.matcher(it.toString()) }
+            // if there is a double match --> show attachment
+            if ((matchFull?.find() == true) && (matchLink.find() == true)) {
+                val result = matchFull.group()
                 val key = result.substring(1, result.length - 1)
                 val lnkParts = key.split("::::".toRegex()).toTypedArray()
                 if (lnkParts != null && lnkParts.size == 2) {
-                    var wordNoBrackets = word.substring(2, word.length-1) // !! word always has a leading ' ' due to the icon space
-                    if (wordNoBrackets.endsWith(lnkParts[0])) {
+                    var linkNoBrackets = attachment.substring(1, attachment.length-1)
+                    if (linkNoBrackets.endsWith(lnkParts[0])) {
                         title = lnkParts[0]
                         fileName = lnkParts[1]
                         if (!verifyExifPermission()) {
                             centeredToast(this, getString(R.string.mayNotWork), 3000)
                         }
-                        showAppLinkedAttachment(this, title, fileName)
-                        // avoid potential confusion in getAllLinksFromString() by removing the already handled attachment
-                        itemTextNoAttachment = fullItemText.replace(result, "")
+                        centeredToast(this, attachment, 50)
+                        showAppLinkOrAttachment(this, title, fileName)
                     }
                 }
-            }
-            // 2. find regular urls in an item's text outside of the attachment link and show them in the default browser
-            val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-            if (sharedPref.getBoolean("openLinks", false)) {
-                var urls: ArrayList<String>? = getAllLinksFromString(itemTextNoAttachment!!)
-                if (urls != null && urls.size > 0) {
-                    for (url in urls) {
-                        if (url.equals(word.trim())) {
-                            showAppLinkedAttachment(this, url!!, url!!)
+            } else {
+                // 2. find a regular url in an item's text and show it in the default browser
+                val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                if (sharedPref.getBoolean("openLinks", false)) {
+                    // indicator to show what was clicked, even if it is neither attachment nor link
+                    var urlWasShown = false
+                    // get a list of potential urls / www-links
+                    var urls: ArrayList<String>? = getAllLinksFromString(fullItemText.toString())
+                    if (urls != null && urls.size > 0) {
+                        for (url in urls) {
+                            // open link, if one of the potential urls contains at least partially, what was clicked on (!! multiple lines!!)
+                            if (url.contains(link.trim())) {
+                                var tmp = ""
+                                if (url.equals(link.trim())) {
+                                    // provided link is good to go, no need to care about fragmentation
+                                    tmp = url
+                                } else {
+                                    // fragmented link: expand link upwards with upper wrappedLines, until a ' ' appears
+                                    var posSpaceBeforeLink = wrappedLines[wrappedLineIndex].indexOf(" ")
+                                    var posLink = wrappedLines[wrappedLineIndex].indexOf(link)
+                                    if (posSpaceBeforeLink != -1 && posSpaceBeforeLink < posLink) {
+                                        for (ndx in 0..wrappedLineIndex) {
+                                            tmp += wrappedLines[ndx]
+                                        }
+                                    } else {
+                                        for (ndx in 0 until wrappedLineIndex) {
+                                            tmp += wrappedLines[ndx]
+                                        }
+                                        tmp += link.trim()
+                                    }
+                                    tmp = tmp.trim()
+                                    var last = tmp.lastIndexOf(" ")
+                                    if (last != -1) {
+                                        tmp = tmp.substring(last)
+                                    } else {
+                                        tmp = link.trim()
+                                    }
+                                    // fragmented link: expand downwards with lower warppedLines, until a ' ' appears
+                                    var posLastSpace = wrappedLines[wrappedLineIndex].lastIndexOf(" ")
+                                    if (posLastSpace < posLink) {
+                                        for (ndx in wrappedLineIndex + 1 until wrappedLines.size) {
+                                            tmp += wrappedLines[ndx]
+                                        }
+                                    }
+                                    tmp = tmp.trim()
+                                    var first = tmp.indexOf(" ")
+                                    if (first != -1) {
+                                        tmp = tmp.substring(0, first)
+                                    }
+                                }
+                                // show www link
+                                urlWasShown = true
+                                var urlComplete = tmp
+                                centeredToast(this, urlComplete, 50)
+                                showAppLinkOrAttachment(this, urlComplete, urlComplete)
+                            }
                         }
+                        if (!urlWasShown) {
+                            centeredToast(this, link, 50)
+                        }
+                    } else {
+                        centeredToast(this, link, 50)
                     }
+                } else {
+                    centeredToast(this, link, 50)
                 }
             }
         } catch (e: Exception) {
             Toast.makeText(baseContext, e.message, Toast.LENGTH_LONG).show()
         }
+    }
+
+    // complete a fragmented attachment link, so that it contains the pair of enclosing brackets
+    fun getAttachmentFromText(text: String, attachmentFragment: String) : String {
+        // plausible to search
+        if (attachmentFragment.indexOf("[") == -1 && attachmentFragment.indexOf("]") == -1) {
+            return ""
+        }
+        // start
+        var tmp = attachmentFragment.trim()
+        // expand to left
+        var currPos = text.indexOf(tmp)
+        while (tmp.indexOf("[") == -1 && --currPos >= 0) {
+            tmp = text[currPos] + tmp
+        }
+        // expand to right
+        currPos = text.indexOf(tmp) + tmp.length-1
+        while (tmp.lastIndexOf("]") == -1 && ++currPos < text.length) {
+            tmp = tmp + text[currPos]
+        }
+        // final check
+        if (!PATTERN.UriLink.matcher(tmp).find()) {
+            return ""
+        }
+        return tmp
+    }
+
+    // extract the word around the character offset position in a given text
+    fun getWordAtOffset(text: String, offset: Int) : String {
+        // sake of mind
+        var ofs = Math.max(0, Math.min(offset, text.length-1))
+        // 1st char
+        var word = text[ofs].toString()
+        // don't expand word to the right, if ' ' is already in place
+        var expandToRight = if (text[ofs] == ' ') false else true
+        // expand word to the left, stop at ' '
+        var left = ofs - 1
+        while ((left >= 0) && (text[left] != ' ')) {
+            word = text[left] + word
+            left--
+        }
+        // expand word to the right
+        if (expandToRight) {
+            var right = ofs + 1
+            while ((right < text.length) && (text[right] != ' ')) {
+                word = word + text[right]
+                right++
+            }
+        }
+        return word
     }
 
     // ListView long click handler edit item implementation
@@ -5978,11 +6080,13 @@ class FabPlus {
 // compile regex patterns once in advance to detect: "blah[uriLink]blah", "YYYY-MM-DD", "YYYY-MM-DD Mon"
 internal object PATTERN {
     private val URLS_REGEX = "((http:\\/\\/|https:\\/\\/)?(www.)?(([a-zA-Z0-9-]){2,2083}\\.){1,4}([a-zA-Z]){2,6}(\\/(([a-zA-Z-_\\/\\.0-9#:?=&;,]){0,2083})?){0,2083}?[^ \\n]*)"
+    private val IP4PORT_REGEX = "\\d{1,3}(?:\\.\\d{1,3}){3}(?::\\d{1,5})?"
     val UriLink = Pattern.compile("\\[(.*?)\\]")                       // uri link is enclosed in []
     val Date = Pattern.compile("\\d{4}-\\d{2}-\\d{2}")
     val DateDay = Pattern.compile("\\d{4}-\\d{2}-\\d{2}.*")            // header section with date
     val DatePattern = Pattern.compile("[_-]\\d{8}[_-]")                // file date stamp pattern
     val UrlsPattern = Pattern.compile(URLS_REGEX, Pattern.CASE_INSENSITIVE)  // find urls in string
+    val IP4PortPattern = Pattern.compile(IP4PORT_REGEX)                      // find urls in string
 }
 
 // showOrder

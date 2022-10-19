@@ -850,7 +850,7 @@ fun getFileFromUri(context: Context, imageUriOri: Uri): File? {
 }
 
 // show linked attachment
-fun showAppLinkedAttachment(context: Context, title: String, fileName: String?) {
+fun showAppLinkOrAttachment(context: Context, title: String, fileName: String?) {
     // sake of mind
     if (fileName!!.isEmpty()) {
         return
@@ -1222,7 +1222,14 @@ fun getExifInterface(context: Context, uri: Uri): ExifInterface? {
 // extract urls from string: https://stackoverflow.com/questions/5713558/detect-and-extract-url-from-a-string
 fun getAllLinksFromString(text: String): ArrayList<String>? {
     val links: ArrayList<String> = ArrayList()
-    val m = PATTERN.UrlsPattern.matcher(text)
+    // find text links
+    var m = PATTERN.UrlsPattern.matcher(text)
+    while (m.find()) {
+        var hit = m.group()
+        links.add(hit)
+    }
+    // find ip4:port links
+    m = PATTERN.IP4PortPattern.matcher(text)
     while (m.find()) {
         var hit = m.group()
         links.add(hit)
