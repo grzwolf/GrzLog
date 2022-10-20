@@ -957,9 +957,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builderItemMore?.setPositiveButton(
             R.string.cancel,
             DialogInterface.OnClickListener { dialog, which ->
-// on one hand a nice, handy feature, on the other hand it might confuse                
-//                shareBody = lvMain.arrayList!![position].fullTitle
-//                clipboard = shareBody
                 dialog.dismiss()
             }
         )
@@ -1883,11 +1880,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     // fabPlus dialog cancel action
     private fun localCancel(dialog: DialogInterface, context: Context?) {
-        // 'long press input' text only goes to clipboard, if it is not empty and fabPlus input dlg was cancelled (--> very nice paste option)
-        if ((lvMain.arrayList!!.size > 0) && !lvMain.selectedText!!.isEmpty()) {
-            shareBody = lvMain.arrayList!![lvMain.selectedRow].fullTitle
-            clipboard = shareBody
-        }
         // after 'insert line' + cancel, we need to restore the status 'before insert line'
         if (fabPlus.editInsertLine) {
             // restore DataStore from undo data
@@ -3940,8 +3932,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     // clipboard helpers
     private var clipboard: String?
         get() {
-            val clipBoard =
-                getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val clipBoard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
             val clipData = clipBoard.primaryClip
             val item = clipData!!.getItemAt(0)
             return item.text.toString()
