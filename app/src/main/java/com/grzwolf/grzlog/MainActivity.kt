@@ -640,22 +640,31 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // complete a fragmented attachment link, so that it contains the pair of enclosing brackets
-    fun getAttachmentFromText(text: String, attachmentFragment: String) : String {
+    fun getAttachmentFromText(fullText: String, attachmentFragment: String) : String {
         // plausible to search
-        if (attachmentFragment.indexOf("[") == -1 && attachmentFragment.indexOf("]") == -1) {
+        if (fullText.indexOf("[") == -1 && fullText.indexOf("]") == -1) {
             return ""
         }
         // start
         var tmp = attachmentFragment.trim()
         // expand to left
-        var currPos = text.indexOf(tmp)
+        var currPos = fullText.indexOf(tmp)
         while (tmp.indexOf("[") == -1 && --currPos >= 0) {
-            tmp = text[currPos] + tmp
+            if (fullText[currPos] == ']') {
+                return ""
+            }
+            tmp = fullText[currPos] + tmp
+        }
+        if (tmp.indexOf("[") == -1) {
+            return ""
         }
         // expand to right
-        currPos = text.indexOf(tmp) + tmp.length-1
-        while (tmp.lastIndexOf("]") == -1 && ++currPos < text.length) {
-            tmp = tmp + text[currPos]
+        currPos = fullText.indexOf(tmp) + tmp.length-1
+        while (tmp.lastIndexOf("]") == -1 && ++currPos < fullText.length) {
+            if (fullText[currPos] == '[') {
+                return ""
+            }
+            tmp = tmp + fullText[currPos]
         }
         // final check
         if (!PATTERN.UriLink.matcher(tmp).find()) {
