@@ -536,10 +536,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 break;
             }
         }
-        // obtain the link (attachment or www-link) from text
-        var link = getWordAtOffset(text, ofs)
-        // link could be a fragmented attachment, get the real attachment name with both enclosing brackets
-        var attachment = getAttachmentFromText(lvMain.arrayList!![position].title.toString(), link)
+        // obtain the word around the character offset position from text
+        var word = getWordAtOffset(text, ofs)
+        // word could be a fragmented attachment, get the real attachment name with both enclosing brackets
+        var attachment = getAttachmentFromText(lvMain.arrayList!![position].title.toString(), word)
         // so far, we only know what word/link was clicked on, it's time to show the content
         var title = ""
         var fileName = ""
@@ -578,15 +578,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     if (urls != null && urls.size > 0) {
                         for (url in urls) {
                             // open link, if one of the potential urls contains at least partially, what was clicked on (!! multiple lines!!)
-                            if (url.contains(link.trim())) {
+                            if (url.contains(word.trim())) {
                                 var tmp = ""
-                                if (url.equals(link.trim())) {
+                                if (url.equals(word.trim())) {
                                     // provided link is good to go, no need to care about fragmentation
                                     tmp = url
                                 } else {
                                     // fragmented link: expand link upwards with upper wrappedLines, until a ' ' appears
                                     var posSpaceBeforeLink = wrappedLines[wrappedLineIndex].indexOf(" ")
-                                    var posLink = wrappedLines[wrappedLineIndex].indexOf(link)
+                                    var posLink = wrappedLines[wrappedLineIndex].indexOf(word)
                                     if (posSpaceBeforeLink != -1 && posSpaceBeforeLink < posLink) {
                                         for (ndx in 0..wrappedLineIndex) {
                                             tmp += wrappedLines[ndx]
@@ -595,14 +595,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                         for (ndx in 0 until wrappedLineIndex) {
                                             tmp += wrappedLines[ndx]
                                         }
-                                        tmp += link.trim()
+                                        tmp += word.trim()
                                     }
                                     tmp = tmp.trim()
                                     var last = tmp.lastIndexOf(" ")
                                     if (last != -1) {
                                         tmp = tmp.substring(last)
                                     } else {
-                                        tmp = link.trim()
+                                        tmp = word.trim()
                                     }
                                     // fragmented link: expand downwards with lower warppedLines, until a ' ' appears
                                     var posLastSpace = wrappedLines[wrappedLineIndex].lastIndexOf(" ")
@@ -625,13 +625,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             }
                         }
                         if (!urlWasShown) {
-                            centeredToast(this, link, 50)
+                            centeredToast(this, word, 50)
                         }
                     } else {
-                        centeredToast(this, link, 50)
+                        centeredToast(this, word, 50)
                     }
                 } else {
-                    centeredToast(this, link, 50)
+                    centeredToast(this, word, 50)
                 }
             }
         } catch (e: Exception) {
