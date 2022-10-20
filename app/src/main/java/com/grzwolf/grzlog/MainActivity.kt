@@ -957,6 +957,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builderItemMore?.setPositiveButton(
             R.string.cancel,
             DialogInterface.OnClickListener { dialog, which ->
+                fabPlus.moreOptionsOnLongClickItemPos = -1
                 dialog.dismiss()
             }
         )
