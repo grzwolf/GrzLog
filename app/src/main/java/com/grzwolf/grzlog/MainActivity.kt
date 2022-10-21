@@ -955,7 +955,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             })
         // BUTTON RETURN
         builderItemMore?.setPositiveButton(
-            R.string.cancel,
+            R.string.close,
             DialogInterface.OnClickListener { dialog, which ->
                 fabPlus.moreOptionsOnLongClickItemPos = -1
                 dialog.dismiss()
@@ -1133,7 +1133,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
         })
         // CANCEL button
-        builder.setPositiveButton(R.string.cancel, DialogInterface.OnClickListener { dialog, which ->
+        builder.setPositiveButton(R.string.close, DialogInterface.OnClickListener { dialog, which ->
             dialog.dismiss()
             if (function != null) {
                 function(position)
@@ -1212,7 +1212,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         })
         // CANCEL button
         builder.setPositiveButton(
-            R.string.cancel,
+            R.string.close,
             DialogInterface.OnClickListener { dialog, which -> dialog.dismiss() })
         val dialog = builder.create()
         val listView = dialog.listView
