@@ -1535,6 +1535,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         // fabPlus button OK
         //
         fabPlusBuilder.setPositiveButton(R.string.ok, DialogInterface.OnClickListener { dialog, which ->
+
+            // reset the possibility to return to moreOptionsOnLongClickItem()
+            fabPlus.moreOptionsOnLongClickItemPos = -1
+
             // timestamp requested ?
             var timestampType = ds!!.timeSection[ds!!.selectedSection]
 
