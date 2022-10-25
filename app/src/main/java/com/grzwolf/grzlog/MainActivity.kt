@@ -10,7 +10,6 @@ import android.content.*
 import android.content.ClipboardManager
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.database.Cursor
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.graphics.pdf.PdfDocument
@@ -218,7 +217,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         ds!!.tagSection.clear()
 
         // listview item touch listener to determine the screen coordinates of the touch event
-        (lvMain.listView)?.setOnTouchListener(OnTouchListener { v, event -> // reset the "listview did scroll" flag
+        (lvMain.listView)?.setOnTouchListener(OnTouchListener { listView, event ->
+            // reset the "listview did scroll" flag
             if (menuSearchVisible) {
                 lvMain.scrollWhileSearch = false
             }
@@ -245,34 +245,34 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             false
         })
         // listview item click
-        (lvMain.listView)?.setOnItemClickListener(OnItemClickListener { parent, view, position, id ->
+        (lvMain.listView)?.setOnItemClickListener(OnItemClickListener { adapterView, itemView, itemPosition, itemId ->
             if (lvMain.touchSelectItem && !menuSearchVisible) {
                 // handle click on item as item select
                 lvMain.touchSelectItem = false
-                val wasSelected = lvMain.arrayList!![position].isSelected()
+                val wasSelected = lvMain.arrayList!![itemPosition].isSelected()
                 val isSelected = !wasSelected
-                lvMain.arrayList!![position].setSelected(isSelected)
+                lvMain.arrayList!![itemPosition].setSelected(isSelected)
                 lvMain.adapter!!.notifyDataSetChanged()
             } else {
                 // show item attachment OR www text link
-                lvMainOnItemClick(parent, view, position, id)
+                lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
             }
         })
         // listview item long press
-        (lvMain.listView)?.setOnItemLongClickListener(OnItemLongClickListener { parent, view, position, id ->
+        (lvMain.listView)?.setOnItemLongClickListener(OnItemLongClickListener { adapterView, itemView, itemPosition, itemId ->
             // any long press action cancels 'select item mode'
             lvMain.touchSelectItem = false
             // does the long click happen on a search hit item
-            if (lvMain.arrayList!![position].isSearchHit()) {
-                whatToDoWithSearchHits(parent, view, position, id)
+            if (lvMain.arrayList!![itemPosition].isSearchHit()) {
+                whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId)
             } else {
                 // does the long click happen on a selected item
-                if (lvMain.arrayList!![position].isSelected()) {
+                if (lvMain.arrayList!![itemPosition].isSelected()) {
                     // handle long click on a selection as 'what to do with selection ?'
-                    whatToDoWithItemsSelection(position, null)
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, false, null)
                 } else {
-                    // handle long click as edit
-                    lvMainOnItemLongClick(parent, view, position, id)
+                    // handle long click as 'more edit option dialog'
+                    whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, false)
                 }
             }
             true
@@ -280,7 +280,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         // user input button has two use scenarios: click and long press
         (fabPlus.button)?.setOnClickListener(View.OnClickListener { view ->
-            fabPlusOnClick(view)
+            fabPlusOnClick(null, null, -1, -1, false, null)
         })
         (fabPlus.button)?.setOnLongClickListener(OnLongClickListener { view ->
             fabPlusOnLongClick(view, lvMain.listView)
@@ -353,10 +353,30 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         }
                     }
                     fabPlus.mainDialog?.dismiss()
-                    fabPlus.button!!.performClick()
+                    // back to main input with the option to return there to the calling dialog
+                    fabPlusOnClick(
+                        ReturnToDialogData.adapterView,
+                        ReturnToDialogData.itemView,
+                        ReturnToDialogData.itemPosition,
+                        ReturnToDialogData.itemId!!,
+                        ReturnToDialogData.returnToSearchHits,
+                        ReturnToDialogData.function
+                    )
                 } else {
-                    startFilePickerDialog()
+                    // back to file picker
+                    startFilePickerDialog(
+                        ReturnToDialogData.attachmentAllowed,
+                        ReturnToDialogData.linkText,
+                        ReturnToDialogData.adapterView,
+                        ReturnToDialogData.itemView,
+                        ReturnToDialogData.itemPosition,
+                        ReturnToDialogData.itemId!!,
+                        ReturnToDialogData.returnToSearchHits,
+                        ReturnToDialogData.function
+                    )
                 }
+                // reset memorized data
+                ReturnToDialogData.reset()
             }
             super.onResume()
             return
@@ -481,18 +501,18 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // ListView click handler implementation shows the item's linked content
-    fun lvMainOnItemClick(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+    fun lvMainOnItemClick(adapterView: AdapterView<*>?, itemView: View?, itemPosition: Int, itemId: Long) {
         // no view is a no go
-        if (view == null) {
+        if (itemView == null) {
             return
         }
         // text view is either title or section, dismiss spacer
         var tv: TextView
         try {
-            tv = view!!.findViewById(R.id.tvItemTitle)
+            tv = itemView!!.findViewById(R.id.tvItemTitle)
         } catch (e: Exception) {
             try {
-                tv = view!!.findViewById(R.id.tvSectionTitle)
+                tv = itemView!!.findViewById(R.id.tvSectionTitle)
             } catch (e: Exception) {
                 return
             }
@@ -500,8 +520,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         // text line count: text could be wrapped w/o a new line, still it has multiple lines
         var lineCount = tv.getLineCount()
         // full item coordinates containing the wrapped lines
-        var vTop = view.top
-        var vHeight = view.height
+        var vTop = itemView.top
+        var vHeight = itemView.height
         var vHeightPerLine = vHeight / lineCount
         // user touch position
         var touchX = lvMain.touchEventPoint.x.toFloat() - tv.left // x corrected, bc. header is X centered
@@ -539,13 +559,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         // obtain the word around the character offset position from text
         var word = getWordAtOffset(text, ofs)
         // word could be a fragmented attachment, get the real attachment name with both enclosing brackets
-        var attachment = getAttachmentFromText(lvMain.arrayList!![position].title.toString(), word)
+        var attachment = getAttachmentFromText(lvMain.arrayList!![itemPosition].title.toString(), word)
         // so far, we only know what word/link was clicked on, it's time to show the content
         var title = ""
         var fileName = ""
         try {
             // get the clicked item's full text
-            val fullItemText = lvMain.arrayList!![position].fullTitle
+            val fullItemText = lvMain.arrayList!![itemPosition].fullTitle
             // 1. get attachment link (image, video, audio, txt, pdf, www) in fullItemText
             val matchFull = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
             // get the full item, what was clicked on by user
@@ -698,38 +718,32 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         return word
     }
 
-    // ListView long click handler edit item implementation
-    fun lvMainOnItemLongClick(
-        parent: AdapterView<*>,
-        view: View?,
-        position: Int,
-        id: Long
-    ): Boolean {
-        try {
-            // this is what the user can click in UI
-            val item = parent.getItemAtPosition(position) as ListViewItem
-            // do not do anything, if spacer
-            if (item.isSpacer) {
-                return true
-            }
-            // execute the long click as more item options dialog
-            moreOptionsOnLongClickItem(position)
-        } catch (e: Exception) {
-            Toast.makeText(baseContext, "long click item: " + e.message, Toast.LENGTH_LONG).show()
+    // ListView long click handler: show options dialog, how to edit the current item/line
+    fun whatToDoWithLongClickItem(adapterView: AdapterView<*>, itemView: View?, itemPosition: Int, itemId: Long, returnToSearchHits: Boolean = false) {
+        // this is what the user can click in UI
+        val item = adapterView.getItemAtPosition(itemPosition) as ListViewItem
+        // do not do anything, if spacer
+        if (item.isSpacer) {
+            return
         }
-        return true
-    }
-
-    fun moreOptionsOnLongClickItem(position: Int) {
+        // theme
         val builderItemMore: AlertDialog.Builder? =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
             } else {
                 AlertDialog.Builder(this@MainActivity)
             }
-        builderItemMore?.setTitle(R.string.Options)
-        val charSequences: MutableList<CharSequence> = ArrayList()
+        // set custom multiline title: https://stackoverflow.com/questions/9107054/how-to-build-alert-dialog-with-a-multi-line-title
+        val headPart = getString(R.string.Options)
+        val headLine = SpannableString(headPart + "\n\n" + item.title)
+        headLine.setSpan(RelativeSizeSpan(1.35F),0, headPart.length,0)
+        headLine.setSpan(ForegroundColorSpan(ContextCompat.getColor(this, R.color.white)), 0, headPart.length, 0)
+        headLine.setSpan(ForegroundColorSpan(ContextCompat.getColor(this, R.color.yellow)), headPart.length, headLine.length, 0)
+        var titleView: TextView = TextView(this)
+        titleView.text = headLine
+        builderItemMore?.setCustomTitle(titleView)
         // the following options are related to the ListView item
+        val charSequences: MutableList<CharSequence> = ArrayList()
         charSequences.add(getString(R.string.EditLine))             // ITEM == 0
         charSequences.add(getString(R.string.CopyLine))             // ITEM == 1
         charSequences.add(getString(R.string.InsertLineBefore))     // ITEM == 2
@@ -747,20 +761,20 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 // ITEM == 0 edit line
                 if (which == 0) {
                     // execute the long click as edit ListView item
-                    onLongClickEditItem(position)
+                    onLongClickEditItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
                 // ITEM == 1 copy line
                 if (which == 1) {
-                    shareBody = lvMain.arrayList!![position].fullTitle
+                    shareBody = lvMain.arrayList!![itemPosition].fullTitle
                     clipboard = shareBody
-                    moreOptionsOnLongClickItem(position)
+                    whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                 }
 
                 // ITEM == 2  'line insert before current line'
                 if (which == 2) {
                     // reject 'insert line before': at pos == 0 if SHOW_ORDER.BOTTOM
-                    if (position == 0 && lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                    if (itemPosition == 0 && lvMain.showOrder == SHOW_ORDER.BOTTOM) {
                         okBox(
                             this@MainActivity,
                             getString(R.string.note),
@@ -771,27 +785,27 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         return@OnClickListener
                     }
                     // handle 'insert line before' as fabPlus click: at pos == 0 if SHOW_ORDER.TOP
-                    if (position == 0 && lvMain.showOrder == SHOW_ORDER.TOP) {
+                    if (itemPosition == 0 && lvMain.showOrder == SHOW_ORDER.TOP) {
                         lvMain.editLongPress = false
                         lvMain.selectedText = ""
                         lvMain.selectedRow = 0
                         lvMain.selectedRowNoSpacers = 0
                         fabPlus.inputAlertText = ""
                         fabPlus.editInsertLine = false
-                        fabPlus.button!!.performClick()
+                        fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                         return@OnClickListener
                     }
-                    lvMain.selectedRow = position
+                    lvMain.selectedRow = itemPosition
                     // memorize affected row in array list MINUS spacer count for DataStore
                     var spacers = 0
-                    for (i in 0 until position) {
+                    for (i in 0 until itemPosition) {
                         if (lvMain.arrayList!![i].isSpacer) {
                             spacers++
                         }
                     }
-                    lvMain.selectedRowNoSpacers = position - spacers
+                    lvMain.selectedRowNoSpacers = itemPosition - spacers
                     // add line before the selected line in ListView array, which is showOrder aligned
-                    lvMain.arrayList!!.add(position, EntryItem(" ", "", ""))
+                    lvMain.arrayList!!.add(itemPosition, EntryItem(" ", "", ""))
                     // build finalStr from ListView array
                     var finalStr = lvMain.selectedFolder
                     if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
@@ -814,31 +828,29 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     lvMain.editLongPress = true
                     // flag: 1) insert line 2) do not override undo data
                     fabPlus.editInsertLine = true
-                    // provide the item position for the 'jump back to this dialog'
-                    fabPlus.moreOptionsOnLongClickItemPos = position
                     // direct jump to line edit input
-                    fabPlus.button!!.performClick()
+                    fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
                 // ITEM == 3  'line insert after current line'
                 if (which == 3) {
                     // add line after the selected line in ListView array, which is showOrder aligned
-                    lvMain.arrayList!!.add(position + 1, EntryItem(" ", "", ""))
+                    lvMain.arrayList!!.add(itemPosition + 1, EntryItem(" ", "", ""))
                     // build finalStr from ListView array
                     var finalStr = lvMain.selectedFolder
                     if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
                         finalStr = toggleTextShowOrder(finalStr)
                     }
                     // fabPlus needs to work with the inserted index
-                    lvMain.selectedRow = position + 1
+                    lvMain.selectedRow = itemPosition + 1
                     // memorize affected row in array list MINUS spacer count for DataStore
                     var spacers = 0
-                    for (i in 0 until position) {
+                    for (i in 0 until itemPosition) {
                         if (lvMain.arrayList!![i].isSpacer) {
                             spacers++
                         }
                     }
-                    lvMain.selectedRowNoSpacers = position - spacers + 1
+                    lvMain.selectedRowNoSpacers = itemPosition - spacers + 1
                     // save undo data
                     ds!!.undoSection = ds!!.dataSection[ds!!.selectedSection]
                     ds!!.undoText = getString(R.string.InsertRow)
@@ -855,25 +867,22 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     // logic control flags
                     lvMain.editLongPress = true
                     fabPlus.editInsertLine = true
-                    // provide the item position for the 'jump back to this dialog'
-                    fabPlus.moreOptionsOnLongClickItemPos = position
                     // direct jump to line edit input
-                    fabPlus.button!!.performClick()
+                    fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
-                // ITEM == 4  'select items dialog' - afterwards return to moreOptionsOnLongClickItem
+                // ITEM == 4  'select items dialog' - afterwards return to here
                 if (which == 4) {
                     // function as parameter: https://stackoverflow.com/questions/62935022/pass-function-with-parameters-in-extension-functionkotlin
-//                    whatToDoWithItemsSelection(position, ::moreOptionsOnLongClickItem )                // works, but needs position as extra parameter
-                    whatToDoWithItemsSelection(position) { (::moreOptionsOnLongClickItem)(position) }   // works, is more versatile
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
                 // ITEM == 5 'lock screen notification'
                 if (which == 5) {
                     if (!notificationPermissionGranted) {
-                        moreOptionsOnLongClickItem(position)
+                        whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                     }
-                    val message = lvMain.arrayList!![position].title
+                    val message = lvMain.arrayList!![itemPosition].title
                     var youSureBld: AlertDialog.Builder? = null
                     youSureBld =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -897,13 +906,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             ).show()
                             // lock screen notification: Huawei launcher does not allow to render lsm directly, only via a screen-on receiver, which needs a list of notifications
                             lockScreenMessageList.add(message.toString())
-                            moreOptionsOnLongClickItem(position)
+                            whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                         })
                     // 'you sure' dlg CANCEL
                     youSureBld.setNegativeButton(
                         R.string.cancel,
                         DialogInterface.OnClickListener { dialog, which ->
-                            moreOptionsOnLongClickItem(position)
+                            whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                         })
                     val youSureDlg = youSureBld.create()
                     youSureDlg.setCanceledOnTouchOutside(false)
@@ -912,12 +921,12 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
                 // ITEM == 6 'empty space'
                 if (which == 6) {
-                    moreOptionsOnLongClickItem(position)
+                    whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                 }
 
                 // ITEM == 7 'current line delete'
                 if (which == 7) {
-                    val message = lvMain.arrayList!![position].title
+                    val message = lvMain.arrayList!![itemPosition].title
                     var youSureBld: AlertDialog.Builder?
                     youSureBld =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -937,7 +946,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             // clean up
                             fabPlus.inputAlertText = ""
                             // select item and let range delete method do its job
-                            lvMain.arrayList!![position].setSelected(true)
+                            lvMain.arrayList!![itemPosition].setSelected(true)
                             deleteMarkedItems(0)  // type: 0 == delete selected item, type: 1 == delete highlighted search item
                             // was hidden during input
                             fabPlus.button!!.show()
@@ -946,7 +955,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     youSureBld.setNegativeButton(
                         R.string.cancel,
                         DialogInterface.OnClickListener { dialog, which ->
-                            moreOptionsOnLongClickItem(position)
+                            whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                         })
                     val youSureDlg = youSureBld.create()
                     youSureDlg.setCanceledOnTouchOutside(false)
@@ -957,8 +966,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builderItemMore?.setPositiveButton(
             R.string.close,
             DialogInterface.OnClickListener { dialog, which ->
-                fabPlus.moreOptionsOnLongClickItemPos = -1
                 dialog.dismiss()
+                // return to search hits dialog
+                if (returnToSearchHits) {
+                    whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId)
+                }
             }
         )
         var itemMoreDialog = builderItemMore?.create()
@@ -970,7 +982,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // execute the long click as edit ListView item
-    fun onLongClickEditItem(position: Int) {
+    fun onLongClickEditItem(adapterView: AdapterView<*>, itemView: View?, itemPosition: Int, itemId: Long, returnToSearchHits: Boolean, function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)?) {
         // flag indicates the usage of fabPlus input as an editor for a 'long press line' input
         lvMain.editLongPress = true
         // delete previous undo data
@@ -982,7 +994,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         lvMain.fstVisPos = lvMain.listView!!.firstVisiblePosition
         lvMain.lstVisPos = lvMain.listView!!.lastVisiblePosition
         // the full text of the selected ListView item is data input
-        var lineInput = lvMain.arrayList!![position].fullTitle
+        var lineInput = lvMain.arrayList!![itemPosition].fullTitle
         // search for attachment link in 'long press input': if found, prepare fabPlus input data accordingly
         val m = lineInput?.let { PATTERN.UriLink.matcher(it.toString()) }
         if (m?.find() == true) {
@@ -1004,24 +1016,22 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
         lvMain.selectedText = lineInput
         // memorize affected row in array list
-        lvMain.selectedRow = position
+        lvMain.selectedRow = itemPosition
         // memorize affected row in array list MINUS spacer count for DataStore
         var spacers = 0
-        for (i in 0 until position) {
+        for (i in 0 until itemPosition) {
             if (lvMain.arrayList!![i].isSpacer) {
                 spacers++
             }
         }
-        lvMain.selectedRowNoSpacers = position - spacers
-        // provide the item position for the 'jump back to this dialog'
-        fabPlus.moreOptionsOnLongClickItemPos = position
+        lvMain.selectedRowNoSpacers = itemPosition - spacers
         // continue with regular user data input --> jump to fabPlus click handler
-        fabPlus.button!!.performClick()
+        fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
     }
 
     // items from ListView are selected OR a so far unselected item was 'long clicked' --> what to do now
     // function as param https://stackoverflow.com/questions/62935022/pass-function-with-parameters-in-extension-functionkotlin
-    private fun whatToDoWithItemsSelection(position: Int, function: ((Int) -> Unit?)?) {
+    private fun whatToDoWithItemsSelection(adapterView: AdapterView<*>, itemView: View?, itemPosition: Int, itemId: Long, returnToSearchHits: Boolean, function: ((AdapterView<*>, View?, Int, Long) -> Unit?)?) {
         // build a dialog
         var builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
@@ -1048,7 +1058,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     }
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
-                    whatToDoWithItemsSelection(position, null)
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
                 1 -> { // Select all
                     for (i in lvMain.arrayList!!.indices) {
@@ -1056,7 +1066,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     }
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
-                    whatToDoWithItemsSelection(position, null)
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
                 2 -> { // Invert selection
                     for (i in lvMain.arrayList!!.indices) {
@@ -1064,19 +1074,19 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     }
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
-                    whatToDoWithItemsSelection(position, null)
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
                 3 -> { // Select items of today
-                    lvMain.selectGivenDay(position)
+                    lvMain.selectGivenDay(itemPosition)
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
-                    whatToDoWithItemsSelection(position, null)
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
                 4 -> { // Copy to clipboard / shareBody
                     shareBody = lvMain.folderSelectedItems
                     clipboard = shareBody
                     dialog.dismiss()
-                    whatToDoWithItemsSelection(position, null)
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
                 5 -> { // Cut to clipboard / shareBody
                     var itemsSelected = false
@@ -1096,17 +1106,17 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 clipboard = shareBody
                                 deleteMarkedItems(0)
                             },
-                            { whatToDoWithItemsSelection(position, null) }
+                            { whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function) }
                         )
                     } else {
-                        whatToDoWithItemsSelection(position, null)
+                        whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                         centeredToast(this, getString(R.string.noSelection), 3000 )
                     }
                 }
                 6 -> { // empty space as separator to 'Delete from List'
                     dialog.dismiss()
                     Handler().postDelayed({
-                        whatToDoWithItemsSelection(position, null)
+                        whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                     }, 100)
                 }
                 7 -> { // Delete from ListView
@@ -1123,10 +1133,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             getString(R.string.deleteSelectedItems),
                             getString(R.string.continueQuestion),
                             { deleteMarkedItems(0) },
-                            { whatToDoWithItemsSelection(position, null) }
+                            { whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function) }
                         )
                     } else {
-                        whatToDoWithItemsSelection(position, null)
+                        whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                         centeredToast(this, getString(R.string.noSelection), 3000 )
                     }
                 }
@@ -1136,7 +1146,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builder.setPositiveButton(R.string.close, DialogInterface.OnClickListener { dialog, which ->
             dialog.dismiss()
             if (function != null) {
-                function(position)
+                function(adapterView, itemView, itemPosition, itemId)
             } else {
                 fabPlus.button?.show()
             }
@@ -1150,7 +1160,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // items from ListView are search hits, what to do with them as next
-    fun whatToDoWithSearchHits(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+    fun whatToDoWithSearchHits(adapterView: AdapterView<*>, itemView: View?, itemPosition: Int, itemId: Long) {
         // build a dialog
         var builder: AlertDialog.Builder? = null
         builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1176,7 +1186,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             lvMain.arrayList!![i].setSearchHit(false)
                         }
                         lvMain.adapter!!.notifyDataSetChanged()
-                        whatToDoWithSearchHits(parent, view, position, id)
+                        whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId)
                     }
                     1 -> { // invert selection
                         run {
@@ -1185,18 +1195,18 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             }
                         }
                         lvMain.adapter!!.notifyDataSetChanged()
-                        whatToDoWithSearchHits(parent, view, position, id)
+                        whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId)
                     }
                     2 -> { // copy search hits to clipboard & shareBody
                         shareBody = lvMain.folderSearchHits
                         clipboard = shareBody
-                        whatToDoWithSearchHits(parent, view, position, id)
+                        whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId)
                     }
                     3 -> { // edit current item
-                        lvMainOnItemLongClick(parent, view, position, id)
+                        whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, true)
                     }
                     4 -> { // separator
-                        whatToDoWithSearchHits(parent, view, position, id)
+                        whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId)
                     }
                     5 -> { // delete search hits from ListView
                         decisionBox(this@MainActivity,
@@ -1204,7 +1214,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             getString(R.string.deleteSelectedItems),
                             getString(R.string.continueQuestion),
                             { deleteMarkedItems(1) },
-                            { whatToDoWithSearchHits(parent, view, position, id) }
+                            { whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId) }
                         )
                     }
                 }
@@ -1213,7 +1223,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         // CANCEL button
         builder.setPositiveButton(
             R.string.close,
-            DialogInterface.OnClickListener { dialog, which -> dialog.dismiss() })
+            DialogInterface.OnClickListener { dialog, which ->
+                dialog.dismiss()
+            }
+        )
         val dialog = builder.create()
         val listView = dialog.listView
         listView.divider = ColorDrawable(Color.GRAY)
@@ -1312,8 +1325,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // input button click --> simple input of data
-    private fun fabPlusOnClick(view: View) {
-
+    private fun fabPlusOnClick(
+        adapterView: AdapterView<*>? = null,
+        itemView: View? = null,
+        itemPosition: Int = -1,
+        itemId: Long = -1,
+        returnToSearchHits: Boolean = false,
+        function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)?)
+    {
         // avoid multiple fabPlus instances (example: have one open + home + tap widget)
         if (fabPlus.inputAlertView != null && fabPlus.inputAlertView!!.isShown) {
             return
@@ -1323,8 +1342,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
 
         // create main editor object
-        val context = view.context
-        fabPlus.inputAlertView = GrzEditText(context)
+        fabPlus.inputAlertView = GrzEditText(this)
         fabPlus.inputAlertView?.inputType = InputType.TYPE_TEXT_FLAG_MULTI_LINE
         fabPlus.inputAlertView?.setSingleLine(false)
         fabPlus.inputAlertView?.gravity = Gravity.LEFT or Gravity.TOP
@@ -1388,11 +1406,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     // check for existence of an attachment link, it might have gotten destroyed
                     val matcher = PATTERN.UriLink.matcher(s.toString())
                     if (!matcher.find()) {
-                        Toast.makeText(
-                            applicationContext,
-                            R.string.attachmentLink.toString() + R.string.notValid,
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        // attachment link is gone
+                        centeredToast(this@MainActivity,getString(R.string.attachmentLink) + fabPlus.attachmentName + getString(R.string.notValid), 3000)
                         fabPlus.attachmentUri = ""
                         fabPlus.attachmentName = ""
                         // since link is gone, restarted fabPlus dialog shall show corrected content
@@ -1402,7 +1417,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         fabPlus.inputAlertText = tmp
                         // restart fabPlus.mainDialog with the activated ability to insert a new attachment link
                         fabPlus.mainDialog?.dismiss()
-                        fabPlus.button!!.performClick()
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        }, 100)
                         return
                     } else {
                         // memorize potential changed fabPlus.attachmentName
@@ -1493,7 +1510,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 if (!verifyMediaPermission()) {
                     centeredToast(this, getString(R.string.noMediaPermission), 3000)
                     Handler(Looper.getMainLooper()).postDelayed({
-                        fabPlus.button!!.performClick()
+                        fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                     }, 100)
                     dlg.dismiss()
                     return@OnClickListener
@@ -1505,14 +1522,20 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 if (!attachmentAllowed) {
                     // get current text from input editor: extract the part with the brackets bla[foo]bla
                     linkText = fabPlus.inputAlertText!!
+                    var linkTextNoBrackets = ""
                     val matchLnk = linkText?.let { PATTERN.UriLink.matcher(it.toString()) }
                     if (matchLnk?.find() == true) {
                         linkText = matchLnk.group()
+                        linkTextNoBrackets = linkText.substring(1, linkText.length-1)
                     } else {
                         linkText = ""
                     }
                     // clicked item's original full text: extract the part after :::: within the brackets
-                    var fullLink = lvMain.arrayList!![fabPlus.moreOptionsOnLongClickItemPos].fullTitle
+                    var fullLink = lvMain.arrayList!![itemPosition].fullTitle
+                    // ... but there could be a recently added and not yet saved attachment
+                    if (fabPlus.attachmentUri!!.length > 0) {
+                        fullLink = "[" + linkTextNoBrackets + "::::" + fabPlus.attachmentUri!! + "]"
+                    }
                     val matchOri = fullLink?.let { PATTERN.UriLink.matcher(it.toString()) }
                     var oriLink = ""
                     if (matchOri?.find() == true) {
@@ -1529,15 +1552,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     }
                 }
                 // fire attachment picker dlg, which finally ends at onActivityResult
-                startFilePickerDialog(attachmentAllowed, linkText.toString())
+                dlg.dismiss()
+                startFilePickerDialog(attachmentAllowed, linkText.toString(), adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
             })
 
         // fabPlus button OK
         //
         fabPlusBuilder.setPositiveButton(R.string.ok, DialogInterface.OnClickListener { dialog, which ->
-
-            // reset the possibility to return to moreOptionsOnLongClickItem()
-            fabPlus.moreOptionsOnLongClickItemPos = -1
 
             // timestamp requested ?
             var timestampType = ds!!.timeSection[ds!!.selectedSection]
@@ -1545,6 +1566,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             // get input data from AlertDialog
             var newText = trimEndAll(fabPlus.inputAlertView!!.text.toString())
 
+            // just in case, such thing came in from paste operation
             newText = newText.replace("\r\n", "\n")
 
             // empty input is only allowed, if timestamp is not empty
@@ -1552,6 +1574,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 centeredToast(this, getString(R.string.inputOneSpace), 3000)
                 fabPlus.button?.show()
                 dialog.dismiss()
+                // return to calling function
+                if ((function != null) && (itemPosition != -1)) {
+                    function(adapterView!!, itemView, itemPosition, itemId, returnToSearchHits)
+                }
                 return@OnClickListener
             }
 
@@ -1632,7 +1658,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 // specific case: one line edit & no change to text & user pushed ok
                 if (oriParts[lvMain.selectedRowNoSpacers].equals(newText) && !fabPlus.editInsertLine) {
                     // if nothing was changed, we leave here to avoid to show the undo icon
-                    localCancel(dialog, context)
+                    localCancel(dialog, this)
+                    centeredToast(this, getString(R.string.noChange), 3000)
+                    // return to calling function: toast would be overlapped w/o delay
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        if ((function != null) && (itemPosition != -1)) {
+                            function(adapterView!!, itemView, itemPosition, itemId, returnToSearchHits)
+                        }
+                    }, 500)
                     return@OnClickListener
                 }
                 // make the actual change: it's fine, if newText contains multiple \n
@@ -1732,7 +1765,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 markRange = true
                 // the magic newline
                 if (newText.endsWith("\n")) {
-//                    newText = newText.trimEnd('\n')
                     numOfNewlines--
                 }
                 // corrections:
@@ -1775,6 +1807,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             fabPlus.attachmentUri = ""
             fabPlus.inputAlertText = ""
             fabPlus.attachmentName = ""
+            fabPlus.button!!.show()
             // save and re-read saved data
             ds!!.dataSection[ds!!.selectedSection] = finalStr                      // update DataStore dataSection
             writeAppData(appStoragePath, ds, appName)                              // serialize DataStore to GrzLog.ser
@@ -1839,9 +1872,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (menuSearchVisible && searchViewQuery.length > 0) {
                 // edit item while search menu is open, shall restore the search hit selection status of all items
                 lvMain.restoreSearchHitStatus(searchViewQuery.lowercase(Locale.getDefault()))
-            } else {
-                // fabPlus was hidden during input, don't show after item edit with ongoing search
-                fabPlus.button!!.show()
             }
         })
 
@@ -1849,11 +1879,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         fabPlusBuilder.setNegativeButton(
             R.string.cancel,
             DialogInterface.OnClickListener { dialog, which ->
-                localCancel(dialog, context)
-                // if the item edit call came from fabPlus.moreOptionsOnLongClickItem, then jump back to it
-                if (fabPlus.moreOptionsOnLongClickItemPos != -1) {
-                    moreOptionsOnLongClickItem(fabPlus.moreOptionsOnLongClickItemPos)
-                    fabPlus.moreOptionsOnLongClickItemPos = -1
+                // standard cancel handling
+                localCancel(dialog, this)
+                // return to calling function
+                if ((function != null) && (itemPosition != -1)) {
+                    function(adapterView!!, itemView, itemPosition, itemId, returnToSearchHits)
                 }
             }
         )
@@ -1872,7 +1902,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         (fabPlus.mainDialog)?.setCanceledOnTouchOutside(false)
         // to detect Alert Dialog cancel: Android back button OR dlg quit
         (fabPlus.mainDialog)?.setOnCancelListener { dialog ->
-            localCancel(dialog, context)
+            localCancel(dialog, this)
         }
         // button shall be hidden when AlertDialog.Builder is shown
         fabPlus.button!!.hide()
@@ -2094,8 +2124,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (hasFocus) {
                 // clear any listview selection
                 lvMain.unselectSelections()
-                // hide fabPlus
-                fabPlus.button!!.hide()
                 // starting a search shall quit the auto menu handler: aka search hides other menu items
                 menuSearchVisible = true
                 mainMenuHandler.removeCallbacksAndMessages(null)
@@ -2145,7 +2173,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
             // show normal app title
             title = ds!!.namesSection[ds!!.selectedSection]
-            // show fabPlus (was hidden during search)
+            // show fabPlus
             fabPlus.button!!.show()
             // hide keyboard
             hideKeyboard()
@@ -3166,7 +3194,16 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // file picker dlg for fabPlus
-    fun startFilePickerDialog(attachmentAllowed: Boolean = true, linkText: String = "") {
+    fun startFilePickerDialog(
+        attachmentAllowed: Boolean = true,
+        linkText: String = "",
+        adapterView: AdapterView<*>?,
+        itemView: View?,
+        itemPosition: Int,
+        itemId: Long,
+        returnToSearchHits: Boolean = false,
+        function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)? = null)
+    {
         // build a dialog
         var pickerBuilder: AlertDialog.Builder?
         pickerBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -3188,6 +3225,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             getString(R.string.editExistingLink)
         )
         pickerBuilder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
+            // static memorize the return data
+            ReturnToDialogData(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+            // common intent
             var intent: Intent?
             when (item) {
                 0 -> { // IMAGE from Android
@@ -3203,7 +3243,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(pickIntent))
                         startActivityForResult(chooserIntent, PICK.IMAGE)
                     } else {
-                        fabPlus.button?.show()
+                        dialog.dismiss()
+                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        return@OnClickListener
                     }
                 }
                 1 -> { // IMAGE from GrzLog gallery
@@ -3212,7 +3254,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         centeredToast(this, getString(R.string.waitForFinish), Toast.LENGTH_SHORT)
                         var pw = ProgressWindow(this, getString(R.string.waitForFinish))
                         pw.dialog?.setOnDismissListener {
-                            startFilePickerDialog()
+                            startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                         }
                         pw.show()
                         pw.absCount = appScanTotal.toFloat()
@@ -3244,7 +3286,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     if (verifyCameraPermission()) {
                         capturedPhotoUri = makeCameraCaptureIntent()
                     } else {
-                        fabPlus.button?.show()
+                        dialog.dismiss()
+                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        return@OnClickListener
                     }
                 }
                 3 -> { // VIDEO
@@ -3260,7 +3304,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(pickIntent))
                         startActivityForResult(chooserIntent, PICK.VIDEO)
                     } else {
-                        fabPlus.button?.show()
+                        dialog.dismiss()
+                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        return@OnClickListener
                     }
                 }
                 4 -> { // AUDIO
@@ -3270,7 +3316,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         intent.addCategory(Intent.CATEGORY_OPENABLE)
                         startActivityForResult(intent, PICK.AUDIO)
                     } else {
-                        fabPlus.button?.show()
+                        dialog.dismiss()
+                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        return@OnClickListener
                     }
                 }
                 5 -> { // PDF
@@ -3334,13 +3382,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             fabPlus.attachmentUri = tv.text.toString()
                             fabPlus.attachmentUriUri = null
                             fabPlus.attachmentName = "[www]"
-                            fabPlus.button!!.performClick()
+                            dlg.dismiss()
+                            fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                         })
                     wwwBuilder.setNegativeButton(
                         R.string.cancel,
                         DialogInterface.OnClickListener { dlg, which ->
                             dlg.dismiss()
-                            startFilePickerDialog()
+                            startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                             return@OnClickListener
                         })
                     wwwBuilder.setView(tv)
@@ -3360,7 +3409,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     tv.setSingleLine(false)
                     tv.gravity = Gravity.LEFT or Gravity.TOP
                     tv.addTextChangedListener(object : TextWatcher {
-                        // modify text input window according to text length
+                        // modify text input window dimensions according to text length
                         val fontSize = tv.textSize
                         val lineSpacingExtra = Math.max(tv.lineSpacingExtra, 25f)
                         val lineSpacingMultiplier = tv.lineSpacingMultiplier
@@ -3423,7 +3472,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     fabPlus.attachmentUri = lnkParts[1]
                                     fabPlus.attachmentUriUri = null
                                     fabPlus.pickAttachment = true
-                                    fabPlus.button!!.performClick()
+                                    fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                                 } else {
                                     // no link --> cancel
                                     centeredToast(this, getString(R.string.linkDestroyed), 3000)
@@ -3441,7 +3490,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     editLinkBuilder.setNegativeButton(
                         R.string.cancel,
                         DialogInterface.OnClickListener { dlg, which ->
-                            dialog.cancel()
+                            dlg.cancel()
                             return@OnClickListener
                         })
                     // edit builder show
@@ -3454,8 +3503,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     tv.requestFocus()
                     showKeyboard(tv, 0, 0, 250)
                     // detect cancel: Android back button OR editLinkBuilder NegativeButton
-                    editLinkDialog.setOnCancelListener { dialog ->
-                        fabPlus.button!!.performClick()
+                    editLinkDialog.setOnCancelListener { dlg ->
+                        // restart
+                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                     }
                 }
             }
@@ -3497,7 +3547,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         pickerDialog.setCanceledOnTouchOutside(false)
         // detect cancel: Android back button OR editLinkBuilder NegativeButton
         pickerDialog.setOnCancelListener { dialog ->
-            fabPlus.button!!.performClick()
+            // reset static memorize the return data
+            ReturnToDialogData.reset()
+            // back to main input
+            fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
         }
     }
 
@@ -3506,7 +3559,17 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         super.onActivityResult(requestCode, resultCode, data)
         fabPlus.imageCapture = false
         if (resultCode != RESULT_OK) {
-            startFilePickerDialog()
+            startFilePickerDialog(
+                true,
+                ReturnToDialogData.linkText,
+                ReturnToDialogData.adapterView,
+                ReturnToDialogData.itemView,
+                ReturnToDialogData.itemPosition,
+                ReturnToDialogData.itemId!!,
+                ReturnToDialogData.returnToSearchHits,
+                ReturnToDialogData.function
+            )
+            ReturnToDialogData.reset()
             return
         }
         if (requestCode == PICK.CAPTURE) {
@@ -3516,13 +3579,21 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (capturedPhotoUri != null) {
                 fabPlus.imageCapture = true
                 fabPlus.pickAttachment = true
-//                var unusableImage = getRealPathFromUri(capturedPhotoUri) // image is not correctly resolved into a real path
                 fabPlus.attachmentUri = FileUtils.getPath(this, capturedPhotoUri!!)
                 fabPlus.attachmentName = getString(R.string.capture)
             } else {
-// after GCam ???
-//                fabPlus.button!!.performClick()
-                startFilePickerDialog()
+// !! not going here after GCam usage !!
+                startFilePickerDialog(
+                    true,
+                    ReturnToDialogData.linkText,
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function
+                )
+                ReturnToDialogData.reset()
                 return
             }
         }
@@ -3549,12 +3620,32 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     fabPlus.attachmentUriUri = uriOri
                     fabPlus.attachmentName = getString(R.string.image)
                 } else {
-                    startFilePickerDialog()
+                    startFilePickerDialog(
+                        true,
+                        ReturnToDialogData.linkText,
+                        ReturnToDialogData.adapterView,
+                        ReturnToDialogData.itemView,
+                        ReturnToDialogData.itemPosition,
+                        ReturnToDialogData.itemId!!,
+                        ReturnToDialogData.returnToSearchHits,
+                        ReturnToDialogData.function
+                    )
+                    ReturnToDialogData.reset()
                     return
                 }
             } catch (e: Exception) {
                 centeredToast(this, e.message.toString(), 3000)
-                startFilePickerDialog()
+                startFilePickerDialog(
+                    true,
+                    ReturnToDialogData.linkText,
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function
+                )
+                ReturnToDialogData.reset()
                 return
             }
         }
@@ -3581,16 +3672,52 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     fabPlus.attachmentUriUri = uriOri
                     fabPlus.attachmentName = getString(R.string.video)
                 } else {
-                    startFilePickerDialog()
+                    startFilePickerDialog(
+                        true,
+                        ReturnToDialogData.linkText,
+                        ReturnToDialogData.adapterView,
+                        ReturnToDialogData.itemView,
+                        ReturnToDialogData.itemPosition,
+                        ReturnToDialogData.itemId!!,
+                        ReturnToDialogData.returnToSearchHits,
+                        ReturnToDialogData.function
+                    )
+                    ReturnToDialogData.reset()
                     return
                 }
             } catch (e: Exception) {
                 centeredToast(this, e.message.toString(), 5000)
                 if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-                    okBox(this, getString(R.string.androidIssue),getString(R.string.useFilesPicker), { startFilePickerDialog() })
+                    okBox(
+                        this,
+                        getString(R.string.androidIssue),
+                        getString(R.string.useFilesPicker),
+                        {
+                            startFilePickerDialog(
+                                true,
+                                ReturnToDialogData.linkText,
+                                ReturnToDialogData.adapterView,
+                                ReturnToDialogData.itemView,
+                                ReturnToDialogData.itemPosition,
+                                ReturnToDialogData.itemId!!,
+                                ReturnToDialogData.returnToSearchHits,
+                                ReturnToDialogData.function
+                            )
+                        }
+                    )
                 } else {
-                    startFilePickerDialog()
+                    startFilePickerDialog(
+                        true,
+                        ReturnToDialogData.linkText,
+                        ReturnToDialogData.adapterView,
+                        ReturnToDialogData.itemView,
+                        ReturnToDialogData.itemPosition,
+                        ReturnToDialogData.itemId!!,
+                        ReturnToDialogData.returnToSearchHits,
+                        ReturnToDialogData.function
+                    )
                 }
+                ReturnToDialogData.reset()
                 return
             }
         }
@@ -3606,7 +3733,17 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 fabPlus.attachmentUriUri = uriOri
                 fabPlus.attachmentName = getString(R.string.audio)
             } else {
-                startFilePickerDialog()
+                startFilePickerDialog(
+                    true,
+                    ReturnToDialogData.linkText,
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function
+                )
+                ReturnToDialogData.reset()
                 return
             }
         }
@@ -3622,18 +3759,48 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     fabPlus.attachmentUriUri = uriOri
                     fabPlus.attachmentName = "[" + file.name + "]"
                 } else {
-                    startFilePickerDialog()
+                    startFilePickerDialog(
+                        true,
+                        ReturnToDialogData.linkText,
+                        ReturnToDialogData.adapterView,
+                        ReturnToDialogData.itemView,
+                        ReturnToDialogData.itemPosition,
+                        ReturnToDialogData.itemId!!,
+                        ReturnToDialogData.returnToSearchHits,
+                        ReturnToDialogData.function
+                    )
+                    ReturnToDialogData.reset()
                     return
                 }
             }
             catch (e: Exception) {
                 centeredToast(this, "PICK.PDF" + e.message.toString(), 3000)
-                startFilePickerDialog()
+                startFilePickerDialog(
+                    true,
+                    ReturnToDialogData.linkText,
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function
+                )
+                ReturnToDialogData.reset()
                 return
             }
             catch (e: FileNotFoundException) {
                 centeredToast(this, "PICK.PDF" + e.message.toString(), 3000)
-                startFilePickerDialog()
+                startFilePickerDialog(
+                    true,
+                    ReturnToDialogData.linkText,
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function
+                )
+                ReturnToDialogData.reset()
                 return
             }
         }
@@ -3649,24 +3816,61 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     fabPlus.attachmentUriUri = uriOri
                     fabPlus.attachmentName = "[" + file.name + "]"
                 } else {
-                    startFilePickerDialog()
+                    startFilePickerDialog(false, "", null, null, -1, -1)
+                    ReturnToDialogData(
+                        true,
+                        ReturnToDialogData.linkText,
+                        ReturnToDialogData.adapterView,
+                        ReturnToDialogData.itemView,
+                        ReturnToDialogData.itemPosition,
+                        ReturnToDialogData.itemId!!,
+                        ReturnToDialogData.returnToSearchHits,
+                        ReturnToDialogData.function
+                    )
                     return
                 }
             }
             catch (e: Exception) {
                 centeredToast(this, "PICK.TXT" + e.message.toString(), 3000)
-                startFilePickerDialog()
+                startFilePickerDialog(
+                    true,
+                    ReturnToDialogData.linkText,
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function
+                )
+                ReturnToDialogData.reset()
                 return
             }
             catch (e: FileNotFoundException) {
                 centeredToast(this, "PICK.TXT" + e.message.toString(), 3000)
-                startFilePickerDialog()
+                startFilePickerDialog(
+                    true,
+                    ReturnToDialogData.linkText,
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function)
+                ReturnToDialogData.reset()
                 return
             }
         }
 
-        // always jump back to input
-        fabPlus.button!!.performClick()
+        // back to main input with the option to return there to the calling dialog
+        fabPlusOnClick(
+            ReturnToDialogData.adapterView,
+            ReturnToDialogData.itemView,
+            ReturnToDialogData.itemPosition,
+            ReturnToDialogData.itemId!!,
+            ReturnToDialogData.returnToSearchHits,
+            ReturnToDialogData.function
+        )
+        ReturnToDialogData.reset()
     }
 
     // provide an intent to start the selected camera app
@@ -3889,7 +4093,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         0
                     )
                 )
-                et.setSelection(selectStart, selectStop)
+                var start = Math.max(0, Math.min(selectStart, et.text.length))
+                var stop = Math.max(0, Math.min(selectStop, et.text.length))
+                et.setSelection(start, stop)
             }
         }, (msDelay + 1000).toLong())
     }
@@ -3900,26 +4106,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
-    }
-
-    // get real path from GooglePhoto URL
-    private fun getRealPathFromUri(contentURI: Uri?): String? {
-        val result: String?
-        val cursor: Cursor? = null
-        try {
-            val cursor = contentResolver.query(contentURI!!, null, null, null, null)
-        } catch (e: IllegalArgumentException) {
-            return ""
-        }
-        if (cursor == null) { // Source is Dropbox or other similar local file path
-            result = contentURI.path
-        } else {
-            cursor.moveToFirst()
-            val idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA)
-            result = cursor.getString(idx)
-            cursor.close()
-        }
-        return result
     }
 
     // if image capture input is cancelled, we need to remove/delete the previously captured image
@@ -5220,6 +5406,42 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         lateinit var contextMainActivity: MainActivity
             private set
 
+        // static storage, if activity was left and then returned to it
+        class ReturnToDialogData {
+            companion object {
+                var attachmentAllowed: Boolean = true
+                var linkText: String = ""
+                var adapterView: AdapterView<*>? = null
+                var itemView: View? = null
+                var itemPosition: Int = -1
+                var itemId: Long? = -1
+                var returnToSearchHits: Boolean = false
+                var function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)? = null
+
+                fun reset() {
+                    ReturnToDialogData(false, "", null, null, -1, -1, false, null)
+                }
+            }
+
+            constructor(attachmentAllowed: Boolean,
+                        linkText: String,
+                        adapterView: AdapterView<*>?,
+                        itemView: View?,
+                        itemPosition: Int,
+                        itemId: Long?,
+                        returnToSearchHits: Boolean,
+                        function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)?) {
+                ReturnToDialogData.attachmentAllowed = attachmentAllowed
+                ReturnToDialogData.linkText = linkText
+                ReturnToDialogData.adapterView = adapterView
+                ReturnToDialogData.itemView = itemView
+                ReturnToDialogData.itemPosition = itemPosition
+                ReturnToDialogData.itemId = itemId
+                ReturnToDialogData.returnToSearchHits = returnToSearchHits
+                ReturnToDialogData.function = function
+            }
+        }
+
         //
         // verify attachment links, make attachments app local (if needed) and delete orphaned files
         //
@@ -6079,7 +6301,6 @@ class FabPlus {
     var pickAttachment = false               // flag indicates, fabPlus was called from onActivityResult
     var imageCapture = false                 // flag indicates, an image was captured
     var mainDialog: AlertDialog? = null      // main edit dlg after click on button +
-    var moreOptionsOnLongClickItemPos = -1   // allows to return to moreOptionsOnLongClickItem at given item position
 }
 
 // compile regex patterns once in advance to detect: "blah[uriLink]blah", "YYYY-MM-DD", "YYYY-MM-DD Mon"

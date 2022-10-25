@@ -174,9 +174,8 @@ class FileUtils(var context: Context) {
                         return getDriveFilePath(context, uri)
                     }
                     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        // return getFilePathFromURI(context,uri);
+                        // return the filename provided by copyFileToInternalStorage
                         copyFileToInternalStorage(context, uri, FALLBACK_COPY_FOLDER)
-                        // return getRealPathFromURI(context,uri);
                     } else {
                         getDataColumn(context, uri, null, null)
                     }

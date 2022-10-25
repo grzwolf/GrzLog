@@ -8,7 +8,7 @@
     <string name="extra_header">Extra</string>
 
     <!-- Messages Preferences -->
-    <string name="signature_title">GrzLog 1.0.8</string>
+    <string name="signature_title">GrzLog 1.0.9</string>
     <string name="signature_summary">\nKontakt: grzwolf.app@gmail.com</string>
 
     <!-- Sync Preferences -->
@@ -59,7 +59,7 @@
     <string name="Reminder">Erinnerung</string>
     <string name="willShow">wird auf dem Sperrschirm gezeigt</string>
     <string name="InsertFile">Anhang</string>
-    <string name="Options">Eingabe Optionen</string>
+    <string name="Options">Was soll mit der aktuellen Zeile geschehen?</string>
     <string name="ShowOnLockscreen">Sperrschirm Erinnerung:</string>
     <string name="created_with">erzeugt von \"</string>
     <string name="imageFailure">[Bidfehler]</string>
@@ -153,7 +153,7 @@
     <string name="audio">[Audio]</string>
     <string name="errorRenameBakFolder">BAK kann nicht erstellt werden.</string>
     <string name="deleteSelectedItems">Ausgewählte Items löschen?</string>
-    <string name="whatToDoWithItems">Selektion von Items</string>
+    <string name="whatToDoWithItems">Was soll mit der Auswahl geschehen?</string>
     <string name="unselectAll">Selektion aufheben</string>
     <string name="selectAll">Alle selektieren</string>
     <string name="copyToClipboard">Kopieren in Zwischenablage</string>
@@ -205,5 +205,6 @@
     <string name="openLinksInBrowser">Öffnen von Text Links mit Browser</string>
     <string name="editExistingLink">Edit Dateianhang</string>
     <string name="linkDestroyed">Abbruch, weil Link zu Dateianhang zerstört</string>
+    <string name="noChange">keine Änderung</string>
 </resources>
 
