@@ -179,8 +179,7 @@ fun createZipArchive(
 internal fun upgradeFromLegacy(storagePath: String?, deleteLegacyFile: Boolean): DataStore? {
     var dataStore: DataStore? = null
     // loop the possibly existing *.txt files
-    val possibleNames =
-        arrayOf("GrzLog.txt", "LogBookPro.txt", "LogBook.txt", "QuickLogBook.txt")
+    val possibleNames = arrayOf("GrzLog.txt", "LogBookPro.txt", "LogBook.txt", "QuickLogBook.txt")
     var possibleNamesNdx = -1
     var file: File? = null
     for (i in possibleNames.indices) {

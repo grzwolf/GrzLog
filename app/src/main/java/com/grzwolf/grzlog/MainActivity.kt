@@ -90,6 +90,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     var searchViewQuery = ""                              // search query string
     var menuSearchVisible = false                         // visibility flag of search input
     var capturedPhotoUri: Uri? = null                     // needs to be global, bc there is no way a camara app returns uri in onActivityResult
+    var fabBack : FloatingActionButton? = null            // folder as attachment link: if folder is switched, show a return to origin button
 
     internal object PICK {
         // different attachments
@@ -195,6 +196,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         lvMain.listView = findViewById(R.id.lvMain)
         lvMain.showOrder = if (sharedPref.getBoolean("newAtBottom", false)) SHOW_ORDER.BOTTOM else SHOW_ORDER.TOP
         fabPlus.button = findViewById(R.id.fabPlus)
+        fabBack = findViewById(R.id.fabBack)
 
         // prevents onPause / onResume to make a text bak: reset flag in onCreate
         returningFromRestore = false
@@ -285,6 +287,25 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         (fabPlus.button)?.setOnLongClickListener(OnLongClickListener { view ->
             fabPlusOnLongClick(view, lvMain.listView)
             true
+        })
+
+        // switch back to previous folder after following an attachment link to a GrzLog folder
+        (fabBack)?.setOnClickListener(View.OnClickListener { view ->
+            val switchToFolder = fabBack!!.tag.toString()
+            decisionBox(
+                this,
+                DECISION.YESNO,
+                getString(R.string.switchFolder),
+                switchToFolder,
+                {
+                    if (fabBack != null) {
+                        fabBack!!.visibility = INVISIBLE
+                        switchToFolderByName(switchToFolder)
+                        fabBack!!.tag = ""
+                    }
+                },
+                null
+            )
         })
 
         // silently scan app gallery data
@@ -583,8 +604,30 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         if (!verifyExifPermission()) {
                             centeredToast(this, getString(R.string.mayNotWork), 3000)
                         }
-                        centeredToast(this, attachment, 50)
-                        showAppLinkOrAttachment(this, title, fileName)
+//                        centeredToast(this, attachment, 50)
+                        if (fileName!!.startsWith("folder/") == true) {
+                            // fileName starting with folder/ is an attachment link to a GrzLog folder
+                            var folderName = fileName!!.substring(fileName!!.indexOf("folder/") + "folder/".length)
+                            decisionBox(
+                                this,
+                                DECISION.YESNO,
+                                getString(R.string.switchFolder),
+                                folderName,
+                                {
+                                    if (fabBack != null) {
+                                        val dsFolder = ds!!.namesSection[ds!!.selectedSection]
+                                        fabBack!!.tag = dsFolder
+                                        fabBack!!.visibility = VISIBLE
+                                    }
+                                    switchToFolderByName(folderName)
+                                },
+                                null
+                            )
+                            return
+                        } else {
+                            // all other attachments and www
+                            showAppLinkOrAttachment(this, title, fileName)
+                        }
                     }
                 }
             } else {
@@ -2053,12 +2096,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         return dataStore
     }
 
-    private fun tryLocalRestoreFromTxt(): DataStore? {
-        var dataStore: DataStore? = null
-
-        return dataStore
-    }
-
     // method returns a reversed SHOW_ORDER, it toggles from TOP to BOTTOM or from BOTTOM to TOP
     fun toggleTextShowOrder(toReverse: String): String {
         // input data array contains split by "\n" lines
@@ -2556,7 +2593,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (searchView != null) {
                 searchView!!.onActionViewCollapsed()
             }
-
+            // reset visibility of the folder switch back button
+            if (fabBack != null) {
+                fabBack!!.visibility = INVISIBLE
+                fabBack!!.tag = ""
+            }
             // change folder always cancels undo
             ds!!.undoSection = ""
             ds!!.undoText = ""
@@ -2579,30 +2620,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             changeFileBuilder.setSingleChoiceItems(
                 array,
                 ds!!.selectedSection,
-                DialogInterface.OnClickListener { dialog, which -> // the current file selection is temporary, unless we confirm with OK
+                DialogInterface.OnClickListener { dialog, which ->
+                    // the current file selection is temporary, unless we confirm with OK
                     selectedSectionTemp[0] = which
                     // check double click event: it shall behave like OK, means make the folder change permanent
                     val nowTime = System.currentTimeMillis()
                     val deltaTime = nowTime - lastClickTime[0]
                     if (deltaTime < 700 && lastSelectedSection[0] == which) {
                         // now the file selection becomes permanent
-                        ds!!.selectedSection = selectedSectionTemp[0]
-                        writeAppData(appStoragePath, ds, appName)
-                        val dsText =
-                            ds!!.dataSection[ds!!.selectedSection] // pick the data section from DataStore
-                        lvMain.arrayList = lvMain.makeArrayList(
-                            dsText,
-                            lvMain.showOrder
-                        ) // convert & format raw text to array
-                        lvMain.adapter = LvAdapter(
-                            this@MainActivity,
-                            lvMain.arrayList
-                        ) // set adapter and populate main listview
-                        lvMain.listView!!.adapter = lvMain.adapter
-                        title = ds!!.namesSection[ds!!.selectedSection]
-                        val pos =
-                            if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList!!.size - 1 // scroll main listview
-                        lvMain.scrollToItemPos(pos)
+                        switchToFolderByNumber(selectedSectionTemp[0])
                         dialog.cancel()
                     }
                     lastSelectedSection[0] = which
@@ -2611,23 +2637,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             // CHANGE FOLDER selection OK
             changeFileBuilder.setPositiveButton(
                 R.string.ok,
-                DialogInterface.OnClickListener { dialog, which -> // now the file selection becomes permanent
-                    ds!!.selectedSection = selectedSectionTemp[0]
-                    writeAppData(appStoragePath, ds, appName)
-                    val dsText = ds!!.dataSection[ds!!.selectedSection]
-                    lvMain.arrayList = lvMain.makeArrayList(
-                        dsText,
-                        lvMain.showOrder
-                    ) // convert & format raw text to array
-                    lvMain.adapter = LvAdapter(
-                        this@MainActivity,
-                        lvMain.arrayList
-                    ) // set adapter and populate main listview
-                    lvMain.listView!!.adapter = lvMain.adapter
-                    title = ds!!.namesSection[ds!!.selectedSection]
-                    val pos =
-                        if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList!!.size - 1 // scroll main listview
-                    lvMain.scrollToItemPos(pos)
+                DialogInterface.OnClickListener { dialog, which ->
+                    // now the file selection becomes permanent
+                    switchToFolderByNumber(selectedSectionTemp[0])
                     dialog.cancel()
                 })
             // CHANGE FOLDER selection Cancel
@@ -3046,6 +3058,38 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         return super.onOptionsItemSelected(item)
     }
 
+    // switch folder helpers
+    fun switchToFolderByNumber(number: Int) {
+        if (number < 0 || number >= ds!!.dataSection.size) {
+            if (fabBack != null) {
+                fabBack!!.visibility = INVISIBLE
+                fabBack!!.tag = ""
+            }
+            centeredToast(this, "Index out of range", 3000)
+            return
+        }
+        ds!!.selectedSection = number
+        writeAppData(appStoragePath, ds, appName)
+        val dsText = ds!!.dataSection[ds!!.selectedSection]
+        lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)
+        lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList)
+        lvMain.listView!!.adapter = lvMain.adapter
+        title = ds!!.namesSection[ds!!.selectedSection]
+        val pos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList!!.size - 1 // scroll main listview
+        lvMain.scrollToItemPos(pos)
+    }
+    fun switchToFolderByName(name: String) {
+        var folderNumber = -1
+        val folderList = ds!!.namesSection.toTypedArray()
+        for (i in 0 .. folderList.size) {
+            if (folderList[i].equals(name)) {
+                folderNumber = i
+                break
+            }
+        }
+        switchToFolderByNumber(folderNumber)
+    }
+
     fun verifyNotificationPermission(): Boolean {
         val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()
         ) { isGranted: Boolean ->
@@ -3222,6 +3266,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             "PDF",
             "TXT",
             "WWW",
+            getString(R.string.appFolder),
             getString(R.string.editExistingLink)
         )
         pickerBuilder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
@@ -3400,7 +3445,52 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     tv.requestFocus()
                     showKeyboard(tv, 0, 0, 250)
                 }
-                8 -> { // edit existing link
+                8 -> { // link to a GrzLog folder
+                    var getFolderBuilder: AlertDialog.Builder? = null
+                    getFolderBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
+                    } else {
+                        AlertDialog.Builder(this@MainActivity)
+                    }
+                    getFolderBuilder.setTitle(R.string.selectFolder)
+                    var selectedSectionTemp = ds!!.selectedSection
+                    // add a radio button list containing all the folder names from DataStore
+                    val folderList = ds!!.namesSection.toTypedArray()
+                    getFolderBuilder.setSingleChoiceItems(
+                        folderList,
+                        ds!!.selectedSection,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            // the current file selection is temporary, unless we confirm with OK
+                            selectedSectionTemp = which
+                        })
+                    // OK
+                    getFolderBuilder.setPositiveButton(
+                        R.string.ok,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            fabPlus.pickAttachment = true
+                            fabPlus.attachmentUri = "folder/" + folderList[selectedSectionTemp]
+                            fabPlus.attachmentUriUri = null
+                            fabPlus.attachmentName = "[" + getString(R.string.folder) + "]"
+                            dialog.dismiss()
+                            fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            dialog.cancel()
+                        })
+                    // Cancel
+                    getFolderBuilder.setNegativeButton(
+                        R.string.cancel,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            dialog.dismiss()
+                            startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            return@OnClickListener
+                        })
+                    // CHANGE FOLDER finally show change folder dialog
+                    var getFolderDialog = getFolderBuilder.create()
+                    val listView = changeFolderDialog?.getListView()
+                    listView?.divider = ColorDrawable(Color.GRAY)
+                    listView?.dividerHeight = 2
+                    getFolderDialog?.show()
+                }
+                9 -> { // edit existing link
                     // edit dialog
                     var editLinkDialog: AlertDialog? = null
                     // text editor
@@ -3530,12 +3620,12 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     val itemIndex: Int = options.indexOf(text)
                     child.setEnabled(true)
                     if (attachmentAllowed) {
-                        if (itemIndex == 8) {
+                        if (itemIndex == 9) {
                             child.setEnabled(false)
                             child.setOnClickListener(null)
                         }
                     } else {
-                        if (itemIndex < 8) {
+                        if (itemIndex < 9) {
                             child.setEnabled(false)
                             child.setOnClickListener(null)
                         }
@@ -6217,12 +6307,15 @@ internal class LvAdapter : BaseAdapter {
             // place icon left to key and after the opening bracket
             val start = text?.indexOf('[')?.plus(1)
             val stop = text?.indexOf(']')?.plus(1)
-            // insert a " " as icon placeholder
-            text = text?.substring(0, start!!) + " " + text?.substring(start!!)
-            spanStr = SpannableString(text)
-            // set icon via spannable
-            res = android.R.drawable.ic_dialog_alert
-            val mime = getFileExtension(items!![position].fullTitle!!.substring(0, items!![position].fullTitle!!.lastIndexOf("]")))
+            var mime = ""
+            if ( stop != -1 ) {
+                // insert a " " as icon placeholder
+                text = text?.substring(0, start!!) + " " + text?.substring(start!!)
+                spanStr = SpannableString(text)
+                // set icon via spannable
+                res = android.R.drawable.ic_dialog_alert
+                mime = getFileExtension(items!![position].fullTitle!!.substring(0, items!![position].fullTitle!!.lastIndexOf("]")))
+            }
             if (mime.length > 0) {
                 if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
                     res = android.R.drawable.ic_menu_camera
@@ -6239,21 +6332,42 @@ internal class LvAdapter : BaseAdapter {
                                 if (mime.equals("txt", ignoreCase = true)) {
                                     res = android.R.drawable.ic_dialog_email
                                 } else {
+                                    // www attachment link goes here, bc www mime is not empty
                                     val fullItemText = items!![position].fullTitle
                                     val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
-                                    if (m?.find() == true) {
+                                    if (m?.find() == true) { // www attachment link
                                         val result = m.group()
                                         val key = result.substring(1, result.length - 1)
                                         val lnkParts = key.split("::::".toRegex()).toTypedArray()
                                         if (lnkParts != null && lnkParts.size == 2) {
-                                            var title = lnkParts[0]
                                             var fileName = lnkParts[1]
                                             if (fileName!!.startsWith("/") == false) {
                                                 res = android.R.drawable.ic_menu_compass
                                             }
+                                            // in case a folder name contains a .
+                                            if (fileName!!.startsWith("folder/")) {
+                                                res = android.R.drawable.ic_menu_agenda
+                                            }
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // check for folder attachment link, if folder name does not contain a .
+                if ( start != -1 && stop != -1 ) {
+                    val fullItemText = items!![position].fullTitle
+                    val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                    if (m?.find() == true) {
+                        val result = m.group()
+                        val key = result.substring(1, result.length - 1)
+                        val lnkParts = key.split("::::".toRegex()).toTypedArray()
+                        if (lnkParts != null && lnkParts.size == 2) {
+                            var fileName = lnkParts[1]
+                            if (fileName!!.startsWith("folder/")) {
+                                res = android.R.drawable.ic_menu_agenda
                             }
                         }
                     }

@@ -207,4 +207,6 @@
     <string name="editExistingLink">Edit existing attachment</string>
     <string name="linkDestroyed">Cancel, due to destroyed attachment link</string>
     <string name="noChange">nothing was changed</string>
+    <string name="appFolder">GrzLog folder</string>
+    <string name="switchFolder">Leave the current folder and switch to below?</string>
 </resources>

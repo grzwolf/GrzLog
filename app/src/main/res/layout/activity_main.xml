@@ -33,6 +33,16 @@ tools:context="com.grzwolf.grzlog.MainActivity">
     app:srcCompat="@android:drawable/ic_input_add"
     android:tint="@android:color/white"/>
 
+<com.google.android.material.floatingactionbutton.FloatingActionButton
+    android:id="@+id/fabBack"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="right|center_vertical"
+    android:layout_margin="16dp"
+    app:srcCompat="@drawable/ic_menu_back"
+    android:visibility="invisible"
+    android:tint="@android:color/white"/>
+
 <ListView
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintLeft_toLeftOf="parent"

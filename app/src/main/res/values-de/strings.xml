@@ -206,5 +206,7 @@
     <string name="editExistingLink">Edit Dateianhang</string>
     <string name="linkDestroyed">Abbruch, weil Link zu Dateianhang zerstört</string>
     <string name="noChange">keine Änderung</string>
+    <string name="appFolder">GrzLog Ordner</string>
+    <string name="switchFolder">Aktuellen Ordner verlassen und in s.u. wechseln?</string>
 </resources>
 
