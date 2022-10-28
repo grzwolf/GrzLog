@@ -8,7 +8,7 @@
     <string name="extra_header">Extra</string>
 
     <!-- Messages Preferences -->
-    <string name="signature_title">GrzLog 1.0.10</string>
+    <string name="signature_title">GrzLog 1.0.11</string>
     <string name="signature_summary">\nKontakt: grzwolf.app@gmail.com</string>
 
     <!-- Sync Preferences -->
@@ -208,5 +208,8 @@
     <string name="noChange">keine Änderung</string>
     <string name="appFolder">GrzLog Ordner</string>
     <string name="switchFolder">Aktuellen Ordner verlassen und in s.u. wechseln?</string>
+    <string name="ToggleLineAsHeader">Wechseln Zeile als Überschrift</string>
+    <string name="ToggleLineAsText">Wechseln Zeile als Text</string>
+    <string name="LineOrHeader">Jetzt wechseln?</string>
 </resources>
 

@@ -787,14 +787,19 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builderItemMore?.setCustomTitle(titleView)
         // the following options are related to the ListView item
         val charSequences: MutableList<CharSequence> = ArrayList()
-        charSequences.add(getString(R.string.EditLine))             // ITEM == 0
-        charSequences.add(getString(R.string.CopyLine))             // ITEM == 1
-        charSequences.add(getString(R.string.InsertLineBefore))     // ITEM == 2
-        charSequences.add(getString(R.string.InsertLineAfter))      // ITEM == 3
-        charSequences.add(getString(R.string.SelectItems))          // ITEM == 4
-        charSequences.add(getString(R.string.LockscreenReminder))   // ITEM == 5
-        charSequences.add("")                                       // ITEM == 6
-        charSequences.add(getString(R.string.RemoveLine))           // ITEM == 7
+        charSequences.add(getString(R.string.EditLine))              // ITEM == 0
+        charSequences.add(getString(R.string.CopyLine))              // ITEM == 1
+        charSequences.add(getString(R.string.InsertLineBefore))      // ITEM == 2
+        charSequences.add(getString(R.string.InsertLineAfter))       // ITEM == 3
+        charSequences.add(getString(R.string.SelectItems))           // ITEM == 4
+        charSequences.add(getString(R.string.LockscreenReminder))    // ITEM == 5
+        if (lvMain.arrayList!![itemPosition].isSection) {
+            charSequences.add(getString(R.string.ToggleLineAsText))  // ITEM == 6
+        } else {
+            charSequences.add(getString(R.string.ToggleLineAsHeader))// ITEM == 6
+        }
+        charSequences.add("")                                        // ITEM == 7
+        charSequences.add(getString(R.string.RemoveLine))            // ITEM == 8
         val itemsMore = charSequences.toTypedArray()
         builderItemMore?.setItems(
             itemsMore,
@@ -962,13 +967,86 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     youSureDlg.show()
                 }
 
-                // ITEM == 6 'empty space'
+                // ITEM == 6 'set header manually'
                 if (which == 6) {
+                    // if item is date header, dismiss
+                    if (PATTERN.DateDay.matcher(lvMain.arrayList!![itemPosition].title.toString()).find()) {
+                        centeredToast(this, "Line is already header", 3000)
+                        dialog.dismiss()
+                        return@OnClickListener
+                    }
+                    decisionBox(
+                        this,
+                        DECISION.YESNO,
+                        getString(R.string.ToggleLineAsHeader),
+                        getString(R.string.LineOrHeader),
+                        {
+                            // save undo data
+                            lvMain.selectedRow = itemPosition
+                            ds!!.undoSection = ds!!.dataSection[ds!!.selectedSection]
+                            ds!!.undoText = charSequences[6].toString()
+                            ds!!.undoAction = ACTION.REVERTEDIT
+                            showMenuItemUndo()
+                            // modify title and fullTitle
+                            var isNowSection: Boolean
+                            var newTitle: String
+                            var fullTitle: String
+                            if (lvMain.arrayList!![itemPosition].isSection) {
+                                // reset header flag
+                                newTitle = lvMain.arrayList!![itemPosition].title!!.substring(1)
+                                fullTitle = lvMain.arrayList!![itemPosition].fullTitle!!.substring(1)
+                                isNowSection = false
+                            } else {
+                                // set header flag: Tab = 9
+                                newTitle = 9.toChar() + lvMain.arrayList!![itemPosition].title!!
+                                fullTitle = 9.toChar() + lvMain.arrayList!![itemPosition].fullTitle!!
+                                isNowSection = true
+                            }
+                            lvMain.arrayList!![itemPosition] = SectionItem(newTitle, fullTitle, lvMain.arrayList!![itemPosition].uriStr)
+                            // build finalStr from modified ListView array via getter selectedFolder
+                            var finalStr = lvMain.selectedFolder
+                            if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                                finalStr = toggleTextShowOrder(finalStr)
+                            }
+                            // save finalStr to DataStore, to GrzLog.ser and re-read saved data
+                            ds!!.dataSection[ds!!.selectedSection] = finalStr                        // update DataStore dataSection
+                            writeAppData(appStoragePath, ds, appName)                                // write DataStore
+                            ds!!.clear()                                                             // clear DataStore
+                            ds = readAppData(appStoragePath)                                         // read DataStore
+                            val dsText = ds!!.dataSection[ds!!.selectedSection]                      // raw data from DataStore
+                            title = ds!!.namesSection[ds!!.selectedSection]                          // set app title to folder Name
+                            lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)        // convert & format raw text to array
+                            lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList)   // build adapter and populate main listview
+                            lvMain.listView!!.adapter = lvMain.adapter                               // populate main listview via adapter
+                            lvMain.adapter!!.notifyDataSetChanged()
+                            // temporary highlight affected item and revert it to normal 3s later
+                            var posHighLight: Int
+                            if (isNowSection) {
+                                posHighLight = Math.min(itemPosition + 1, lvMain.arrayList!!.size-1)
+                            } else {
+                                posHighLight = Math.max(itemPosition - 1, 0)
+                            }
+                            lvMain.arrayList!![posHighLight].setHighLighted(true)
+                            lvMain.listView!!.postDelayed({
+                                lvMain.arrayList!![posHighLight].setHighLighted(false)
+                                lvMain.adapter!!.notifyDataSetChanged()
+                            }, 3000)
+                            // get out
+                            dialog.dismiss()
+                        },
+                        {
+                            whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
+                        }
+                    )
+                }
+
+                // ITEM == 7 'empty space'
+                if (which == 7) {
                     whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                 }
 
-                // ITEM == 7 'current line delete'
-                if (which == 7) {
+                // ITEM == 8 'current line delete'
+                if (which == 8) {
                     val message = lvMain.arrayList!![itemPosition].title
                     var youSureBld: AlertDialog.Builder?
                     youSureBld =
@@ -1020,6 +1098,24 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val listView = itemMoreDialog?.getListView()
         listView?.divider = ColorDrawable(Color.GRAY)
         listView?.dividerHeight = 2
+        // item 6 shall be disabled, if item is already header
+        listView!!.setOnHierarchyChangeListener(
+            object : ViewGroup.OnHierarchyChangeListener {
+                override fun onChildViewAdded(parent: View?, child: View) {
+                    child.setEnabled(true)
+                    // disable option number 6, if line is a date header
+                    val text = (child as AppCompatTextView).text
+                    val itemIndex: Int = charSequences.indexOf(text)
+                    if (itemIndex == 6) {
+                        var curText = lvMain.arrayList!![itemPosition].title.toString()
+                        if (lvMain.arrayList!![itemPosition].isSection && PATTERN.DateDay.matcher(curText).find()) {
+                            child.setEnabled(false)
+                            child.setOnClickListener(null)
+                        }
+                    }
+                }
+                override fun onChildViewRemoved(view: View?, view1: View?) {}
+            })
         itemMoreDialog?.show()
         itemMoreDialog?.setCanceledOnTouchOutside(false)
     }
@@ -2110,17 +2206,18 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     // as soon as a date timestamp appears, add it to the TOP of the temp list
                     tmpList.add(0, parts[i])
                 } else {
-                    // other entries are mostly added to the TOP too
-//                    if (parts[i]!!.length == 0) {
-//                        tmpList.add(0, parts[i])
-//                    } else {
+                    // ascii '\t = 9 as almost invisible marker for header item (it acts like a single space)
+                    if (parts[i].startsWith(9.toChar())) {
+                        // as soon as a header line appears, add it to the TOP of the temp list
+                        tmpList.add(0, parts[i])
+                    } else {
                         if (tmpList.size > 0) {
                             tmpList.add(1, parts[i])
                         } else {
                             // this should be an exceptional case: a non date item before a date / Header / Section item
                             tmpList.add(0, parts[i])
                         }
-//                    }
+                    }
                 }
             }
         }
@@ -4461,13 +4558,19 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i].toString())) {
                     tmpList.add(0, parts[i])
                 } else {
-                    if (parts[i]!!.length == 0) {
+                    // ascii '\t = 9 as almost invisible marker for header item (it acts like a single space)
+                    if (parts[i].toString().startsWith(9.toChar())) {
+                        // as soon as a header line appears, add it to the TOP of the temp list
                         tmpList.add(0, parts[i])
                     } else {
-                        if (tmpList.size > 0) {
-                            tmpList.add(1, parts[i])
-                        } else {
+                        if (parts[i]!!.length == 0) {
                             tmpList.add(0, parts[i])
+                        } else {
+                            if (tmpList.size > 0) {
+                                tmpList.add(1, parts[i])
+                            } else {
+                                tmpList.add(0, parts[i])
+                            }
                         }
                     }
                 }
@@ -4745,13 +4848,19 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i].toString())) {
                     tmpList.add(0, parts[i])
                 } else {
-                    if (parts[i]!!.length == 0) {
+                    // ascii '\t = 9 as almost invisible marker for header item (it acts like a single space)
+                    if (parts[i].toString().startsWith(9.toChar())) {
+                        // as soon as a header line appears, add it to the TOP of the temp list
                         tmpList.add(0, parts[i])
                     } else {
-                        if (tmpList.size > 0) {
-                            tmpList.add(1, parts[i])
-                        } else {
+                        if (parts[i]!!.length == 0) {
                             tmpList.add(0, parts[i])
+                        } else {
+                            if (tmpList.size > 0) {
+                                tmpList.add(1, parts[i])
+                            } else {
+                                tmpList.add(0, parts[i])
+                            }
                         }
                     }
                 }
@@ -4762,31 +4871,41 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val len = parts.size
         for (i in 0 until len) {
             // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
-            if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i].toString())) {
+            if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i].toString()) || parts[i].toString().startsWith(9.toChar())) {
                 // no spaces at end of the row - ONLY in timestamp part, NOT in any other part
                 parts[i] = trimEndAll(parts[i]!!)
-                // if week day name is missing, add it
-                if (parts[i]!!.length == 10) {
-                    parts[i] += dayNameOfWeek(parts[i])
-                }
-                // date stamps shall be bold
-                val ssPart = SpannableString(trimEndAll(parts[i].toString()) + "\n")
-                // the days Sat and Sun have a different background color
-                val dow = dayNumberOfWeek(parts[i])
-                if (dow == 1 || dow == 7) {
-                    ssPart.setSpan(
-                        BackgroundColorSpan(0x55FF5555),
-                        0,
-                        ssPart.length,
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                } else {
+                // headers shall be bold
+                var ssPart = SpannableString(trimEndAll(parts[i].toString()) + "\n")
+                if (parts[i].toString().startsWith(9.toChar())) {
+                    // header via 9.toChar()
                     ssPart.setSpan(
                         BackgroundColorSpan(0x66777777),
                         0,
                         ssPart.length,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                     )
+                } else {
+                    // if week day name is missing, add it
+                    if (parts[i]!!.length == 10) {
+                        parts[i] += dayNameOfWeek(parts[i])
+                    }
+                    // the days Sat and Sun have a different background color
+                    val dow = dayNumberOfWeek(parts[i])
+                    if (dow == 1 || dow == 7) {
+                        ssPart.setSpan(
+                            BackgroundColorSpan(0x55FF5555),
+                            0,
+                            ssPart.length,
+                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    } else {
+                        ssPart.setSpan(
+                            BackgroundColorSpan(0x66777777),
+                            0,
+                            ssPart.length,
+                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    }
                 }
                 ssb.append(ssPart)
             } else {
@@ -5118,16 +5237,20 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
 
             // EITHER line with day header OR simple line: a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
-            if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", line)) {
-                line = trimEndAll(line)
-                // if week day name is missing, add it
-                if (line.length == 10) {
-                    line += dayNameOfWeek(line)
+            if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", line) || line.startsWith(9.toChar()) ) {
+                var bgColor = Color.LTGRAY
+                if (line.startsWith(9.toChar())) {
+                    bgColor = Color.LTGRAY
+                } else {
+                    line = trimEndAll(line)
+                    // if week day name is missing, add it
+                    if (line.length == 10) {
+                        line += dayNameOfWeek(line)
+                    }
+                    // timestamp headlines shall have different background colors
+                    val dow = dayNumberOfWeek(line)
+                    bgColor = if (dow == 1) 0x55DD1111 else if (dow == 7) 0x55FF5555 else Color.LTGRAY
                 }
-                // timestamp headlines shall have different background colors
-                val dow = dayNumberOfWeek(line)
-                val bgColor =
-                    if (dow == 1) 0x55DD1111 else if (dow == 7) 0x55FF5555 else Color.LTGRAY
                 painter.color = bgColor
                 // normal text in timestamp headline
                 yPos += lineHeight
@@ -5856,7 +5979,7 @@ class GrzListView {
                 }
                 itemTitle = parts[i]!!.replace(lnkString, keyString)
             }
-            // distinguish header & item:  regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
+            // distinguish header & item: regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
             if (PATTERN.DateDay.matcher(itemTitle.toString()).find()) {
                 // if week day name is missing, add it
                 itemTitle = trimEndAll(itemTitle!!)
@@ -5870,8 +5993,18 @@ class GrzListView {
                 // add listview header
                 arrayList.add(SectionItem(itemTitle, fullTitle, uriString))
             } else {
-                // add listview item
-                arrayList.add(EntryItem(itemTitle, fullTitle, uriString))
+                // ascii '\t = 9 as almost invisible marker for header item (it acts like a single space)
+                if (itemTitle.startsWith(9.toChar())) {
+                    // add spacer item before header, but not in the very first row of the list
+                    if (arrayList.size > 0) {
+                        arrayList.add(SpacerItem())
+                    }
+                    // add listview header
+                    arrayList.add(SectionItem(itemTitle, fullTitle, uriString))
+                } else {
+                    // add normal listview item
+                    arrayList.add(EntryItem(itemTitle, fullTitle, uriString))
+                }
             }
         }
         return arrayList
@@ -5885,14 +6018,21 @@ class GrzListView {
             for (i in parts.indices) {
                 val m = PATTERN.DateDay.matcher(parts[i])
                 if (m.find() && parts[i].startsWith(m.group())) {
+                    // header bc of date
                     tmpList.add(0, parts[i])
                 } else {
-                    var tmpStr = trimEndAll(parts[i])
-                    if (tmpStr.isNotEmpty()) {
-                        if (tmpList.size > 0) {
-                            tmpList.add(1, tmpStr)
-                        } else {
-                            tmpList.add(0, tmpStr)
+                    // ascii '\t = 9 as almost invisible marker for header item (it acts like a single space)
+                    if (parts[i].startsWith(9.toChar())) {
+                        // as soon as a header line appears, add it to the TOP of the temp list
+                        tmpList.add(0, parts[i])
+                    } else {
+                        var tmpStr = trimEndAll(parts[i])
+                        if (tmpStr.isNotEmpty()) {
+                            if (tmpList.size > 0) {
+                                tmpList.add(1, tmpStr)
+                            } else {
+                                tmpList.add(0, tmpStr)
+                            }
                         }
                     }
                 }
@@ -5948,9 +6088,9 @@ class GrzListView {
             var dayEnd = -1
             // climb ListView up until a valid date is found
             for (i in position downTo 0) {
-                // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
+                // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR header via 9.toChar()
                 val curText = arrayList!![i].title
-                if (PATTERN.DateDay.matcher(curText.toString()).find()) {
+                if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(9.toChar())) {
                     dayStart = i
                     break
                 }
@@ -5967,7 +6107,7 @@ class GrzListView {
                         break
                     } else {
                         // stop climbing at Date
-                        if (PATTERN.DateDay.matcher(curText.toString()).find()) {
+                        if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(9.toChar())) {
                             dayEnd = if (i > position) i - 1 else i
                             break
                         }
@@ -5986,27 +6126,27 @@ class GrzListView {
         } catch(e: Exception) {}
     }
 
-    // return a complete day from ListView array according to showOrder
+    // return a complete day/section from ListView array as String
     fun getSelectedDay(position: Int): String {
         var retVal = ""
         try {
             var dayStart = 0
             var dayEnd = -1
-            // climb ListView up until a valid date is found
+            // climb ListView up until a valid date or the header sign 9.toChar() is found
             for (i in position downTo 0) {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
                 val curText = arrayList!![i].title
-                if (PATTERN.DateDay.matcher(curText.toString()).find()) {
+                if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(9.toChar())) {
                     dayStart = i
                     break
                 }
             }
-            // climb ListView down until a valid date is found
+            // climb ListView down until a valid date/header is found
             for (i in position until arrayList!!.size) {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
                 val curText = arrayList!![i].title
-                // stop climbing at Date or Spacer
-                if (PATTERN.DateDay.matcher(curText.toString()).find() or arrayList!![i].isSpacer) {
+                // stop climbing at Date or Header or Spacer
+                if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(8.toChar()) || arrayList!![i].isSpacer) {
                     dayEnd = if (i > position) i - 1 else i
                     break
                 }
@@ -6023,8 +6163,9 @@ class GrzListView {
         return retVal
     }
 
-    // return a complete folder from ListView array according to showOrder as String --> copy/paste
+    // return a complete folder from ListView array w/o spacers as String
     val selectedFolder: String
+        // variable is accessed by its getter
         get() {
             // collect data with file links
             var retVal = ""
@@ -6038,8 +6179,9 @@ class GrzListView {
             return retVal
         }
 
-    // return selected items from ListView array according to showOrder as String --> copy/paste
+    // return selected items from ListView array as String --> copy/paste
     val folderSelectedItems: String
+        // variable is accessed by its getter
         get() {
             // collect selected items
             var retVal = ""
@@ -6054,8 +6196,9 @@ class GrzListView {
             return retVal
         }// collect data with file links
 
-    // return search hit items from ListView array according to showOrder as String --> copy/paste
+    // return search hit items from ListView array as String --> copy/paste
     val folderSearchHits: String
+        // variable is accessed by its getter
         get() {
             // collect search hit items
             var retVal = ""
@@ -6079,8 +6222,9 @@ class GrzListView {
             }, 50)
         } catch(e: Exception) {}
     }
-} // ListView item interface
+}
 
+// ListView item interface
 internal interface ListViewItem : Serializable {
     val isSection: Boolean
     val isSpacer: Boolean
@@ -6093,8 +6237,9 @@ internal interface ListViewItem : Serializable {
     fun isSelected(): Boolean
     fun setHighLighted(setVal: Boolean)
     fun isHighLighted(): Boolean
-} // ListView item section header
+}
 
+// ListView item section header
 internal class SectionItem(
     title: String,
     fullTitle: String?,
@@ -6140,8 +6285,9 @@ internal class SectionItem(
         get() = true
     override val isSpacer: Boolean
         get() = false
-} // ListView item normal entry
+}
 
+// ListView item normal entry
 internal class EntryItem(
     title: String?,
     fullTitle: String?,
@@ -6186,8 +6332,9 @@ internal class EntryItem(
         get() = false
     override val isSpacer: Boolean
         get() = false
-} // ListView item spacer between last item and header
+}
 
+// ListView item spacer between last item and header
 internal class SpacerItem : ListViewItem {
     override val title: String
         get() = " "
@@ -6215,8 +6362,9 @@ internal class SpacerItem : ListViewItem {
         get() = false
     override val isSpacer: Boolean
         get() = true
-} // adapter for ListView
+}
 
+// adapter for ListView
 internal class LvAdapter : BaseAdapter {
     private var context: Context? = null
     private var items: ArrayList<ListViewItem>? = null
