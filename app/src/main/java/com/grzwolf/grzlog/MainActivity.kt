@@ -631,12 +631,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             val fullItemText = lvMain.arrayList!![itemPosition].fullTitle
             // 1. get attachment link (image, video, audio, txt, pdf, www) in fullItemText
             val matchFull = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+            var matchFullResult = ""
+            if (matchFull?.find() == true) {
+                matchFullResult = matchFull.group()
+            }
             // get the full item, what was clicked on by user
             val matchLink = attachment.let { PATTERN.UriLink.matcher(it.toString()) }
-            // if there is a double match --> show attachment
-            if ((matchFull?.find() == true) && (matchLink.find() == true)) {
-                val result = matchFull.group()
-                val key = result.substring(1, result.length - 1)
+            // if there is a double match --> attachment was clicked, so show attachment
+            if (matchFullResult.isNotEmpty() && (matchLink.find() == true)) {
+                val key = matchFullResult.substring(1, matchFullResult.length - 1)
                 val lnkParts = key.split("::::".toRegex()).toTypedArray()
                 if (lnkParts != null && lnkParts.size == 2) {
                     var linkNoBrackets = attachment.substring(1, attachment.length-1)
@@ -675,14 +678,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             } else {
                 // 2. find a regular url in an item's text and show it in the default browser
                 val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                // show links could be disabled via preferences
                 if (sharedPref.getBoolean("openLinks", false)) {
-                    // indicator to show what was clicked, even if it is neither attachment nor link
+                    // url was shown indicator
                     var urlWasShown = false
                     // get a list of potential urls / www-links
                     var urls: ArrayList<String>? = getAllLinksFromString(fullItemText.toString())
                     if (urls != null && urls.size > 0) {
                         for (url in urls) {
-                            // open link, if one of the potential urls contains at least partially, what was clicked on (!! multiple lines!!)
+                            // open www link, if one of the potential urls contains at least partially, what was clicked on (!! multiple lines!!)
                             if (url.contains(word.trim())) {
                                 var tmp = ""
                                 if (url.equals(word.trim())) {
@@ -730,7 +734,50 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             }
                         }
                         if (!urlWasShown) {
-                            centeredToast(this, word, 50)
+                            // specific case: item has attachment but was not clicked in attachment AND not in a text link --> show attachment
+                            if (matchFullResult.isNotEmpty()) {
+                                val key = matchFullResult.substring(1, matchFullResult.length - 1)
+                                val lnkParts = key.split("::::".toRegex()).toTypedArray()
+                                if (lnkParts != null && lnkParts.size == 2) {
+                                    title = lnkParts[0]
+                                    fileName = lnkParts[1]
+                                    if (!verifyExifPermission()) {
+                                        centeredToast(this, getString(R.string.mayNotWork), 3000)
+                                    }
+                                    if (fileName!!.startsWith("folder/") == true) {
+                                        // fileName starting with folder/ is an attachment link to a GrzLog folder
+                                        var folderName = fileName!!.substring(fileName!!.indexOf("folder/") + "folder/".length)
+                                        decisionBox(
+                                            this,
+                                            DECISION.YESNO,
+                                            getString(R.string.switchFolder),
+                                            folderName,
+                                            {
+                                                if (fabBack != null) {
+                                                    val dsFolder = ds!!.namesSection[ds!!.selectedSection]
+                                                    val fbt = FabBackTag(dsFolder, ArrayList(), -1)
+                                                    fabBack!!.tag = fbt
+                                                    fabBack!!.visibility = VISIBLE
+                                                }
+                                                switchToFolderByName(folderName)
+                                            },
+                                            null
+                                        )
+                                        return
+                                    } else {
+                                        // all other attachments but folder
+                                        showAppLinkOrAttachment(this, title, fileName)
+                                    }
+                                }
+                            } else {
+                                // specific case: no attachment but exactly one www text link, which was not clicked on
+                                if (urls.size == 1) {
+                                    centeredToast(this, urls[0], 50)
+                                    showAppLinkOrAttachment(this, urls[0], urls[0])
+                                } else {
+                                    centeredToast(this, word, 50)
+                                }
+                            }
                         }
                     } else {
                         centeredToast(this, word, 50)
