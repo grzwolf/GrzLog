@@ -8,7 +8,7 @@
     <string name="extra_header">Extra</string>
 
     <!-- Messages Preferences -->
-    <string name="signature_title">GrzLog 1.0.11</string>
+    <string name="signature_title">GrzLog 1.0.12</string>
     <string name="signature_summary">\nKontakt: grzwolf.app@gmail.com</string>
 
     <!-- Sync Preferences -->
@@ -133,7 +133,7 @@
     <string name="InsertRow">Einfügen Zeile</string>
     <string name="EditRow">Edit Zeile</string>
     <string name="undo">Rückgängig</string>
-    <string name="alienFile">Biite \'Import Daten aus einer Dateiliste\' auführen.</string>
+    <string name="alienFile">Bitte \'Import Daten aus einer Dateiliste\' auführen.</string>
     <string name="gcamhint">GCam Bild muss nach Aufnahme aus Galerie selektiert werden.</string>
     <string name="AppMissing">Keine Applikation verfügbar</string>
     <string name="JumpTo">Springe an ...</string>
@@ -158,7 +158,7 @@
     <string name="selectAll">Alle selektieren</string>
     <string name="copyToClipboard">Kopieren in Zwischenablage</string>
     <string name="deleteFromList">Auswahl aus der Liste löschen</string>
-    <string name="deleteSelection"> gelöschte Auswahl</string>
+    <string name="deleteSelection">" gelöschte Auswahl"</string>
     <string name="pickImage">Bild wählen</string>
     <string name="invertSelection">Invertieren der Auswahl</string>
     <string name="tryingTxtAppData">Keine Daten gefunden, versuche lokales Restore.</string>
@@ -211,5 +211,12 @@
     <string name="ToggleLineAsHeader">Wechseln Zeile als Überschrift</string>
     <string name="ToggleLineAsText">Wechseln Zeile als Text</string>
     <string name="LineOrHeader">Jetzt wechseln?</string>
+    <string name="searchFolders">Suchen in Ordnern</string>
+    <string name="chooseSearchHit">Treffer auswählen</string>
+    <string name="searchHitList">" und Suchtreffer Liste"</string>
+    <string name="nothingFound">Nichts gefunden</string>
+    <string name="duplicateName">duplikater Name</string>
+    <string name="emptyInput">leerer Input</string>
+    <string name="switchToSearchList">Zurück zur Suchliste?</string>
 </resources>
 

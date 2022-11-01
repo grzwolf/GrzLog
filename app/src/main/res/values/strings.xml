@@ -8,7 +8,7 @@
     <string name="extra_header">Extra</string>
 
     <!-- Messages Preferences -->
-    <string name="signature_title">GrzLog 1.0.11</string>
+    <string name="signature_title">GrzLog 1.0.12</string>
     <string name="signature_summary">\nContact: grzwolf.app@gmail.com</string>
 
     <!-- Sync Preferences -->
@@ -159,7 +159,7 @@
     <string name="selectAll">Select all</string>
     <string name="copyToClipboard">Copy to clipboard</string>
     <string name="deleteFromList">Delete selection from list</string>
-    <string name="deleteSelection"> deleted selection</string>
+    <string name="deleteSelection">" deleted selection"</string>
     <string name="pickImage">Select Image</string>
     <string name="invertSelection">Invert selection</string>
     <string name="tryingTxtAppData">No app data found, trying local restore.</string>
@@ -212,4 +212,11 @@
     <string name="ToggleLineAsHeader">Toggle line as header</string>
     <string name="ToggleLineAsText">Toggle line as text</string>
     <string name="LineOrHeader">Switch now?</string>
+    <string name="searchFolders">Search all folders</string>
+    <string name="chooseSearchHit">Choose a search hit</string>
+    <string name="searchHitList">" and search hits list"</string>
+    <string name="nothingFound">No search hits found</string>
+    <string name="duplicateName">duplicate name</string>
+    <string name="emptyInput">empty input</string>
+    <string name="switchToSearchList">Switch back to search list?</string>
 </resources>
