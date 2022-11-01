@@ -226,7 +226,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         ds!!.undoSection = ""
         ds!!.tagSection.clear()
 
-        // listview item touch listener to determine the screen coordinates of the touch event
+        // listview item touch listener determines the screen coordinates of the touch event
         (lvMain.listView)?.setOnTouchListener(OnTouchListener { listView, event ->
             // reset the "listview did scroll" flag
             if (menuSearchVisible) {
@@ -237,6 +237,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 if (event.x < 200) {
                     // switch to 'select item mode'
                     lvMain.touchSelectItem = true
+                } else {
+                    lvMain.touchSelectItem = false
                 }
                 // memorize the touch event coordinates
                 lvMain.touchEventPoint = Point(event.x.toInt(), event.y.toInt())
@@ -254,20 +256,31 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
             false
         })
-        // listview item click
+
+        // listview item 'double click' and 'single click'
         (lvMain.listView)?.setOnItemClickListener(OnItemClickListener { adapterView, itemView, itemPosition, itemId ->
-            if (lvMain.touchSelectItem && !menuSearchVisible) {
-                // handle click on item as item select
-                lvMain.touchSelectItem = false
-                val wasSelected = lvMain.arrayList!![itemPosition].isSelected()
-                val isSelected = !wasSelected
-                lvMain.arrayList!![itemPosition].setSelected(isSelected)
-                lvMain.adapter!!.notifyDataSetChanged()
-            } else {
-                // show item attachment OR www text link
+            // if condition for a double click event is met, the single click handler gets disabled
+            if (System.currentTimeMillis() - lvMain.itemLastClickTime < 300) {
+                lvMain.singleClickHandler.removeCallbacksAndMessages(null)
                 lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
+                return@OnItemClickListener
             }
+            // store the time of the item's click event
+            lvMain.itemLastClickTime = System.currentTimeMillis()
+            // the single click handler only fires, if it is not deactivated by a double click event
+            lvMain.singleClickHandler!!.postDelayed({
+                if (lvMain.touchSelectItem && !menuSearchVisible) {
+                    // handle click on item as item select
+                    lvMain.touchSelectItem = false
+                    lvMain.arrayList!![itemPosition].setSelected(!lvMain.arrayList!![itemPosition].isSelected())
+                    lvMain.adapter!!.notifyDataSetChanged()
+                } else {
+                    // show item attachment OR www text link
+                    lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
+                }
+            }, 300)
         })
+
         // listview item long press
         (lvMain.listView)?.setOnItemLongClickListener(OnItemLongClickListener { adapterView, itemView, itemPosition, itemId ->
             // any long press action cancels 'select item mode'
@@ -6228,21 +6241,23 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 class GrzListView {
 
     internal var arrayList : ArrayList<ListViewItem>? = null // ListView array
-    internal var adapter : LvAdapter? = null // ListView adapter
-    internal var showOrder = SHOW_ORDER.TOP // ListView show order: new on top -- vs. -- new at bottom
+    internal var adapter : LvAdapter? = null                 // ListView adapter
+    internal var showOrder = SHOW_ORDER.TOP                  // ListView show order: new on top -- vs. -- new at bottom
 
-    var listView : ListView? = null                   // ListView itself
-    var selectedText: String? = ""                    // selected text from listview after long press
-    var selectedRow = -1                              // selected row from listview after long press
-    var selectedRowNoSpacers = -1                     // selected row from listview after long press MINUS Spacer items --> needed for DataStore index
-    var editLongPress = false                         // flag indicates the usage of fabPlus input as a line editor
-    var searchHitList: MutableList<Int> = ArrayList() // search hit list derived from ListView array
-    var searchNdx = 0                                 // currently shown search hit index
-    var fstVisPos = 0                                 // memorize 1st position item position
-    var lstVisPos = 0                                 // memorize last position item position
-    var touchSelectItem = false                       // touch event x < 200 allows to select an item at long press
-    var scrollWhileSearch = false                     // allows to skip search hits when scrolling before Up / Down
-    var touchEventPoint = Point(-1, -1)         // point coordinates of the latest touch event: needed to detect scrolling AND get word in string
+    var listView : ListView? = null                          // ListView itself
+    var selectedText: String? = ""                           // selected text from listview after long press
+    var selectedRow = -1                                     // selected row from listview after long press
+    var selectedRowNoSpacers = -1                            // selected row from listview after long press MINUS Spacer items --> needed for DataStore index
+    var editLongPress = false                                // flag indicates the usage of fabPlus input as a line editor
+    var searchHitList: MutableList<Int> = ArrayList()        // search hit list derived from ListView array for one folder
+    var searchNdx = 0                                        // currently shown search hit index
+    var fstVisPos = 0                                        // memorize 1st item position
+    var lstVisPos = 0                                        // memorize last item position
+    var touchSelectItem = false                              // touch event x < 200 allows to select an item at single click
+    var scrollWhileSearch = false                            // allows to skip search hits when scrolling before Up / Down
+    var touchEventPoint = Point(-1, -1)                // point coordinates of the latest touch event: needed to detect scrolling AND get word in string
+    var singleClickHandler = Handler(Looper.getMainLooper()) // needed to distinguish between item's single and double click
+    var itemLastClickTime: Long = 0                          // needed to distinguish between item's single and double click
 
     // generate ArrayList from a DataStore raw text to later populate the listview
     internal fun makeArrayList(rawText: String, lvShowOrder: SHOW_ORDER): ArrayList<ListViewItem> {
