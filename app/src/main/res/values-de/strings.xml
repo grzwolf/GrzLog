@@ -100,8 +100,6 @@
     <string name="deleteFolder">Ordner löschen</string>
     <string name="folder">Ordner</string>
     <string name="folderAlreadyAtTop">Ordner ist am Anfang </string>
-    <string name="moveFolder">Ordner verschieben \'</string>
-    <string name="upInList">\' aufwärts in Liste?</string>
     <string name="folderLimit">\"\nEs gibt ein Limit von \"</string>
     <string name="folders">\" Ordnern.\"</string>
     <string name="folderNewName">Neuer Ordnername</string>
@@ -201,7 +199,6 @@
     <string name="useFilesPicker">Auswahl Video nicht von \'Photos\', besser von \'Dateien\'</string>
     <string name="missingFileAssociation">Keine Datei Verknüpfung vorhanden</string>
     <string name="wwwLink">WWW Link unten einfügen</string>
-    <string name="choose">App Auswählen</string>
     <string name="openLinksInBrowser">Öffnen von Text Links mit Browser</string>
     <string name="editExistingLink">Edit Dateianhang</string>
     <string name="linkDestroyed">Abbruch, weil Link zu Dateianhang zerstört</string>

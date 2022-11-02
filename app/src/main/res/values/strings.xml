@@ -101,8 +101,6 @@
     <string name="deleteFolder">Remove folder</string>
     <string name="folder">folder</string>
     <string name="folderAlreadyAtTop">Folder is already on top of the list</string>
-    <string name="moveFolder">Move folder \'</string>
-    <string name="upInList">\' up in list?</string>
     <string name="folderLimit">\"\nThere is a limit of \"</string>
     <string name="folders">\" folders.\"</string>
     <string name="folderNewName">Set new folder\'s name</string>
@@ -202,7 +200,6 @@
     <string name="useFilesPicker">Do not pick video from \'Photos\', pick from \'Files\'</string>
     <string name="missingFileAssociation">No file association</string>
     <string name="wwwLink">Insert www link below</string>
-    <string name="choose">Choose from below</string>
     <string name="openLinksInBrowser">Open text links with browser</string>
     <string name="editExistingLink">Edit existing attachment</string>
     <string name="linkDestroyed">Cancel, due to destroyed attachment link</string>

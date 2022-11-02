@@ -3188,53 +3188,32 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             //  MORE FOLDER OPTIONS: Move folder up in list
                             if (which == 5) {
                                 if (ds!!.namesSection.size < 2 || selectedSectionTemp[0] == 0) {
-                                    Toast.makeText(
-                                        applicationContext,
-                                        R.string.folderAlreadyAtTop,
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    moreDialog!!.show()
+                                    val folderName = ds!!.namesSection[selectedSectionTemp[0]]
+                                    centeredToast(
+                                        this,
+                                        "'" + folderName + "' " + getString(R.string.folderAlreadyAtTop),
+                                        5000
+                                    )
+                                    onOptionsItemSelected(item)
                                     return@OnClickListener
                                 }
-                                var builder: AlertDialog.Builder? = null
-                                builder =
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                        AlertDialog.Builder(
-                                            moreBuilderContext,
-                                            android.R.style.Theme_Material_Dialog
-                                        )
-                                    } else {
-                                        AlertDialog.Builder(moreBuilderContext)
-                                    }
-                                builder.setTitle(
-                                    getString(R.string.moveFolder) + itemText + getString(
-                                        R.string.upInList
-                                    )
-                                )
-                                builder.setPositiveButton(
-                                    R.string.ok,
-                                    DialogInterface.OnClickListener { dialogChange, which -> // tmp save current -1
-                                        val nameTmp = ds!!.namesSection[selectedSectionTemp[0] - 1]
-                                        ds!!.selectedSection = selectedSectionTemp[0] - 1
-                                        val selectionTmp = ds!!.selectedSection
-                                        val dataTmp = ds!!.dataSection[selectedSectionTemp[0] - 1]
-                                        // copy current one level up
-                                        ds!!.namesSection[selectedSectionTemp[0] - 1] = ds!!.namesSection[selectedSectionTemp[0]]
-                                        ds!!.selectedSection = selectedSectionTemp[0] - 1
-                                        ds!!.dataSection[selectedSectionTemp[0] - 1] = ds!!.dataSection[selectedSectionTemp[0]]
-                                        // copy tmp to current
-                                        ds!!.namesSection[selectedSectionTemp[0]] = nameTmp
-                                        ds!!.selectedSection = selectionTmp
-                                        ds!!.dataSection[selectedSectionTemp[0]] = dataTmp
-                                        // make change permanent
-                                        writeAppData(appStoragePath, ds, appName)
-                                        reReadAppFileData = true
-                                        onResume()
-                                    })
-                                builder.setNegativeButton(
-                                    R.string.cancel,
-                                    DialogInterface.OnClickListener { dialogRename, which -> moreDialog!!.show() })
-                                builder.show()
+                                // tmp save current folder -1
+                                val nameTmp = ds!!.namesSection[selectedSectionTemp[0] - 1]
+                                ds!!.selectedSection = selectedSectionTemp[0] - 1
+                                val selectionTmp = ds!!.selectedSection
+                                val dataTmp = ds!!.dataSection[selectedSectionTemp[0] - 1]
+                                // copy current folder one level up
+                                ds!!.namesSection[selectedSectionTemp[0] - 1] = ds!!.namesSection[selectedSectionTemp[0]]
+                                ds!!.selectedSection = selectedSectionTemp[0] - 1
+                                ds!!.dataSection[selectedSectionTemp[0] - 1] = ds!!.dataSection[selectedSectionTemp[0]]
+                                // copy tmp to current
+                                ds!!.namesSection[selectedSectionTemp[0]] = nameTmp
+                                ds!!.selectedSection = selectionTmp
+                                ds!!.dataSection[selectedSectionTemp[0]] = dataTmp
+                                // make change permanent
+                                writeAppData(appStoragePath, ds, appName)
+                                reReadAppFileData = true
+                                onOptionsItemSelected(item)
                             }
                             // MORE FOLDER OPTIONS: Timestamp setting
                             if (which == 6) {
