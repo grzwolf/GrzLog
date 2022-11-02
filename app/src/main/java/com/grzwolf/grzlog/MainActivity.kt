@@ -583,6 +583,17 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         if (itemView == null) {
             return
         }
+        // show links could be disabled via preferences
+        var showLinks = true
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+        if (sharedPref.getBoolean("openLinks", false) == false) {
+            centeredToast(this, getString(R.string.wwwDisabled), 50)
+            showLinks = false
+        }
+
+        //
+        // 0. find what was clicked on
+        //
         // text view is either title or section, dismiss spacer
         var tv: TextView
         try {
@@ -637,22 +648,27 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         var word = getWordAtOffset(text, ofs)
         // word could be a fragmented attachment, get the real attachment name with both enclosing brackets
         var attachment = getAttachmentFromText(lvMain.arrayList!![itemPosition].title.toString(), word)
+
         // so far, we only know what word/link was clicked on, it's time to show the content
         var title = ""
         var fileName = ""
         try {
             // get the clicked item's full text
             val fullItemText = lvMain.arrayList!![itemPosition].fullTitle
-            // 1. get attachment link (image, video, audio, txt, pdf, www) in fullItemText
+            // get the attachment (image, video, audio, txt, pdf, www, folder) in fullItemText
             val matchFull = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
             var matchFullResult = ""
             if (matchFull?.find() == true) {
                 matchFullResult = matchFull.group()
             }
-            // get the full item, what was clicked on by user
+            // check, what was clicked on by user, if it is an attachment
             val matchLink = attachment.let { PATTERN.UriLink.matcher(it.toString()) }
-            // if there is a double match --> attachment was clicked, so show attachment
+
+            //
+            // 1. handle a clicked attachment in an item's text
+            //
             if (matchFullResult.isNotEmpty() && (matchLink.find() == true)) {
+                // if there is a double match --> attachment was clicked, so show attachment
                 val key = matchFullResult.substring(1, matchFullResult.length - 1)
                 val lnkParts = key.split("::::".toRegex()).toTypedArray()
                 if (lnkParts != null && lnkParts.size == 2) {
@@ -660,9 +676,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     if (linkNoBrackets.endsWith(lnkParts[0])) {
                         title = lnkParts[0]
                         fileName = lnkParts[1]
-                        if (!verifyExifPermission()) {
-                            centeredToast(this, getString(R.string.mayNotWork), 3000)
-                        }
                         if (fileName.startsWith("folder/") == true) {
                             // fileName starting with folder/ is an attachment link to a GrzLog folder
                             var folderName = fileName.substring(fileName.indexOf("folder/") + "folder/".length)
@@ -685,121 +698,123 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             )
                             return
                         } else {
-                            // all other attachments and www
+                            // exif perm missing
+                            if (!verifyExifPermission()) {
+                                centeredToast(this, getString(R.string.mayNotWork), 3000)
+                            }
+                            // all attachments other than folder
                             showAppLinkOrAttachment(this, title, fileName)
                         }
                     }
                 }
             } else {
-                // 2. find a regular url in an item's text and show it in the default browser
-                val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-                // show links could be disabled via preferences
-                if (sharedPref.getBoolean("openLinks", false)) {
-                    // url was shown indicator
-                    var urlWasShown = false
-                    // get a list of potential urls / www-links
-                    var urls: ArrayList<String>? = getAllLinksFromString(fullItemText.toString())
-                    if (urls != null && urls.size > 0) {
-                        for (url in urls) {
-                            // open www link, if one of the potential urls contains at least partially, what was clicked on (!! multiple lines!!)
-                            if (url.contains(word.trim())) {
-                                var tmp = ""
-                                if (url.equals(word.trim())) {
-                                    // provided link is good to go, no need to care about fragmentation
-                                    tmp = url
-                                } else {
-                                    // fragmented link: expand link upwards with upper wrappedLines, until a ' ' appears
-                                    var posSpaceBeforeLink = wrappedLines[wrappedLineIndex].indexOf(" ")
-                                    var posLink = wrappedLines[wrappedLineIndex].indexOf(word)
-                                    if (posSpaceBeforeLink != -1 && posSpaceBeforeLink < posLink) {
-                                        for (ndx in 0..wrappedLineIndex) {
-                                            tmp += wrappedLines[ndx]
-                                        }
-                                    } else {
-                                        for (ndx in 0 until wrappedLineIndex) {
-                                            tmp += wrappedLines[ndx]
-                                        }
-                                        tmp += word.trim()
-                                    }
-                                    tmp = tmp.trim()
-                                    var last = tmp.lastIndexOf(" ")
-                                    if (last != -1) {
-                                        tmp = tmp.substring(last)
-                                    } else {
-                                        tmp = word.trim()
-                                    }
-                                    // fragmented link: expand downwards with lower warppedLines, until a ' ' appears
-                                    var posLastSpace = wrappedLines[wrappedLineIndex].lastIndexOf(" ")
-                                    if (posLastSpace < posLink) {
-                                        for (ndx in wrappedLineIndex + 1 until wrappedLines.size) {
-                                            tmp += wrappedLines[ndx]
-                                        }
-                                    }
-                                    tmp = tmp.trim()
-                                    var first = tmp.indexOf(" ")
-                                    if (first != -1) {
-                                        tmp = tmp.substring(0, first)
-                                    }
-                                }
-                                // show www link
-                                urlWasShown = true
-                                var urlComplete = tmp
-                                centeredToast(this, urlComplete, 50)
-                                showAppLinkOrAttachment(this, urlComplete, urlComplete)
-                            }
-                        }
-                        if (!urlWasShown) {
-                            // specific case: item has attachment but was not clicked in attachment AND not in a text link --> show attachment
-                            if (matchFullResult.isNotEmpty()) {
-                                val key = matchFullResult.substring(1, matchFullResult.length - 1)
-                                val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                                if (lnkParts != null && lnkParts.size == 2) {
-                                    title = lnkParts[0]
-                                    fileName = lnkParts[1]
-                                    if (!verifyExifPermission()) {
-                                        centeredToast(this, getString(R.string.mayNotWork), 3000)
-                                    }
-                                    if (fileName.startsWith("folder/") == true) {
-                                        // fileName starting with folder/ is an attachment link to a GrzLog folder
-                                        var folderName = fileName.substring(fileName.indexOf("folder/") + "folder/".length)
-                                        decisionBox(
-                                            this,
-                                            DECISION.YESNO,
-                                            getString(R.string.switchFolder),
-                                            folderName,
-                                            {
-                                                if (fabBack != null) {
-                                                    val dsFolder = ds!!.namesSection[ds!!.selectedSection]
-                                                    val fbtOld = fabBack!!.tag as FabBackTag
-                                                    val fbt = FabBackTag(dsFolder, fbtOld.searchHitListGlobal, -1)
-                                                    fabBack!!.tag = fbt
-                                                    fabBack!!.visibility = VISIBLE
-                                                }
-                                                switchToFolderByName(folderName)
-                                            },
-                                            null
-                                        )
-                                        return
-                                    } else {
-                                        // all other attachments but folder
-                                        showAppLinkOrAttachment(this, title, fileName)
-                                    }
-                                }
+                //
+                // 2. find a regular clicked url in an item's text and show it in the default browser
+                //
+                // url was shown indicator
+                var urlWasShown = false
+                // get a list of potential urls / www-links
+                var urls: ArrayList<String>? = getAllLinksFromString(fullItemText.toString())
+                if (showLinks && urls != null && urls.size > 0) {
+                    // loop to only show clicked www links
+                    for (url in urls) {
+                        // open www link, if one of the potential urls contains at least partially, what was clicked on (!! multiple lines!!)
+                        if (url.contains(word.trim())) {
+                            var tmp = ""
+                            if (url.equals(word.trim())) {
+                                // provided link is good to go, no need to care about fragmentation
+                                tmp = url
                             } else {
-                                // specific case: no attachment but exactly one www text link, which was not clicked on
-                                if (urls.size == 1) {
-                                    centeredToast(this, urls[0], 50)
-                                    showAppLinkOrAttachment(this, urls[0], urls[0])
+                                // fragmented link: expand link upwards with upper wrappedLines, until a ' ' appears
+                                var posSpaceBeforeLink = wrappedLines[wrappedLineIndex].indexOf(" ")
+                                var posLink = wrappedLines[wrappedLineIndex].indexOf(word)
+                                if (posSpaceBeforeLink != -1 && posSpaceBeforeLink < posLink) {
+                                    for (ndx in 0..wrappedLineIndex) {
+                                        tmp += wrappedLines[ndx]
+                                    }
                                 } else {
-                                    centeredToast(this, word, 50)
+                                    for (ndx in 0 until wrappedLineIndex) {
+                                        tmp += wrappedLines[ndx]
+                                    }
+                                    tmp += word.trim()
                                 }
+                                tmp = tmp.trim()
+                                var last = tmp.lastIndexOf(" ")
+                                if (last != -1) {
+                                    tmp = tmp.substring(last)
+                                } else {
+                                    tmp = word.trim()
+                                }
+                                // fragmented link: expand downwards with lower warppedLines, until a ' ' appears
+                                var posLastSpace = wrappedLines[wrappedLineIndex].lastIndexOf(" ")
+                                if (posLastSpace < posLink) {
+                                    for (ndx in wrappedLineIndex + 1 until wrappedLines.size) {
+                                        tmp += wrappedLines[ndx]
+                                    }
+                                }
+                                tmp = tmp.trim()
+                                var first = tmp.indexOf(" ")
+                                if (first != -1) {
+                                    tmp = tmp.substring(0, first)
+                                }
+                            }
+                            // show www link
+                            urlWasShown = true
+                            var urlComplete = tmp
+                            centeredToast(this, urlComplete, 50)
+                            showAppLinkOrAttachment(this, urlComplete, urlComplete)
+                        }
+                    }
+                }
+                //
+                // 3. not clicked attachment/link (aka click into the void)
+                //
+                if (!urlWasShown) {
+                    // specific case: item has attachment but was not clicked in attachment AND not in a text link --> show attachment
+                    if (matchFullResult.isNotEmpty()) {
+                        val key = matchFullResult.substring(1, matchFullResult.length - 1)
+                        val lnkParts = key.split("::::".toRegex()).toTypedArray()
+                        if (lnkParts != null && lnkParts.size == 2) {
+                            title = lnkParts[0]
+                            fileName = lnkParts[1]
+                            if (!verifyExifPermission()) {
+                                centeredToast(this, getString(R.string.mayNotWork), 3000)
+                            }
+                            if (fileName.startsWith("folder/") == true) {
+                                // fileName starting with folder/ is an attachment link to a GrzLog folder
+                                var folderName = fileName.substring(fileName.indexOf("folder/") + "folder/".length)
+                                decisionBox(
+                                    this,
+                                    DECISION.YESNO,
+                                    getString(R.string.switchFolder),
+                                    folderName,
+                                    {
+                                        if (fabBack != null) {
+                                            val dsFolder = ds!!.namesSection[ds!!.selectedSection]
+                                            val fbtOld = fabBack!!.tag as FabBackTag
+                                            val fbt = FabBackTag(dsFolder, fbtOld.searchHitListGlobal, -1)
+                                            fabBack!!.tag = fbt
+                                            fabBack!!.visibility = VISIBLE
+                                        }
+                                        switchToFolderByName(folderName)
+                                    },
+                                    null
+                                )
+                                return
+                            } else {
+                                // all other attachments but folder
+                                showAppLinkOrAttachment(this, title, fileName)
                             }
                         }
                     } else {
-                        centeredToast(this, word, 50)
+                        // specific case: no attachment but exactly one www text link, which was not clicked on
+                        if (showLinks && urls != null && urls.size == 1) {
+                            centeredToast(this, urls[0], 50)
+                            showAppLinkOrAttachment(this, urls[0], urls[0])
+                        } else {
+                            centeredToast(this, word, 50)
+                        }
                     }
-                } else {
-                    centeredToast(this, word, 50)
                 }
             }
         } catch (e: Exception) {

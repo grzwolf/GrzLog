@@ -220,4 +220,5 @@
     <string name="searchPhrase">Input global search phrase</string>
     <string name="searchResultsAvailable">Search results available</string>
     <string name="useExistingResults">Use existing results?</string>
+    <string name="wwwDisabled">WWW text links are disabled</string>
 </resources>
