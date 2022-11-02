@@ -268,7 +268,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             // store the time of the item's click event
             lvMain.itemLastClickTime = System.currentTimeMillis()
             // the single click handler only fires, if it is not deactivated by a double click event
-            lvMain.singleClickHandler!!.postDelayed({
+            lvMain.singleClickHandler.postDelayed({
                 if (lvMain.touchSelectItem && !menuSearchVisible) {
                     // handle click on item as item select
                     lvMain.touchSelectItem = false
@@ -663,9 +663,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         if (!verifyExifPermission()) {
                             centeredToast(this, getString(R.string.mayNotWork), 3000)
                         }
-                        if (fileName!!.startsWith("folder/") == true) {
+                        if (fileName.startsWith("folder/") == true) {
                             // fileName starting with folder/ is an attachment link to a GrzLog folder
-                            var folderName = fileName!!.substring(fileName!!.indexOf("folder/") + "folder/".length)
+                            var folderName = fileName.substring(fileName.indexOf("folder/") + "folder/".length)
                             decisionBox(
                                 this,
                                 DECISION.YESNO,
@@ -759,9 +759,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     if (!verifyExifPermission()) {
                                         centeredToast(this, getString(R.string.mayNotWork), 3000)
                                     }
-                                    if (fileName!!.startsWith("folder/") == true) {
+                                    if (fileName.startsWith("folder/") == true) {
                                         // fileName starting with folder/ is an attachment link to a GrzLog folder
-                                        var folderName = fileName!!.substring(fileName!!.indexOf("folder/") + "folder/".length)
+                                        var folderName = fileName.substring(fileName.indexOf("folder/") + "folder/".length)
                                         decisionBox(
                                             this,
                                             DECISION.YESNO,
@@ -1767,8 +1767,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     // get current text from input editor: extract the part with the brackets bla[foo]bla
                     linkText = fabPlus.inputAlertText!!
                     var linkTextNoBrackets = ""
-                    val matchLnk = linkText?.let { PATTERN.UriLink.matcher(it.toString()) }
-                    if (matchLnk?.find() == true) {
+                    val matchLnk = linkText.let { PATTERN.UriLink.matcher(it.toString()) }
+                    if (matchLnk.find() == true) {
                         linkText = matchLnk.group()
                         linkTextNoBrackets = linkText.substring(1, linkText.length-1)
                     } else {
@@ -2307,7 +2307,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         for (i in parts.indices) {
             val m = parts[i].let { PATTERN.DateDay.matcher(it) }
             if (m != null) {
-                if (m.find() && parts[i]!!.startsWith(m.group())) {
+                if (m.find() && parts[i].startsWith(m.group())) {
                     // as soon as a date timestamp appears, add it to the TOP of the temp list
                     tmpList.add(0, parts[i])
                 } else {
@@ -4192,7 +4192,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
         if (requestCode == PICK.AUDIO) {
             var uriOri = data!!.data
-            val uriStr = uriOri.toString()
             val uriPath = getPath(this, uriOri!!)
             val file = File(uriPath.toString())
             var uri = Uri.fromFile(file)
@@ -4220,7 +4219,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             var uriOri = data!!.data
             try {
                 val uriPath = getPath(this, uriOri!!)
-                val file = File(uriPath)
+                val file = File(uriPath.toString())
                 var uriNew = Uri.fromFile(file)
                 if (uriNew != null) {
                     fabPlus.pickAttachment = true
@@ -4277,7 +4276,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             var uriOri = data!!.data
             try {
                 val uriPath = getPath(this, uriOri!!)
-                val file = File(uriPath)
+                val file = File(uriPath.toString())
                 var uriNew = Uri.fromFile(file)
                 if (uriNew != null) {
                     fabPlus.pickAttachment = true
@@ -5896,7 +5895,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             var sectionName = ""
             for (i in arrayList.indices) {
                 // save most current section name: it will be used, if there is a search hit
-                if (PATTERN.DateDay.matcher(arrayList[i].title).find() || arrayList[i].title.toString().startsWith(8.toChar())) {
+                if (PATTERN.DateDay.matcher(arrayList[i].title.toString()).find() || arrayList[i].title.toString().startsWith(8.toChar())) {
                     sectionName = arrayList[i].title.toString()
                 }
                 // save search hits data: the text where the search phrase occurs, its line index, its section name, its folder index
@@ -6015,7 +6014,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     keyStrOri = lnkParts[0]
                                     uriStrOri = Uri.parse(lnkParts[1]).path!!
                                     uriLocOri = uriStrOri
-                                    if (uriStrOri!!.startsWith("/")) {
+                                    if (uriStrOri.startsWith("/")) {
                                         uriLocOri = uriStrOri
                                         uriStrOri = "file://$appAttachmentsPath$uriStrOri"
                                     }
@@ -6029,7 +6028,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 textLine = textLine.replace(lnkFull, "[$keyStrOri::::$localUriStr]")
                             }
                             // check file usage
-                            for (j in attachmentsList.indices!!) {
+                            for (j in attachmentsList.indices) {
                                 val fn = attachmentsList[j].absolutePath
                                 if (fn.endsWith(localUriStr)) {
                                     fileUsed[j] = true
@@ -6047,7 +6046,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
             // write DataStore to app file
             var appPath = File(appAttachmentsPath).parent
-            writeAppData(appPath, ds, appName)
+            if (appPath != null) {
+                writeAppData(appPath.toString(), ds, appName)
+            }
 
             // get number of orphaned files
             var numOrphaned = 0
@@ -6177,7 +6178,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 return "file-error"
             }
             // return the filename of the copied file with a leading /
-            return uriString!!.substring(uriString.lastIndexOf("/"))
+            return uriString.substring(uriString.lastIndexOf("/"))
         }
         // copy a file based on SAF Uri to GrzLog Images
         fun copyUriToAppImages(context: Context, inputUri: Uri?, outputFilePath: String): Boolean {
@@ -6280,15 +6281,15 @@ class GrzListView {
         val parts = splitDataStoreStringWithShowOrder(rawText, lvShowOrder)
         // loop parts and format items and headers accordingly
         for (i in parts.indices) {
-            if (parts[i]!!.length == 0) {
+            if (parts[i].length == 0) {
                 continue
             }
             var itemTitle = parts[i]
             var fullTitle: String? = ""
             var uriString = ""
             // if a link is found, modify itemTitle to only show key name
-            val lnkMatch = itemTitle?.let { PATTERN.UriLink.matcher(it) }
-            if (lnkMatch?.find() == true) {
+            val lnkMatch = itemTitle.let { PATTERN.UriLink.matcher(it) }
+            if (lnkMatch.find() == true) {
                 var lnkString = lnkMatch.group()
                 lnkString = lnkString.substring(1, lnkString.length - 1)
                 var keyString = ""
@@ -6301,12 +6302,12 @@ class GrzListView {
                     }
                 } finally {
                 }
-                itemTitle = parts[i]!!.replace(lnkString, keyString)
+                itemTitle = parts[i].replace(lnkString, keyString)
             }
             // distinguish header & item: regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
             if (PATTERN.DateDay.matcher(itemTitle.toString()).find()) {
                 // if week day name is missing, add it
-                itemTitle = trimEndAll(itemTitle!!)
+                itemTitle = trimEndAll(itemTitle)
                 if (itemTitle.length == 10) {
                     itemTitle += dayNameOfWeek(itemTitle)
                 }
@@ -6813,11 +6814,11 @@ internal class LvAdapter : BaseAdapter {
                                         val lnkParts = key.split("::::".toRegex()).toTypedArray()
                                         if (lnkParts != null && lnkParts.size == 2) {
                                             var fileName = lnkParts[1]
-                                            if (fileName!!.startsWith("/") == false) {
+                                            if (fileName.startsWith("/") == false) {
                                                 res = android.R.drawable.ic_menu_compass
                                             }
                                             // in case a folder name contains a .
-                                            if (fileName!!.startsWith("folder/")) {
+                                            if (fileName.startsWith("folder/")) {
                                                 res = android.R.drawable.ic_menu_agenda
                                             }
                                         }
@@ -6838,7 +6839,7 @@ internal class LvAdapter : BaseAdapter {
                         val lnkParts = key.split("::::".toRegex()).toTypedArray()
                         if (lnkParts != null && lnkParts.size == 2) {
                             var fileName = lnkParts[1]
-                            if (fileName!!.startsWith("folder/")) {
+                            if (fileName.startsWith("folder/")) {
                                 res = android.R.drawable.ic_menu_agenda
                             }
                         }

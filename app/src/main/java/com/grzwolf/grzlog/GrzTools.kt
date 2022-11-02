@@ -856,7 +856,7 @@ fun showAppLinkOrAttachment(context: Context, title: String, fileName: String?) 
     }
 
     // fileName not starting with a '/' (emulator) AND 'file' (real device) is a www link: fire default browser and return
-    if ((fileName!!.startsWith("/") == false) && (fileName!!.startsWith("file") == false)) {
+    if ((fileName.startsWith("/") == false) && (fileName.startsWith("file") == false)) {
         // take link as it is
         var uri = Uri.parse(fileName)
         // check link for https and replace it with http
@@ -878,7 +878,7 @@ fun showAppLinkOrAttachment(context: Context, title: String, fileName: String?) 
     // only deal with app local attachments
     var appAttachmentStoragePath = context.getExternalFilesDir(null)!!.absolutePath + "/Images"
     var fullFileName = fileName
-    if (fileName!!.startsWith("file") == false) {
+    if (fileName.startsWith("file") == false) {
         fullFileName = "file://" + appAttachmentStoragePath + fileName
     }
 
