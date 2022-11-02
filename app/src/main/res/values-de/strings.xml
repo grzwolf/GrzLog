@@ -218,5 +218,9 @@
     <string name="duplicateName">duplikater Name</string>
     <string name="emptyInput">leerer Input</string>
     <string name="switchToSearchList">Zurück zur Suchliste?</string>
+    <string name="jump">Springen</string>
+    <string name="searchPhrase">Suchbegriff eingeben</string>
+    <string name="searchResultsAvailable">Suchresultate verfügbar</string>
+    <string name="useExistingResults">Diese anzeigen?</string>
 </resources>
 

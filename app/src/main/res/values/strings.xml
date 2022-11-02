@@ -219,4 +219,8 @@
     <string name="duplicateName">duplicate name</string>
     <string name="emptyInput">empty input</string>
     <string name="switchToSearchList">Switch back to search list?</string>
+    <string name="jump">Jump</string>
+    <string name="searchPhrase">Input global search phrase</string>
+    <string name="searchResultsAvailable">Search results available</string>
+    <string name="useExistingResults">Use existing results?</string>
 </resources>
