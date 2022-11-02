@@ -2062,24 +2062,24 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)      // convert & format raw text to array
             lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList) // set adapter and populate main listview
             lvMain.listView!!.adapter = lvMain.adapter
-            val jumpToPos = intArrayOf(lvMain.fstVisPos)                           // prepare scroll & highlight ListView
+            var jumpToPos = lvMain.fstVisPos                                       // prepare scroll & highlight ListView
             if (plusButtonInput) {
                 // adjust ListView jump to position for normal PlusButton input
                 if (lvMain.showOrder == SHOW_ORDER.TOP) {
                     lvMain.selectedRow = 1
-                    jumpToPos[0] = 0
+                    jumpToPos = 0
                 } else {
                     lvMain.selectedRow = lvMain.arrayList!!.size - 1
-                    jumpToPos[0] = lvMain.selectedRow
+                    jumpToPos = lvMain.selectedRow
                 }
             } else {
                 // adjust ListView jump to position for 'insert line' input
                 if (ds!!.undoAction == ACTION.REVERTINSERT) {
                     if (lvMain.selectedRow >= lvMain.lstVisPos) {
-                        jumpToPos[0] = lvMain.selectedRow
+                        jumpToPos = lvMain.selectedRow
                     }
                     if (lvMain.selectedRow <= lvMain.fstVisPos) {
-                        jumpToPos[0] = lvMain.selectedRow
+                        jumpToPos = lvMain.selectedRow
                     }
                 }
             }
@@ -2093,7 +2093,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 lvMain.arrayList!![lvMain.selectedRow].setHighLighted(true)
             }
             // ListView shall jump to last known 1st visible  position
-            lvMain.listView!!.setSelection(jumpToPos[0])
+            lvMain.listView!!.setSelection(jumpToPos)
 
             // revoke temporary selection of edited item
             lvMain.listView!!.postDelayed({
@@ -2107,7 +2107,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 }
                 ds!!.tagSection.clear()
                 // ListView jump
-                lvMain.listView!!.setSelection(jumpToPos[0])
+                lvMain.listView!!.setSelection(jumpToPos)
                 // inform listview adapter about the changes
                 lvMain.adapter!!.notifyDataSetChanged()
             }, 3000)
@@ -2208,7 +2208,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     private fun fabPlusOnLongClick(view: View, lv: ListView?) {
         val optionsBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         optionsBuilder.setTitle(R.string.JumpTo)
-        val optionsDialog = arrayOf<AlertDialog?>(null)
+        var optionsDialog: AlertDialog? = null
         optionsBuilder.setSingleChoiceItems(
             arrayOf(
                 getString(R.string.top),
@@ -2221,11 +2221,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (which == 1) {
                 lv!!.setSelection(lv.adapter.count - 1)
             }
-            optionsDialog[0]!!.dismiss()
+            optionsDialog!!.dismiss()
         }
         optionsBuilder.setNegativeButton(R.string.cancel) { dialog, which -> }
-        optionsDialog[0] = optionsBuilder.create()
-        optionsDialog[0]?.show()
+        optionsDialog = optionsBuilder.create()
+        optionsDialog?.show()
     }
 
     // DataStore serialization read
@@ -2713,13 +2713,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 getString(R.string.folderAsRTF)
             )
             shareBuilder.setTitle(R.string.shareSelection)
-            val selected = intArrayOf(0)
+            var selected = 0
             shareBuilder.setSingleChoiceItems(
                 items,
                 0,
                 DialogInterface.OnClickListener { dialog, which ->
-                    selected[0] = which
-                    if (selected[0] < 2) {
+                    selected = which
+                    if (selected < 2) {
                         // we cannot accept an empty selection
                         if (lvMain.selectedText!!.length == 0) {
                             okBox(
@@ -2734,7 +2734,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             shareBuilder.setPositiveButton(
                 R.string.ok,
                 DialogInterface.OnClickListener { dialog, which ->
-                    if (selected[0] < 2) {
+                    if (selected < 2) {
                         // we cannot accept an empty selection
                         if (lvMain.selectedText!!.length == 0) {
                             okBox(
@@ -2746,21 +2746,21 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         }
                     }
                     // share line as text
-                    if (selected[0] == 0) {
+                    if (selected == 0) {
                         shareBody = lvMain.arrayList!![lvMain.selectedRow].fullTitle
                         clipboard = shareBody
                     }
                     // share day as text
-                    if (selected[0] == 1) {
+                    if (selected == 1) {
                         shareBody = lvMain.getSelectedDay(lvMain.selectedRow)
                         clipboard = shareBody
                     }
                     // share complete folder as text
-                    if (selected[0] == 2) {
+                    if (selected == 2) {
                         shareBody = lvMain.selectedFolder
                         clipboard = shareBody
                     }
-                    if (selected[0] < 3) {
+                    if (selected < 3) {
                         // open share options
                         val sharingIntent = Intent(Intent.ACTION_SEND)
                         sharingIntent.type = "text/plain"
@@ -2770,12 +2770,12 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         startActivity(Intent.createChooser(sharingIntent, ""))
                     }
                     // share folder as PDF
-                    if (selected[0] == 3) {
+                    if (selected == 3) {
                         val folderName = ds!!.namesSection[ds!!.selectedSection]
                         generatePdf(folderName, ds!!.dataSection[ds!!.selectedSection], true, null)
                     }
                     // share folder as RTF
-                    if (selected[0] == 4) {
+                    if (selected == 4) {
                         val folderName = ds!!.namesSection[ds!!.selectedSection]
                         generateRtf(folderName, ds!!.dataSection[ds!!.selectedSection], true, null)
                     }
@@ -2816,9 +2816,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
             val changeFileBuilderContext = changeFileBuilder.context
             changeFileBuilder.setTitle(R.string.selectFolder)
-            val selectedSectionTemp = intArrayOf(ds!!.selectedSection)
-            val lastClickTime = longArrayOf(System.currentTimeMillis())
-            val lastSelectedSection = intArrayOf(ds!!.selectedSection)
+            var selectedSectionTemp = ds!!.selectedSection
+            var lastClickTime = System.currentTimeMillis()
+            var lastSelectedSection = ds!!.selectedSection
             // add a radio button list containing all the folder names from DataStore
             val array = ds!!.namesSection.toTypedArray()
             changeFileBuilder.setSingleChoiceItems(
@@ -2826,24 +2826,24 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 ds!!.selectedSection,
                 DialogInterface.OnClickListener { dialog, which ->
                     // the current file selection is temporary, unless we confirm with OK
-                    selectedSectionTemp[0] = which
+                    selectedSectionTemp = which
                     // check double click event: it shall behave like OK, means make the folder change permanent
                     val nowTime = System.currentTimeMillis()
-                    val deltaTime = nowTime - lastClickTime[0]
-                    if (deltaTime < 700 && lastSelectedSection[0] == which) {
+                    val deltaTime = nowTime - lastClickTime
+                    if (deltaTime < 700 && lastSelectedSection == which) {
                         // now the file selection becomes permanent
-                        switchToFolderByNumber(selectedSectionTemp[0])
+                        switchToFolderByNumber(selectedSectionTemp)
                         dialog.cancel()
                     }
-                    lastSelectedSection[0] = which
-                    lastClickTime[0] = nowTime
+                    lastSelectedSection = which
+                    lastClickTime = nowTime
                 })
             // CHANGE FOLDER selection OK
             changeFileBuilder.setPositiveButton(
                 R.string.ok,
                 DialogInterface.OnClickListener { dialog, which ->
                     // now the file selection becomes permanent
-                    switchToFolderByNumber(selectedSectionTemp[0])
+                    switchToFolderByNumber(selectedSectionTemp)
                     dialog.cancel()
                 })
             // CHANGE FOLDER selection Cancel
@@ -2852,7 +2852,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             changeFileBuilder.setNeutralButton(
                 R.string.more,
                 DialogInterface.OnClickListener { dialogMore, which ->
-                    val itemText = ds!!.namesSection[selectedSectionTemp[0]]
+                    val itemText = ds!!.namesSection[selectedSectionTemp]
                     // MORE FOLDER OPTIONS
                     val items = arrayOf<CharSequence>(     // x = FOLDER options
                         getString(R.string.export),                          // 0 Export
@@ -2890,7 +2890,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     } else {
                                         AlertDialog.Builder(this@MainActivity)
                                     }
-                                val tmpExportSelection = intArrayOf(0)
+                                var tmpExportSelection = 0
                                 exportBuilder.setTitle(R.string.exportFolder)
                                 exportBuilder.setSingleChoiceItems(
                                     arrayOf(
@@ -2900,27 +2900,27 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     ),
                                     0,
                                     DialogInterface.OnClickListener { dialog, which ->
-                                        tmpExportSelection[0] = which
+                                        tmpExportSelection = which
                                     })
                                 // EXPORT OPTIONS ok
                                 exportBuilder.setPositiveButton(
                                     R.string.ok,
                                     DialogInterface.OnClickListener { dialog, which ->
                                         //  EXPORT OPTIONS: PDF
-                                        if (tmpExportSelection[0] == 0) {
-                                            val folderName = ds!!.namesSection[selectedSectionTemp[0]]
-                                            val rawText = ds!!.dataSection[selectedSectionTemp[0]]
+                                        if (tmpExportSelection == 0) {
+                                            val folderName = ds!!.namesSection[selectedSectionTemp]
+                                            val rawText = ds!!.dataSection[selectedSectionTemp]
                                             generatePdf(folderName, rawText, false, moreBuilder)
                                         }
                                         //  EXPORT OPTIONS: RTF
-                                        if (tmpExportSelection[0] == 1) {
-                                            val folderName = ds!!.namesSection[selectedSectionTemp[0]]
-                                            val rawText = ds!!.dataSection[selectedSectionTemp[0]]
+                                        if (tmpExportSelection == 1) {
+                                            val folderName = ds!!.namesSection[selectedSectionTemp]
+                                            val rawText = ds!!.dataSection[selectedSectionTemp]
                                             generateRtf(folderName, rawText, false, moreBuilder)
                                         }
                                         // EXPORT OPTIONS: copy folder to clipboard
-                                        if (tmpExportSelection[0] == 2) {
-                                            shareBody = ds!!.dataSection[selectedSectionTemp[0]]
+                                        if (tmpExportSelection == 2) {
+                                            shareBody = ds!!.dataSection[selectedSectionTemp]
                                             clipboard = shareBody
                                         }
                                     })
@@ -3019,7 +3019,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 val input = EditText(moreBuilderContext)
                                 input.inputType = InputType.TYPE_CLASS_TEXT
                                 input.setText(
-                                    ds!!.namesSection[selectedSectionTemp[0]],
+                                    ds!!.namesSection[selectedSectionTemp],
                                     TextView.BufferType.SPANNABLE
                                 )
                                 showEditTextContextMenu(input, false) // suppress edit context menu
@@ -3060,8 +3060,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                             val fbt = FabBackTag("", ArrayList(), -1)
                                             fabBack!!.tag = fbt
                                         }
-                                        ds!!.namesSection[selectedSectionTemp[0]] = text.toString()
-                                        ds!!.selectedSection = selectedSectionTemp[0]
+                                        ds!!.namesSection[selectedSectionTemp] = text.toString()
+                                        ds!!.selectedSection = selectedSectionTemp
                                         writeAppData(appStoragePath, ds, appName)
                                         // call menu item programmatically: https://stackoverflow.com/questions/30002471/how-to-programmatically-trigger-click-on-a-menuitem-in-android
                                         findViewById<View>(R.id.action_ChangeFolder).callOnClick()
@@ -3070,7 +3070,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                         // close parent dialog
                                         changeFolderDialog!!.cancel()
                                         // but show more dialog
-                                        moreDialog!!.setTitle(getString(R.string.whatTodoWithFolder) + ds!!.namesSection[selectedSectionTemp[0]] + "'")
+                                        moreDialog!!.setTitle(getString(R.string.whatTodoWithFolder) + ds!!.namesSection[selectedSectionTemp] + "'")
                                         moreDialog!!.show()
                                     })
                                 // folder name rename cancel
@@ -3112,8 +3112,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                             fabBack!!.tag = fbt
                                         }
                                         // cleanup
-                                        ds!!.dataSection[selectedSectionTemp[0]] = ""
-                                        ds!!.selectedSection = selectedSectionTemp[0]
+                                        ds!!.dataSection[selectedSectionTemp] = ""
+                                        ds!!.selectedSection = selectedSectionTemp
                                         writeAppData(appStoragePath, ds, appName)
                                         // close parent dialog
                                         changeFolderDialog!!.cancel()
@@ -3157,18 +3157,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                                 // remove folder
                                                 if (ds!!.namesSection.size > 1) {
                                                     ds!!.namesSection.removeAt(
-                                                        selectedSectionTemp[0]
+                                                        selectedSectionTemp
                                                     )
-                                                    ds!!.selectedSection = Math.max(
-                                                        selectedSectionTemp[0] - 1, 0
-                                                    )
-                                                    ds!!.dataSection.removeAt(
-                                                        selectedSectionTemp[0]
-                                                    )
+                                                    ds!!.selectedSection = Math.max(selectedSectionTemp - 1, 0)
+                                                    ds!!.dataSection.removeAt(selectedSectionTemp)
                                                 } else {
-                                                    ds!!.namesSection[selectedSectionTemp[0]] = getString(R.string.folder)
-                                                    ds!!.selectedSection = selectedSectionTemp[0]
-                                                    ds!!.dataSection[selectedSectionTemp[0]] = ""
+                                                    ds!!.namesSection[selectedSectionTemp] = getString(R.string.folder)
+                                                    ds!!.selectedSection = selectedSectionTemp
+                                                    ds!!.dataSection[selectedSectionTemp] = ""
                                                 }
                                                 // save data
                                                 writeAppData(appStoragePath, ds, appName)
@@ -3187,8 +3183,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             }
                             //  MORE FOLDER OPTIONS: Move folder up in list
                             if (which == 5) {
-                                if (ds!!.namesSection.size < 2 || selectedSectionTemp[0] == 0) {
-                                    val folderName = ds!!.namesSection[selectedSectionTemp[0]]
+                                if (ds!!.namesSection.size < 2 || selectedSectionTemp == 0) {
+                                    val folderName = ds!!.namesSection[selectedSectionTemp]
                                     centeredToast(
                                         this,
                                         "'" + folderName + "' " + getString(R.string.folderAlreadyAtTop),
@@ -3198,18 +3194,18 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     return@OnClickListener
                                 }
                                 // tmp save current folder -1
-                                val nameTmp = ds!!.namesSection[selectedSectionTemp[0] - 1]
-                                ds!!.selectedSection = selectedSectionTemp[0] - 1
+                                val nameTmp = ds!!.namesSection[selectedSectionTemp - 1]
+                                ds!!.selectedSection = selectedSectionTemp - 1
                                 val selectionTmp = ds!!.selectedSection
-                                val dataTmp = ds!!.dataSection[selectedSectionTemp[0] - 1]
+                                val dataTmp = ds!!.dataSection[selectedSectionTemp - 1]
                                 // copy current folder one level up
-                                ds!!.namesSection[selectedSectionTemp[0] - 1] = ds!!.namesSection[selectedSectionTemp[0]]
-                                ds!!.selectedSection = selectedSectionTemp[0] - 1
-                                ds!!.dataSection[selectedSectionTemp[0] - 1] = ds!!.dataSection[selectedSectionTemp[0]]
+                                ds!!.namesSection[selectedSectionTemp - 1] = ds!!.namesSection[selectedSectionTemp]
+                                ds!!.selectedSection = selectedSectionTemp - 1
+                                ds!!.dataSection[selectedSectionTemp - 1] = ds!!.dataSection[selectedSectionTemp]
                                 // copy tmp to current
-                                ds!!.namesSection[selectedSectionTemp[0]] = nameTmp
+                                ds!!.namesSection[selectedSectionTemp] = nameTmp
                                 ds!!.selectedSection = selectionTmp
-                                ds!!.dataSection[selectedSectionTemp[0]] = dataTmp
+                                ds!!.dataSection[selectedSectionTemp] = dataTmp
                                 // make change permanent
                                 writeAppData(appStoragePath, ds, appName)
                                 reReadAppFileData = true
@@ -3222,7 +3218,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     "hh:mm",
                                     "hh:mm:ss"
                                 )
-                                val selection = intArrayOf(ds!!.timeSection[selectedSectionTemp[0]])
+                                var selection = ds!!.timeSection[selectedSectionTemp]
                                 var dialog: AlertDialog?
                                 var builder: AlertDialog.Builder?
                                 builder =
@@ -3237,15 +3233,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 builder.setTitle(R.string.timestampSetting)
                                 builder.setSingleChoiceItems(
                                     items,
-                                    selection[0],
+                                    selection,
                                     DialogInterface.OnClickListener { dialog, which ->
-                                        selection[0] = which
+                                        selection = which
                                     })
                                 builder.setPositiveButton(
                                     "Ok",
                                     // ok takes over the recently selected option
                                     DialogInterface.OnClickListener { dialog, which ->
-                                        ds!!.timeSection[selectedSectionTemp[0]] = selection[0]
+                                        ds!!.timeSection[selectedSectionTemp] = selection
                                         writeAppData(appStoragePath, ds, appName) // save data
                                         moreDialog!!.show()                       // show more dlg again
                                     })
@@ -4738,10 +4734,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         share: Boolean,
         callingBuilder: AlertDialog.Builder?
     ) {
-        val dpi = floatArrayOf(300.0f)
-        val items =
-            arrayOf<CharSequence>("150dpi", "200dpi", "300dpi --> 250kb/jpg", "400dpi", "600dpi")
-        val selection = intArrayOf(2)
+        var dpi = 300.0f
+        val items = arrayOf<CharSequence>("150dpi", "200dpi", "300dpi --> 250kb/jpg", "400dpi", "600dpi")
+        var selection = 2
         var dialog: AlertDialog?
         var builder: AlertDialog.Builder?
         builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -4752,11 +4747,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builder.setTitle(getString(R.string.GenerateRTF) + " - " + getString(R.string.ChoosePrintQuality))
         builder.setSingleChoiceItems(
             items,
-            selection[0],
-            DialogInterface.OnClickListener { dlg, which -> selection[0] = which })
+            selection,
+            DialogInterface.OnClickListener { dlg, which -> selection = which })
         builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dlg, which ->
-            dpi[0] = dpiSelection(selection[0])
-            generateRtfFile(folderName, rawText, share, dpi[0])
+            dpi = dpiSelection(selection)
+            generateRtfFile(folderName, rawText, share, dpi)
         })
         builder.setNegativeButton(
             R.string.cancel,
@@ -5029,10 +5024,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         share: Boolean,
         callingBuilder: AlertDialog.Builder?
     ) {
-        val dpi = floatArrayOf(300.0f)
-        val items =
-            arrayOf<CharSequence>("150dpi", "200dpi", "300dpi --> 250kb/jpg", "400dpi", "600dpi")
-        val selection = intArrayOf(2)
+        var dpi = 300.0f
+        val items = arrayOf<CharSequence>("150dpi", "200dpi", "300dpi --> 250kb/jpg", "400dpi", "600dpi")
+        var selection = 2
         var dialog: AlertDialog?
         var builder: AlertDialog.Builder?
         builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -5043,17 +5037,17 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builder.setTitle(getString(R.string.GeneratePDF) + " - " + getString(R.string.ChoosePrintQuality))
         builder.setSingleChoiceItems(
             items,
-            selection[0],
-            DialogInterface.OnClickListener { dlg, which -> selection[0] = which })
+            selection,
+            DialogInterface.OnClickListener { dlg, which -> selection = which })
         builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dlg, which ->
-            dpi[0] = dpiSelection(selection[0])
-            generatePdfProgress(folderName, rawText, share, dpi[0], false)
+            dpi = dpiSelection(selection)
+            generatePdfProgress(folderName, rawText, share, dpi, false)
         })
         builder.setNeutralButton(
             getString(R.string.ShowPDF),
             DialogInterface.OnClickListener { dlg, which ->
-                dpi[0] = dpiSelection(selection[0])
-                generatePdfProgress(folderName, rawText, share, dpi[0], true)
+                dpi = dpiSelection(selection)
+                generatePdfProgress(folderName, rawText, share, dpi, true)
             })
         builder.setNegativeButton(
             R.string.cancel,
