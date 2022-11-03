@@ -259,26 +259,33 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         // listview item 'double click' and 'single click'
         (lvMain.listView)?.setOnItemClickListener(OnItemClickListener { adapterView, itemView, itemPosition, itemId ->
+            val DOUBLECLICK_MS: Long = 300
             // if condition for a double click event is met, the single click handler gets disabled
-            if (System.currentTimeMillis() - lvMain.itemLastClickTime < 300) {
+            if (System.currentTimeMillis() - lvMain.itemLastClickTime < DOUBLECLICK_MS) {
                 lvMain.singleClickHandler.removeCallbacksAndMessages(null)
                 lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
                 return@OnItemClickListener
             }
             // store the time of the item's click event
             lvMain.itemLastClickTime = System.currentTimeMillis()
-            // the single click handler only fires, if it is not deactivated by a double click event
-            lvMain.singleClickHandler.postDelayed({
-                if (lvMain.touchSelectItem && !menuSearchVisible) {
-                    // handle click on item as item select
-                    lvMain.touchSelectItem = false
-                    lvMain.arrayList!![itemPosition].setSelected(!lvMain.arrayList!![itemPosition].isSelected())
-                    lvMain.adapter!!.notifyDataSetChanged()
-                } else {
-                    // show item attachment OR www text link
-                    lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
-                }
-            }, 300)
+            // prevent to fire a single click event twice: https://stackoverflow.com/questions/16078378/how-to-check-if-handler-has-an-active-task
+            if (lvMain.singleClickHandler.hasMessages(0)) {
+                // never happened in any test scenario
+                return@OnItemClickListener
+            } else {
+                // the single click handler only fires, if it is not deactivated by a double click event
+                lvMain.singleClickHandler.postDelayed({
+                    if (lvMain.touchSelectItem && !menuSearchVisible) {
+                        // handle click on item as item select
+                        lvMain.touchSelectItem = false
+                        lvMain.arrayList!![itemPosition].setSelected(!lvMain.arrayList!![itemPosition].isSelected())
+                        lvMain.adapter!!.notifyDataSetChanged()
+                    } else {
+                        // show item attachment OR www text link
+                        lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
+                    }
+                }, DOUBLECLICK_MS)
+            }
         })
 
         // listview item long press
