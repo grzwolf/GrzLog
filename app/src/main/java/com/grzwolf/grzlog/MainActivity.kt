@@ -3524,6 +3524,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             centeredToast(this, "Index out of range", 3000)
             return
         }
+        // switch folder always cancels undo
+        ds!!.undoSection = ""
+        ds!!.undoText = ""
+        ds!!.undoAction = ACTION.UNDEFINED
+        showMenuItemUndo()
         // full infra to switch to a DataStore folder
         ds!!.selectedSection = number
         writeAppData(appStoragePath, ds, appName)
