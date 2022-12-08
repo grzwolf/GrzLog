@@ -1904,10 +1904,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
             // final string collector
             var finalStr: String
+            // alternative final string collector with skipped dates
+            var finalStrWithSkippedDates: String = ""
+            var newTextWithSkippedDates: String = ""
+            var numAutoFilledDates = 0
+            var fillWithSkippedDates = sharedPref.getBoolean("askAutoFillSkippedDates", true)
             // will a date / time stamp be added
             var addTimeStamp = false
-            // mark a range
-            var markRange = false
             // need to distinguish between 'edit line' (aka long press) AND 'new input' (aka + button)
             val plusButtonInput: Boolean
             if (lvMain.editLongPress) {
@@ -1973,19 +1976,32 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 }
                 // a common date format string
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd")
-                val dateStringLast = if (oriParts[0] != null) oriParts[0] else "1970-01-01"
-                val dateLast: Date
-                dateLast = try {
-                    dateFormat.parse(dateStringLast.toString())!!
-                } catch (ex: Exception) { //  ... if no data is found, we start over with EPOC
-                    Date(1970, 1, 1)
-                }
+
                 // get today date stamp w/o time
                 val dateToday: Date?
                 dateToday = try {
                     dateFormat.parse(dateFormat.format(Date()))
                 } catch (ex: Exception) {
                     Date()
+                }
+                // prepare for a date max. 1 day before
+                val cal = Calendar.getInstance()
+                var todayStr = dateFormat.format(dateToday)
+                cal.time = dateFormat.parse(todayStr)
+                cal.add(Calendar.DATE, -1)
+                val yesterdayStr = dateFormat.format(cal.time)
+                val yesterdayDate = dateFormat.parse(yesterdayStr)
+                // last entry date
+                val dateStringLast = if (oriParts[0] != null) {
+                    oriParts[0]
+                } else {
+                    yesterdayStr
+                }
+                val dateLast: Date
+                dateLast = try {
+                    dateFormat.parse(dateStringLast.toString())!!
+                } catch (ex: Exception) { //  ... if no data is found, we start over with EPOC
+                    yesterdayDate
                 }
                 // keep latest date stamp always on top: 0 = add today at top / 1 = don't add today at top
                 var combineNdx = 1
@@ -2013,132 +2029,61 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 // build final string after input
                 finalStr = dateStr
                 finalStr += newText
+                // alternative finalStr
+                finalStrWithSkippedDates = finalStr
+                // prepare auto fill skipped dates
+                if ( fillWithSkippedDates ) {
+                    newTextWithSkippedDates = finalStr
+                    // start date is one day after the last entry's date
+                    val c = Calendar.getInstance()
+                    c.time = dateFormat.parse(dateStringLast)
+                    c.add(Calendar.DATE, 1)
+                    val fromStr = dateFormat.format(c.time)
+                    val fromDate = dateFormat.parse(fromStr)
+                    // list contains all date strings between today and the last recorded entry
+                    val skippedDatesList = getDaysBetweenDates(fromDate, dateToday!!).reversed()
+                    numAutoFilledDates = skippedDatesList.size
+                    if (skippedDatesList.size > 0) {
+                        for (dateStr in skippedDatesList) {
+                            finalStrWithSkippedDates += "\n" + dateStr
+                            newTextWithSkippedDates += dateStr + "\n"
+                        }
+                    } else {
+                        fillWithSkippedDates = false
+                        finalStrWithSkippedDates = ""
+                        newTextWithSkippedDates = ""
+                    }
+                }
+
+                // finally append all original entries to finalStr
                 for (i in combineNdx until oriParts.size) {
                     finalStr += "\n" + oriParts[i]
+                    if (fillWithSkippedDates) {
+                        finalStrWithSkippedDates += "\n" + oriParts[i]
+                    }
                 }
             }
 
             // sake of mind
             if (!finalStr.endsWith("\n")) {
                 finalStr += "\n"
+                finalStrWithSkippedDates += "\n"
             }
 
-            // memorize the inserted lines in tagSection
-            ds!!.tagSection.clear()
-            var numOfNewlines = newText.split("\n").size
-            if (numOfNewlines > 1) {
-                // there is a range
-                markRange = true
-                // the magic newline
-                if (newText.endsWith("\n")) {
-                    numOfNewlines--
-                }
-                // corrections:
-                var corrector = 0
-                // insert line before a Header / Date section, needs to take the Spacer above into account
-                if (!plusButtonInput) {
-                    if (lvMain.showOrder == SHOW_ORDER.TOP) {
-                        if ((lvMain.selectedRow > 0) && lvMain.arrayList!![lvMain.selectedRow].isSection) {
-                            corrector = -1
-                        }
-                    }
-                    if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                        if ((lvMain.selectedRow < lvMain.arrayList!!.size - 1) && lvMain.arrayList!![lvMain.selectedRow + 1].isSection) {
-                            corrector = -1
-                        }
-                    }
-                }
-                // plus button specific
-                if (plusButtonInput) {
-                    if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                        if (addTimeStamp) {
-                            corrector = 2
-                            numOfNewlines++
-                        } else {
-                            corrector = 1
-                        }
-                    }
-                }
-                // now highlight
-                for (i in 0 until numOfNewlines) {
-                    ds!!.tagSection.add(lvMain.selectedRow + i + corrector)
-                }
-            }
-
-            // clean up
-            fabPlus.pickAttachment = false
-            lvMain.editLongPress = false
-            fabPlus.editInsertLine = false
-            fabPlus.imageCapture = false
-            fabPlus.attachmentUri = ""
-            fabPlus.inputAlertText = ""
-            fabPlus.attachmentName = ""
-            fabPlus.button!!.show()
-            // save and re-read saved data
-            ds!!.dataSection[ds!!.selectedSection] = finalStr                      // update DataStore dataSection
-            writeAppData(appStoragePath, ds, appName)                              // serialize DataStore to GrzLog.ser
-            ds!!.clear()                                                           // clear DataStore
-            ds = readAppData(appStoragePath)                                       // un serialize DataStore from GrzLog.ser
-            val dsText = ds!!.dataSection[ds!!.selectedSection]                    // get raw data text from DataStore section/folder
-            title = ds!!.namesSection[ds!!.selectedSection]                        // set app title to folder Name
-            lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)      // convert & format raw text to array
-            lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList) // set adapter and populate main listview
-            lvMain.listView!!.adapter = lvMain.adapter
-            var jumpToPos = lvMain.fstVisPos                                       // prepare scroll & highlight ListView
-            if (plusButtonInput) {
-                // adjust ListView jump to position for normal PlusButton input
-                if (lvMain.showOrder == SHOW_ORDER.TOP) {
-                    lvMain.selectedRow = 1
-                    jumpToPos = 0
-                } else {
-                    lvMain.selectedRow = lvMain.arrayList!!.size - 1
-                    jumpToPos = lvMain.selectedRow
-                }
+            // finale asks for a decision regarding skipped dates
+            if ( plusButtonInput && fillWithSkippedDates ) {
+                decisionBox(
+                    this@MainActivity,
+                    DECISION.YESNO,
+                    getString(R.string.autoFillSkippedDates),
+                    getString(R.string.continueQuestion),
+                    { fabPlusOkFinale(finalStrWithSkippedDates, newTextWithSkippedDates, addTimeStamp, plusButtonInput, numAutoFilledDates) },
+                    { fabPlusOkFinale(finalStr, newText, addTimeStamp, plusButtonInput, 0) }
+                )
             } else {
-                // adjust ListView jump to position for 'insert line' input
-                if (ds!!.undoAction == ACTION.REVERTINSERT) {
-                    if (lvMain.selectedRow >= lvMain.lstVisPos) {
-                        jumpToPos = lvMain.selectedRow
-                    }
-                    if (lvMain.selectedRow <= lvMain.fstVisPos) {
-                        jumpToPos = lvMain.selectedRow
-                    }
-                }
+                fabPlusOkFinale(finalStr, newText, addTimeStamp, plusButtonInput, 0)
             }
 
-            // temporarily select edited item
-            if (markRange) {
-                for (i in 0 until ds!!.tagSection.size) {
-                    lvMain.arrayList!![ds!!.tagSection[i]].setHighLighted(true)
-                }
-            } else {
-                lvMain.arrayList!![lvMain.selectedRow].setHighLighted(true)
-            }
-            // ListView shall jump to last known 1st visible  position
-            lvMain.listView!!.setSelection(jumpToPos)
-
-            // revoke temporary selection of edited item
-            lvMain.listView!!.postDelayed({
-                // un mark items
-                if (markRange) {
-                    for (i in 0 until ds!!.tagSection.size) {
-                        lvMain.arrayList!![ds!!.tagSection[i]].setHighLighted(false)
-                    }
-                } else {
-                    lvMain.arrayList!![lvMain.selectedRow].setHighLighted(false)
-                }
-                ds!!.tagSection.clear()
-                // ListView jump
-                lvMain.listView!!.setSelection(jumpToPos)
-                // inform listview adapter about the changes
-                lvMain.adapter!!.notifyDataSetChanged()
-            }, 3000)
-
-            // finale
-            if (menuSearchVisible && searchViewQuery.length > 0) {
-                // edit item while search menu is open, shall restore the search hit selection status of all items
-                lvMain.restoreFolderSearchHitStatus(searchViewQuery.lowercase(Locale.getDefault()))
-            }
         })
 
         // fabPlus button CANCEL
@@ -2178,6 +2123,131 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val stopSel = fabPlus.inputAlertView!!.selectionEnd
         showKeyboard(fabPlus.inputAlertView, startSel, stopSel, 250)
     }
+
+    // final handling of fabPlusOk as a separate fun to allow option to auto fill skipped dates
+    fun fabPlusOkFinale(finalStr: String, newText: String, plusButtonInput: Boolean, addTimeStamp: Boolean, numAutoFilledDates: Int ) {
+
+        // memorize the inserted lines in tagSection
+        ds!!.tagSection.clear()
+        var numOfNewlines = newText.split("\n").size
+        var markRange = false
+        if (numOfNewlines > 1) {
+            // there is a range
+            markRange = true
+            // the magic newline
+            if (newText.endsWith("\n")) {
+                numOfNewlines--
+            }
+            // corrections:
+            var corrector = 0
+            // insert line before a Header / Date section, needs to take the Spacer above into account
+            if (!plusButtonInput) {
+                if (lvMain.showOrder == SHOW_ORDER.TOP) {
+                    if ((lvMain.selectedRow > 0) && lvMain.arrayList!![lvMain.selectedRow].isSection) {
+                        corrector = -1
+                    }
+                }
+                if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                    if ((lvMain.selectedRow < lvMain.arrayList!!.size - 1) && lvMain.arrayList!![lvMain.selectedRow + 1].isSection) {
+                        corrector = -1
+                    }
+                }
+            }
+            // plus button specific
+            if (plusButtonInput) {
+                if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                    if (addTimeStamp) {
+                        corrector = 2
+                        numOfNewlines++
+                    } else {
+                        corrector = 1
+                    }
+                }
+                // each auto filled date is a header
+                numOfNewlines += numAutoFilledDates
+            }
+            // now highlight
+            for (i in 0 until numOfNewlines) {
+                ds!!.tagSection.add(lvMain.selectedRow + i + corrector)
+            }
+        }
+
+        // clean up
+        fabPlus.pickAttachment = false
+        lvMain.editLongPress = false
+        fabPlus.editInsertLine = false
+        fabPlus.imageCapture = false
+        fabPlus.attachmentUri = ""
+        fabPlus.inputAlertText = ""
+        fabPlus.attachmentName = ""
+        fabPlus.button!!.show()
+        // save and re-read saved data
+        ds!!.dataSection[ds!!.selectedSection] = finalStr                      // update DataStore dataSection
+        writeAppData(appStoragePath, ds, appName)                              // serialize DataStore to GrzLog.ser
+        ds!!.clear()                                                           // clear DataStore
+        ds = readAppData(appStoragePath)                                       // un serialize DataStore from GrzLog.ser
+        val dsText = ds!!.dataSection[ds!!.selectedSection]                    // get raw data text from DataStore section/folder
+        title = ds!!.namesSection[ds!!.selectedSection]                        // set app title to folder Name
+        lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)      // convert & format raw text to array
+        lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList) // set adapter and populate main listview
+        lvMain.listView!!.adapter = lvMain.adapter
+        var jumpToPos = lvMain.fstVisPos                                       // prepare scroll & highlight ListView
+        if (plusButtonInput) {
+            // adjust ListView jump to position for normal PlusButton input
+            if (lvMain.showOrder == SHOW_ORDER.TOP) {
+                lvMain.selectedRow = 1
+                jumpToPos = 0
+            } else {
+                lvMain.selectedRow = lvMain.arrayList!!.size - 1
+                jumpToPos = lvMain.selectedRow
+            }
+        } else {
+            // adjust ListView jump to position for 'insert line' input
+            if (ds!!.undoAction == ACTION.REVERTINSERT) {
+                if (lvMain.selectedRow >= lvMain.lstVisPos) {
+                    jumpToPos = lvMain.selectedRow
+                }
+                if (lvMain.selectedRow <= lvMain.fstVisPos) {
+                    jumpToPos = lvMain.selectedRow
+                }
+            }
+        }
+
+        // temporarily select edited item
+        if (markRange) {
+            for (i in 0 until ds!!.tagSection.size) {
+                lvMain.arrayList!![ds!!.tagSection[i]].setHighLighted(true)
+            }
+        } else {
+            lvMain.arrayList!![lvMain.selectedRow].setHighLighted(true)
+        }
+        // ListView shall jump to last known 1st visible  position
+        lvMain.listView!!.setSelection(jumpToPos)
+
+        // revoke temporary selection of edited item
+        lvMain.listView!!.postDelayed({
+            // un mark items
+            if (markRange) {
+                for (i in 0 until ds!!.tagSection.size) {
+                    lvMain.arrayList!![ds!!.tagSection[i]].setHighLighted(false)
+                }
+            } else {
+                lvMain.arrayList!![lvMain.selectedRow].setHighLighted(false)
+            }
+            ds!!.tagSection.clear()
+            // ListView jump
+            lvMain.listView!!.setSelection(jumpToPos)
+            // inform listview adapter about the changes
+            lvMain.adapter!!.notifyDataSetChanged()
+        }, 3000)
+
+        // finale
+        if (menuSearchVisible && searchViewQuery.length > 0) {
+            // edit item while search menu is open, shall restore the search hit selection status of all items
+            lvMain.restoreFolderSearchHitStatus(searchViewQuery.lowercase(Locale.getDefault()))
+        }
+    }
+
 
     // fabPlus dialog cancel action
     private fun localCancel(dialog: DialogInterface, context: Context?) {

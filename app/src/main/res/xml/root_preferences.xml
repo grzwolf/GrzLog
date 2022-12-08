@@ -66,6 +66,13 @@
             app:summaryOn="@string/GCam"
             app:title="@string/useGCam" />
 
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="askAutoFillSkippedDates"
+            app:summaryOff="@string/askNever"
+            app:summaryOn="@string/askAlways"
+            app:title="@string/askAutoFillSkippedDates" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/BackupRestore">

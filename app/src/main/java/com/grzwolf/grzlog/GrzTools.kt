@@ -1235,3 +1235,19 @@ fun getAllLinksFromString(text: String): ArrayList<String>? {
     }
     return links
 }
+
+// https://stackoverflow.com/questions/48960945/getting-range-of-dates-from-two-different-dates
+fun getDaysBetweenDates(startdate: Date, enddate: Date): List<String> {
+    val dates = ArrayList<String>()
+    val calendar = GregorianCalendar()
+    calendar.time = startdate
+    while (calendar.time.before(enddate)) {
+        val result = calendar.time
+        val formatter = SimpleDateFormat("yyyy-MM-dd EEE")
+        val today = formatter.format(result)
+        today.split("|")
+        dates.add(today)
+        calendar.add(Calendar.DATE, 1)
+    }
+    return dates
+}

@@ -221,4 +221,8 @@
     <string name="searchResultsAvailable">Search results available</string>
     <string name="useExistingResults">Use existing results?</string>
     <string name="wwwDisabled">WWW text links are disabled</string>
+    <string name="autoFillSkippedDates">Add skipped dates?</string>
+    <string name="askAutoFillSkippedDates">Ask for auto fill on skipped dates</string>
+    <string name="askNever">never ask</string>
+    <string name="askAlways">always ask</string>
 </resources>
