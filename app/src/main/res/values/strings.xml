@@ -126,8 +126,8 @@
     <string name="ZIPrestored">Backup restored</string>
     <string name="restoreZIP">Restore from Backup</string>
     <string name="RemoveLine">Delete line</string>
-    <string name="InsertLineBefore">Insert line before</string>
-    <string name="InsertLineAfter">Insert line after</string>
+    <string name="InsertLineBefore">Insert line above</string>
+    <string name="InsertLineAfter">Insert line below</string>
     <string name="SelectItems">Select items dialog</string>
     <string name="InsertRow">insert line</string>
     <string name="EditRow">edit line</string>

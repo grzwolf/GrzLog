@@ -125,8 +125,8 @@
     <string name="ZIPrestored">Restore aus Backup herstellen</string>
     <string name="restoreZIP">Restore aus Backup ...</string>
     <string name="RemoveLine">Lösche Zeile</string>
-    <string name="InsertLineBefore">Zeile einfügen davor</string>
-    <string name="InsertLineAfter">Zeile einfügen danach</string>
+    <string name="InsertLineBefore">Zeile oberhalb einfügen</string>
+    <string name="InsertLineAfter">Zeile unterhalb einfügen</string>
     <string name="SelectItems">Items selektieren</string>
     <string name="InsertRow">Einfügen Zeile</string>
     <string name="EditRow">Edit Zeile</string>
