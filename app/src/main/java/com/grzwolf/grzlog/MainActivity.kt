@@ -1911,6 +1911,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             var fillWithSkippedDates = sharedPref.getBoolean("askAutoFillSkippedDates", true)
             // will a date / time stamp be added
             var addTimeStamp = false
+            // marker to indicate a valid last date before the current input date
+            var dateLastIsValid = true
             // need to distinguish between 'edit line' (aka long press) AND 'new input' (aka + button)
             val plusButtonInput: Boolean
             if (lvMain.editLongPress) {
@@ -2000,7 +2002,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 val dateLast: Date
                 dateLast = try {
                     dateFormat.parse(dateStringLast.toString())!!
-                } catch (ex: Exception) { //  ... if no data is found, we start over with EPOC
+                } catch (ex: Exception) { //  ... if no data is found, we start over with yesterday
+                    dateLastIsValid = false
                     yesterdayDate
                 }
                 // keep latest date stamp always on top: 0 = add today at top / 1 = don't add today at top
@@ -2032,7 +2035,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 // alternative finalStr
                 finalStrWithSkippedDates = finalStr
                 // prepare auto fill skipped dates
-                if ( fillWithSkippedDates ) {
+                if ( fillWithSkippedDates && dateLastIsValid ) {
                     newTextWithSkippedDates = finalStr
                     // start date is one day after the last entry's date
                     val c = Calendar.getInstance()
@@ -2071,7 +2074,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
 
             // finale asks for a decision regarding skipped dates
-            if ( plusButtonInput && fillWithSkippedDates ) {
+            if ( plusButtonInput && fillWithSkippedDates && dateLastIsValid ) {
                 decisionBox(
                     this@MainActivity,
                     DECISION.YESNO,
