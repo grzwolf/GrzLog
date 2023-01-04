@@ -104,8 +104,8 @@
     <string name="folderLimit">\"\nThere is a limit of \"</string>
     <string name="folders">\" folders.\"</string>
     <string name="folderNewName">Set new folder\'s name</string>
-    <string name="makeLongPress">Please first \'long press\' a line as selection.</string>
-    <string name="selectedLine">selected line</string>
+    <string name="makeSelection">Please first make a selection.</string>
+    <string name="selectedItems">selected items</string>
     <string name="surroundingDay">surrounding day</string>
     <string name="currentFolder">current folder</string>
     <string name="folderAsPDF">folder as PDF</string>

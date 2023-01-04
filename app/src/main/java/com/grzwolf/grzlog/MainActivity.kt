@@ -2801,8 +2801,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 AlertDialog.Builder(this@MainActivity)
             }
             val items = arrayOf<CharSequence>(
-                getString(R.string.selectedLine),
-                getString(R.string.surroundingDay),
+                getString(R.string.selectedItems),
                 getString(R.string.currentFolder),
                 getString(R.string.folderAsPDF),
                 getString(R.string.folderAsRTF)
@@ -2814,48 +2813,37 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 0,
                 DialogInterface.OnClickListener { dialog, which ->
                     selected = which
-                    if (selected < 2) {
-                        // we cannot accept an empty selection
-                        if (lvMain.selectedText!!.length == 0) {
-                            okBox(
-                                this@MainActivity,
-                                getString(R.string.note),
-                                getString(R.string.makeLongPress)
-                            )
-                            return@OnClickListener
-                        }
-                    }
                 })
             shareBuilder.setPositiveButton(
                 R.string.ok,
                 DialogInterface.OnClickListener { dialog, which ->
-                    if (selected < 2) {
-                        // we cannot accept an empty selection
-                        if (lvMain.selectedText!!.length == 0) {
+                    // share current items selection
+                    if (selected == 0) {
+                        var itemsSelected = false
+                        for (i in lvMain.arrayList!!.indices) {
+                            if (lvMain.arrayList!![i].isSelected()) {
+                                itemsSelected = true
+                                break
+                            }
+                        }
+                        if (itemsSelected) {
+                            shareBody = lvMain.folderSelectedItems
+                            clipboard = shareBody
+                        } else {
                             okBox(
                                 this@MainActivity,
                                 getString(R.string.note),
-                                getString(R.string.makeLongPress)
+                                getString(R.string.makeSelection)
                             )
                             return@OnClickListener
                         }
                     }
-                    // share line as text
-                    if (selected == 0) {
-                        shareBody = lvMain.arrayList!![lvMain.selectedRow].fullTitle
-                        clipboard = shareBody
-                    }
-                    // share day as text
-                    if (selected == 1) {
-                        shareBody = lvMain.getSelectedDay(lvMain.selectedRow)
-                        clipboard = shareBody
-                    }
                     // share complete folder as text
-                    if (selected == 2) {
+                    if (selected == 1) {
                         shareBody = lvMain.selectedFolder
                         clipboard = shareBody
                     }
-                    if (selected < 3) {
+                    if (selected < 2) {
                         // open share options
                         val sharingIntent = Intent(Intent.ACTION_SEND)
                         sharingIntent.type = "text/plain"
@@ -2865,12 +2853,12 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         startActivity(Intent.createChooser(sharingIntent, ""))
                     }
                     // share folder as PDF
-                    if (selected == 3) {
+                    if (selected == 2) {
                         val folderName = ds!!.namesSection[ds!!.selectedSection]
                         generatePdf(folderName, ds!!.dataSection[ds!!.selectedSection], true, null)
                     }
                     // share folder as RTF
-                    if (selected == 4) {
+                    if (selected == 3) {
                         val folderName = ds!!.namesSection[ds!!.selectedSection]
                         generateRtf(folderName, ds!!.dataSection[ds!!.selectedSection], true, null)
                     }

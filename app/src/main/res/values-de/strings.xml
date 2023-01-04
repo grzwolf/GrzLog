@@ -103,8 +103,8 @@
     <string name="folderLimit">\"\nEs gibt ein Limit von \"</string>
     <string name="folders">\" Ordnern.\"</string>
     <string name="folderNewName">Neuer Ordnername</string>
-    <string name="makeLongPress">Bitte erst eine \'Klick lang\' Auswahl treffen.</string>
-    <string name="selectedLine">Ausgewählte Zeile</string>
+    <string name="makeSelection">Bitte erst eine Auswahl treffen.</string>
+    <string name="selectedItems">Ausgewählte Zeilen</string>
     <string name="surroundingDay">Umgebender Tag</string>
     <string name="currentFolder">Aktueller Ordner</string>
     <string name="folderAsPDF">Ordner als PDF</string>
