@@ -21,6 +21,7 @@ android {
             minifyEnabled false
         }
     }
+    namespace 'com.grzwolf.grzlog'
 }
 
 dependencies {
