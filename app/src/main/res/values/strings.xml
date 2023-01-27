@@ -227,4 +227,5 @@
     <string name="askAlways">always ask</string>
     <string name="selectNextTen">Select next 10 items</string>
     <string name="selectMonth">Select month</string>
+    <string name="toggleItemSelection">Toggle item selection:</string>
 </resources>

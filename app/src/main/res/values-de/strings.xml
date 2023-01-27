@@ -226,5 +226,6 @@
     <string name="askAlways">immer fragen</string>
     <string name="selectNextTen">Auswahl nächste 10 Items</string>
     <string name="selectMonth">Auswahl Monat</string>
+    <string name="toggleItemSelection">Toggle Item Auswahl:</string>
 </resources>
 

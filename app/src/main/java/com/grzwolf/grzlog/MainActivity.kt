@@ -1319,12 +1319,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builder.setCustomTitle(titleView)
         // dialog OPTIONS
         val options = arrayOf<CharSequence>(
-            getString(R.string.unselectAll),
-            getString(R.string.selectAll),
-            getString(R.string.invertSelection),
+            getString(R.string.toggleItemSelection) + " " + itemPosition,
             getString(R.string.selectNextTen),
             getString(R.string.selectDay),
             getString(R.string.selectMonth),
+            getString(R.string.unselectAll),
+            getString(R.string.selectAll),
+            getString(R.string.invertSelection),
             "",
             getString(R.string.copyToClipboard),
             "",
@@ -1333,7 +1334,31 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         )
         builder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
             when (item) {
-                0 -> { // Unselect all
+                0 -> { // Toggle the current item's selection status
+                    lvMain.arrayList!![itemPosition].setSelected(!lvMain.arrayList!![itemPosition].isSelected())
+                    lvMain.adapter!!.notifyDataSetChanged()
+                    dialog.dismiss()
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                }
+                1 -> { // Select next 10 items
+                    lvMain.selectNextTenEntries(itemPosition)
+                    lvMain.adapter!!.notifyDataSetChanged()
+                    dialog.dismiss()
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                }
+                2 -> { // Select items of today
+                    lvMain.selectGivenDay(itemPosition)
+                    lvMain.adapter!!.notifyDataSetChanged()
+                    dialog.dismiss()
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                }
+                3 -> { // Select items of month
+                    lvMain.selectGivenMonth(itemPosition)
+                    lvMain.adapter!!.notifyDataSetChanged()
+                    dialog.dismiss()
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                }
+                4 -> { // Unselect all
                     for (i in lvMain.arrayList!!.indices) {
                         lvMain.arrayList!![i].setSelected(false)
                     }
@@ -1341,7 +1366,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                1 -> { // Select all
+                5 -> { // Select all
                     for (i in lvMain.arrayList!!.indices) {
                         lvMain.arrayList!![i].setSelected(true)
                     }
@@ -1349,7 +1374,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                2 -> { // Invert selection
+                6 -> { // Invert selection
                     for (i in lvMain.arrayList!!.indices) {
                         lvMain.arrayList!![i].setSelected(!lvMain.arrayList!![i].isSelected())
                     }
@@ -1357,43 +1382,25 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                3 -> { // Select next 10 items
-                    lvMain.selectNextTenEntries(itemPosition)
-                    lvMain.adapter!!.notifyDataSetChanged()
-                    dialog.dismiss()
-                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
-                }
-                4 -> { // Select items of today
-                    lvMain.selectGivenDay(itemPosition)
-                    lvMain.adapter!!.notifyDataSetChanged()
-                    dialog.dismiss()
-                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
-                }
-                5 -> { // Select items of month
-                    lvMain.selectGivenMonth(itemPosition)
-                    lvMain.adapter!!.notifyDataSetChanged()
-                    dialog.dismiss()
-                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
-                }
-                6 -> { // empty space as separator
+                7 -> { // empty space as separator
                     dialog.dismiss()
                     Handler().postDelayed({
                         whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                     }, 100)
                 }
-                7 -> { // Copy to clipboard / shareBody
+                8 -> { // Copy to clipboard / shareBody
                     shareBody = lvMain.folderSelectedItems
                     clipboard = shareBody
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                8 -> { // empty space as separator
+                9 -> { // empty space as separator
                     dialog.dismiss()
                     Handler().postDelayed({
                         whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                     }, 100)
                 }
-                9 -> { // Cut to clipboard / shareBody
+                10 -> { // Cut to clipboard / shareBody
                     var itemsSelected = false
                     for (i in lvMain.arrayList!!.indices) {
                         if (lvMain.arrayList!![i].isSelected()) {
@@ -1418,7 +1425,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         centeredToast(this, getString(R.string.noSelection), 3000 )
                     }
                 }
-                10 -> { // Delete from ListView
+                11 -> { // Delete from ListView
                     var itemsSelected = false
                     for (i in lvMain.arrayList!!.indices) {
                         if (lvMain.arrayList!![i].isSelected()) {
