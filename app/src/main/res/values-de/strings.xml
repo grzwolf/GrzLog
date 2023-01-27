@@ -224,5 +224,7 @@
     <string name="askAutoFillSkippedDates">Nachfragen bei übersprungenen Tagen</string>
     <string name="askNever">nie fragen</string>
     <string name="askAlways">immer fragen</string>
+    <string name="selectNextTen">Auswahl nächste 10 Items</string>
+    <string name="selectMonth">Auswahl Monat</string>
 </resources>
 

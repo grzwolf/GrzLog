@@ -1310,10 +1310,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             getString(R.string.unselectAll),
             getString(R.string.selectAll),
             getString(R.string.invertSelection),
+            getString(R.string.selectNextTen),
             getString(R.string.selectDay),
-            getString(R.string.copyToClipboard),
-            getString(R.string.cutToClipboard),
+            getString(R.string.selectMonth),
             "",
+            getString(R.string.copyToClipboard),
+            "",
+            getString(R.string.cutToClipboard),
             getString(R.string.deleteFromList)
         )
         builder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
@@ -1342,19 +1345,43 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                3 -> { // Select items of today
+                3 -> { // Select next 10 items
+                    lvMain.selectNextTenEntries(itemPosition)
+                    lvMain.adapter!!.notifyDataSetChanged()
+                    dialog.dismiss()
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                }
+                4 -> { // Select items of today
                     lvMain.selectGivenDay(itemPosition)
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                4 -> { // Copy to clipboard / shareBody
+                5 -> { // Select items of month
+                    lvMain.selectGivenMonth(itemPosition)
+                    lvMain.adapter!!.notifyDataSetChanged()
+                    dialog.dismiss()
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                }
+                6 -> { // empty space as separator
+                    dialog.dismiss()
+                    Handler().postDelayed({
+                        whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                    }, 100)
+                }
+                7 -> { // Copy to clipboard / shareBody
                     shareBody = lvMain.folderSelectedItems
                     clipboard = shareBody
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                5 -> { // Cut to clipboard / shareBody
+                8 -> { // empty space as separator
+                    dialog.dismiss()
+                    Handler().postDelayed({
+                        whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                    }, 100)
+                }
+                9 -> { // Cut to clipboard / shareBody
                     var itemsSelected = false
                     for (i in lvMain.arrayList!!.indices) {
                         if (lvMain.arrayList!![i].isSelected()) {
@@ -1379,13 +1406,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         centeredToast(this, getString(R.string.noSelection), 3000 )
                     }
                 }
-                6 -> { // empty space as separator to 'Delete from List'
-                    dialog.dismiss()
-                    Handler().postDelayed({
-                        whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
-                    }, 100)
-                }
-                7 -> { // Delete from ListView
+                10 -> { // Delete from ListView
                     var itemsSelected = false
                     for (i in lvMain.arrayList!!.indices) {
                         if (lvMain.arrayList!![i].isSelected()) {
@@ -1406,6 +1427,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         centeredToast(this, getString(R.string.noSelection), 3000 )
                     }
                 }
+
             }
         })
         // CANCEL button
@@ -6494,6 +6516,36 @@ class GrzListView {
         } catch(e: Exception) {}
     }
 
+    // select 10 more entries in ListView
+    fun selectNextTenEntries(position: Int) {
+        try {
+            // if nothing is so far selected, use argument as start, otherwise the last selected item pos
+            var lastSelectedItemPos = -1
+            for (i in 0 until arrayList!!.size) {
+                if (arrayList!![i].isSelected()) {
+                    lastSelectedItemPos = i
+                }
+            }
+            var startPos = -1
+            if (lastSelectedItemPos != -1) {
+                startPos = Math.min(arrayList!!.size - 1, lastSelectedItemPos + 1)
+            } else {
+                startPos = Math.min(arrayList!!.size - 1, position + 1)
+            }
+
+            // select next 10 items after given position
+            var endPos = Math.min(arrayList!!.size - 1, startPos + 11)
+            var i = startPos
+            while (i < endPos) {
+                arrayList!![i].setSelected(true)
+                if (arrayList!![i].isSpacer) {
+                    endPos++
+                }
+                i++
+            }
+        } catch(e: Exception) {}
+    }
+
     // select a complete day in ListView
     fun selectGivenDay(position: Int) {
         try {
@@ -6537,6 +6589,79 @@ class GrzListView {
                 arrayList!![i].setSelected(true)
             }
         } catch(e: Exception) {}
+    }
+
+    // select a complete month in ListView
+    fun selectGivenMonth(position: Int) {
+        try {
+            var monthStartPos = 0
+            var monthEndPos = -1
+
+            // climb ListView up until a date pattern is found, which is set to "today"
+            var todayYearMonthStr = ""
+            for (i in position downTo 0) {
+                // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
+                val curText = arrayList!![i].title
+                if (PATTERN.DateDay.matcher(curText.toString()).find()) {
+                    var m = PATTERN.DateMonth.matcher(curText.toString())
+                    if (m.find()) {
+                        todayYearMonthStr = m.group()
+                    }
+                    break
+                }
+            }
+            if (todayYearMonthStr.length == 0) {
+                return
+            }
+
+            // climb ListView up until the today's year-month pattern is NOT found
+            for (i in position downTo 0) {
+                // a regex pattern for "yyyy-mm-", sample 2020-03- OR header via 9.toChar()
+                val curText = arrayList!![i].title
+                // only check headers for a valid date pattern
+                if (arrayList!![i].isSection && PATTERN.DateDay.matcher(curText.toString()).find()) {
+                    // if the current year-month pattern differs from today's year-month patter, there is a match
+                    var m = PATTERN.DateMonth.matcher(curText.toString())
+                    if (m.find()) {
+                        var curr = m.group()
+                        if (curr != todayYearMonthStr) {
+                            monthStartPos = i
+                            break
+                        }
+                    }
+                }
+            }
+
+            // climb ListView down until the today year-month pattern is NOT found
+            for (i in position until arrayList!!.size) {
+                // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
+                val curText = arrayList!![i].title
+                // only check headers for a valid date pattern
+                if (arrayList!![i].isSection && PATTERN.DateDay.matcher(curText.toString()).find()) {
+                    // if the current year-month pattern differs from today's year-month patter, there is a match
+                    var m = PATTERN.DateMonth.matcher(curText.toString())
+                    if (m.find()) {
+                        var curr = m.group()
+                        if (curr != todayYearMonthStr) {
+                            monthEndPos = Math.max(0, i-1)
+                            break
+                        }
+                    }
+                }
+            }
+            // if no other year-month pattern below today was found, select the list down zo its end
+            if (monthEndPos == -1) {
+                monthEndPos = arrayList!!.size - 1
+            }
+
+            // select items according to the above calculated range
+            for (i in monthStartPos..monthEndPos) {
+                arrayList!![i].setSelected(true)
+            }
+
+        } catch(e: Exception) {
+            Log.d("selectGivenMonth", e.message!!)
+        }
     }
 
     // return a complete day/section from ListView array as String
@@ -6985,6 +7110,7 @@ internal object PATTERN {
     val UriLink = Pattern.compile("\\[(.*?)\\]")                       // uri link is enclosed in []
     val Date = Pattern.compile("\\d{4}-\\d{2}-\\d{2}")
     val DateDay = Pattern.compile("\\d{4}-\\d{2}-\\d{2}.*")            // header section with date
+    val DateMonth = Pattern.compile("\\d{4}-\\d{2}-")                  // header section with year and month
     val DatePattern = Pattern.compile("[_-]\\d{8}[_-]")                // file date stamp pattern
     val UrlsPattern = Pattern.compile(URLS_REGEX, Pattern.CASE_INSENSITIVE)  // find urls in string
     val IP4PortPattern = Pattern.compile(IP4PORT_REGEX)                      // find urls in string
