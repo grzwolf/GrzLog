@@ -1304,7 +1304,19 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         } else {
             AlertDialog.Builder(this@MainActivity)
         }
-        builder.setTitle(getString(R.string.whatToDoWithItems))
+        // get a list of selected indexes including the included spacers
+        var listSelPos = lvMain.getSelectedIndexList()
+        // range format the list of selected indexes including the included spacers
+        var rangeStr = getIntegerRangeFormatted(listSelPos)
+        // set custom multiline title: https://stackoverflow.com/questions/9107054/how-to-build-alert-dialog-with-a-multi-line-title
+        val headPart = getString(R.string.whatToDoWithItems)
+        val headLine = SpannableString(headPart + "\n\n" + rangeStr)
+        headLine.setSpan(RelativeSizeSpan(1.35F),0, headPart.length,0)
+        headLine.setSpan(ForegroundColorSpan(ContextCompat.getColor(this, R.color.white)), 0, headPart.length, 0)
+        headLine.setSpan(ForegroundColorSpan(ContextCompat.getColor(this, R.color.yellow)), headPart.length, headLine.length, 0)
+        var titleView: TextView = TextView(this)
+        titleView.text = headLine
+        builder.setCustomTitle(titleView)
         // dialog OPTIONS
         val options = arrayOf<CharSequence>(
             getString(R.string.unselectAll),
@@ -1392,7 +1404,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     if (itemsSelected) {
                         decisionBox(this@MainActivity,
                             DECISION.YESNO,
-                            getString(R.string.cutSelectedItems),
+                            getString(R.string.cutSelectedItems) + " " + rangeStr,
                             getString(R.string.continueQuestion),
                             {
                                 shareBody = lvMain.folderSelectedItems
@@ -1417,7 +1429,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     if (itemsSelected) {
                         decisionBox(this@MainActivity,
                             DECISION.YESNO,
-                            getString(R.string.deleteSelectedItems),
+                            getString(R.string.deleteSelectedItems) + " " + rangeStr,
                             getString(R.string.continueQuestion),
                             { deleteMarkedItems(0) },
                             { whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function) }
@@ -1445,6 +1457,41 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         listView.dividerHeight = 2
         dialog.show()
         dialog.setCanceledOnTouchOutside(false)
+    }
+    // https://stackoverflow.com/questions/5744572/is-there-a-java-library-that-will-create-a-number-range-from-a-list-of-numbers
+    private fun getIntegerRangeFormatted(listPos : List<Int>) : String {
+        var rangeStr = "Items: "
+        var start: Int? = null
+        var end: Int? = null
+        for (num in listPos) {
+            //initialize
+            if (start == null || end == null) {
+                start = num
+                end = num
+            } else if (end == num - 1) {
+                end = num
+            } else {
+                //range length 1
+                if (start == end) {
+                    rangeStr += "$start,"
+
+                } else if (start == end - 1) {
+                    rangeStr += "$start,$end,"
+                } else {
+                    rangeStr += "$start-$end,"
+                }
+                start = num
+                end = num
+            }
+        }
+        if (start == end) {
+            rangeStr += start.toString()
+        } else if (start == end!! - 1) {
+            rangeStr += "$start,$end"
+        } else {
+            rangeStr += start.toString() + "-" + end.toString()
+        }
+        return rangeStr
     }
 
     // items from ListView are search hits, what to do with them as next
@@ -6519,18 +6566,28 @@ class GrzListView {
     // select 10 more entries in ListView
     fun selectNextTenEntries(position: Int) {
         try {
-            // if nothing is so far selected, use argument as start, otherwise the last selected item pos
+            // get index of the so far last selected item
             var lastSelectedItemPos = -1
             for (i in 0 until arrayList!!.size) {
                 if (arrayList!![i].isSelected()) {
                     lastSelectedItemPos = i
                 }
             }
+            // if nothing is so far selected, use argument as start, otherwise the last selected item pos
             var startPos = -1
             if (lastSelectedItemPos != -1) {
-                startPos = Math.min(arrayList!!.size - 1, lastSelectedItemPos + 1)
+                // if position is not already selected. take it as start
+                if (!arrayList!![position].isSelected()) {
+                    startPos = Math.min(arrayList!!.size - 1, position)
+                } else {
+                    startPos = Math.min(arrayList!!.size - 1, lastSelectedItemPos + 1)
+                }
             } else {
-                startPos = Math.min(arrayList!!.size - 1, position + 1)
+                if (!arrayList!![position].isSelected()) {
+                    startPos = Math.min(arrayList!!.size - 1, position)
+                } else {
+                    startPos = Math.min(arrayList!!.size - 1, position + 1)
+                }
             }
 
             // select next 10 items after given position
@@ -6699,6 +6756,24 @@ class GrzListView {
         } catch(e: Exception) {}
         retVal = retVal.trimEnd('\n')
         return retVal
+    }
+
+    // return a list of selected indexes including the enclosed spacers
+    fun getSelectedIndexList() : MutableList<Int> {
+        var listSelPos: MutableList<Int> = ArrayList()
+        for (i in 0 until arrayList!!.size) {
+            if (arrayList!![i].isSelected()) {
+                listSelPos.add(i)
+            }
+            if (arrayList!![i].isSpacer) {
+                var posBefore = Math.max(0, i - 1)
+                var posAfter = Math.min(arrayList!!.size - 1, i + 1)
+                if (arrayList!![posBefore].isSelected() && arrayList!![posAfter].isSelected()) {
+                    listSelPos.add(i)
+                }
+            }
+        }
+        return listSelPos
     }
 
     // return a complete folder from ListView array w/o spacers as String
