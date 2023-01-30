@@ -76,6 +76,10 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/BackupRestore">
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="backupReminder"
+            app:title="@string/useBackupReminder" />
         <Preference
             android:selectable="false"
             android:title="@string/BackupInfo"

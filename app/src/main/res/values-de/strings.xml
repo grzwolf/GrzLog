@@ -227,5 +227,8 @@
     <string name="selectNextTen">Auswahl nächste 10 Items</string>
     <string name="selectMonth">Auswahl Monat</string>
     <string name="toggleItemSelection">Toggle Item Auswahl:</string>
+    <string name="makeBackup">Empfehlung: Backup ausführen</string>
+    <string name="useBackupReminder">Backup Erinnerung</string>
+    <string name="nextReminderOneWeek">Nächste Erinnerung in 1 Woche?</string>
 </resources>
 

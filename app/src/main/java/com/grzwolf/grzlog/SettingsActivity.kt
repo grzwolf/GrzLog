@@ -91,44 +91,16 @@ class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
         @Suppress("unused")
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
+            val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 
             // show backup data info
-            // default is GrzLog.zip but QuickLogBook.zip, LogBook.zip, LogBookPro.zip are allowed for backward compatibility
             val backupInfo = findPreference("BackupInfo") as Preference?
-            val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            var appZipName = appContext!!.applicationInfo.loadLabel(appContext!!.packageManager
-            ).toString() + ".zip"
-            var file = File(downloadDir, appZipName)
-            if (file.exists()) {
+            var file = getBackupFile(appContext!!)
+            if (file != null) {
                 val lastModDate = Date(file.lastModified())
-                backupInfo!!.summary =
-                    file.toString() + getString(R.string.lastBackup) + lastModDate.toString()
+                backupInfo!!.summary = file.toString() + getString(R.string.lastBackup) + lastModDate.toString()
             } else {
-                appZipName = "LogBookPro.zip"
-                file = File(downloadDir, appZipName)
-                if (file.exists()) {
-                    val lastModDate = Date(file.lastModified())
-                    backupInfo!!.summary =
-                        file.toString() + getString(R.string.lastBackup) + lastModDate.toString()
-                } else {
-                    appZipName = "LogBook.zip"
-                    file = File(downloadDir, appZipName)
-                    if (file.exists()) {
-                        val lastModDate = Date(file.lastModified())
-                        backupInfo!!.summary =
-                            file.toString() + getString(R.string.lastBackup) + lastModDate.toString()
-                    } else {
-                        appZipName = "QuickLogBook.zip"
-                        file = File(downloadDir, appZipName)
-                        if (file.exists()) {
-                            val lastModDate = Date(file.lastModified())
-                            backupInfo!!.summary =
-                                file.toString() + getString(R.string.lastBackup) + lastModDate.toString()
-                        } else {
-                            backupInfo!!.summary = getString(R.string.noBackup)
-                        }
-                    }
-                }
+                backupInfo!!.summary = getString(R.string.noBackupExisting)
             }
 
             // GCam usage/handling hint
@@ -174,10 +146,8 @@ class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
                     // ... are you sure ...
                     val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
                     builder.setTitle(R.string.backupData)
-//                    val downloadDir =
-//                        "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                     val appName = appContext!!.applicationInfo.loadLabel(appContext!!.packageManager).toString()
-                    file = File(downloadDir, "$appName.zip")
+                    var file = File(downloadDir, "$appName.zip")
                     var message = getString(R.string.wantBackupData) + file.toString() + " + GrzLog.txt"
                     message += if (file.exists()) {
                         getString(R.string.overWrite)
@@ -223,8 +193,6 @@ class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
             val restore = findPreference("Restore") as Preference?
             restore!!.onPreferenceClickListener =
                 Preference.OnPreferenceClickListener { // does it make sense
-//                    val downloadDir =
-//                        "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                     val appName = appContext!!.applicationInfo.loadLabel(
                         appContext!!.packageManager
                     ).toString()

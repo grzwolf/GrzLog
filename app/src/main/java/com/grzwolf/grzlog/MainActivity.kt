@@ -66,6 +66,8 @@ const val PERMISSION_REQUEST_AUDIO        = 2
 const val PERMISSION_REQUEST_EXIFDATA     = 3
 const val PERMISSION_REQUEST_NOTIFICATION = 4
 
+const val MS_TO_DAYS = 1.0 / 1000.0 / 60.0 / 60.0 / 24.0
+
 // common file extensions
 val IMAGE_EXT = "jpg.png.bmp.jpeg.gif"
 val AUDIO_EXT = "mp3.m4a.aac.amr.flac.ogg.wav"
@@ -112,6 +114,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     var shareBody: String? = "" // mimic clipboard inside app
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         // dark mode OR light mode; call before super.onCreate
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
@@ -234,12 +237,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
             // DOWN event
             if (event.action == MotionEvent.ACTION_DOWN) {
-                if (event.x < 200) {
-                    // switch to 'select item mode'
-                    lvMain.touchSelectItem = true
-                } else {
-                    lvMain.touchSelectItem = false
-                }
+                lvMain.touchSelectItem = event.x < 200
                 // memorize the touch event coordinates
                 lvMain.touchEventPoint = Point(event.x.toInt(), event.y.toInt())
             }
@@ -373,6 +371,55 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         // silently scan app gallery data
         getAppGalleryThumbsSilent(this)
+
+        // memorize first app usage to make a backup reminder from it
+        var deferredBakDate = sharedPref.getLong("deferredBak", 0)
+        // 0 indicates the very first app usage, which has oc no backup
+        if (deferredBakDate == 0L) {
+            val spe = sharedPref.edit()
+            spe.putLong("deferredBak", Date().time.toLong())
+            spe.apply()
+        }
+        // have a missing/outdated backup reminder as root preference
+        if (sharedPref.getBoolean("backupReminder", true)) {
+            // read the potential bak reminder deferred time
+            deferredBakDate = sharedPref.getLong("deferredBak", 0)
+            // trigger a backup reminder decision
+            var askForDefer = false
+            // check for existing backup file
+            var file = getBackupFile(this)
+            // prepare reminder decision
+            if (file != null) {
+                // weekly backup reminder: file is outdated AND deferred date is due
+                var diffInDaysBak = (Date().time - file.lastModified()).toDouble() * MS_TO_DAYS
+                val diffInDaysUse = (Date().time - deferredBakDate.toDouble()) * MS_TO_DAYS
+                if (diffInDaysBak > 7 && diffInDaysUse > 7) {
+                    askForDefer = true
+                }
+            } else {
+                // backup reminder 7 days after first app usage, if no backup exists
+                val diffInDaysUse = (Date().time - deferredBakDate).toDouble() * MS_TO_DAYS
+                if (diffInDaysUse > 7) {
+                    askForDefer = true
+                }
+            }
+            // if triggered, ask for bak reminder decision
+            if (askForDefer) {
+                decisionBox(
+                    this,
+                    DECISION.YESNO,
+                    getString(R.string.makeBackup),
+                    getString(R.string.nextReminderOneWeek),
+                    {
+                        // defer bak reminder for one week
+                        val spe = sharedPref.edit()
+                        spe.putLong("deferredBak", Date().time.toLong())
+                        spe.apply()
+                    },
+                    null
+                )
+            }
+        }
     }
 
     // activity_lifecycle.png: onPause() is called, whenever the app goes into background

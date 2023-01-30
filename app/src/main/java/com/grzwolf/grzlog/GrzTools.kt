@@ -17,6 +17,7 @@ import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.Build
 import android.os.CountDownTimer
+import android.os.Environment
 import android.os.Handler
 import android.util.Size
 import android.view.Gravity
@@ -1250,4 +1251,28 @@ fun getDaysBetweenDates(startdate: Date, enddate: Date): List<String> {
         calendar.add(Calendar.DATE, 1)
     }
     return dates
+}
+
+// get backup file - default is GrzLog.zip but QuickLogBook.zip, LogBook.zip, LogBookPro.zip are allowed for backward compatibility
+fun getBackupFile(context: Context) : File? {
+    val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+    var appZipName = context.applicationInfo.loadLabel(context.packageManager).toString() + ".zip"
+    var file : File?
+    file = File(downloadDir, appZipName)
+    if (!file.exists()) {
+        appZipName = "LogBookPro.zip"
+        file = File(downloadDir, appZipName)
+        if (!file.exists()) {
+            appZipName = "LogBook.zip"
+            file = File(downloadDir, appZipName)
+            if (!file.exists()) {
+                appZipName = "QuickLogBook.zip"
+                file = File(downloadDir, appZipName)
+                if (!file.exists()) {
+                    file = null
+                }
+            }
+        }
+    }
+    return file
 }

@@ -67,7 +67,7 @@
     <!-- Settings Strings-->
     <string name="lastBackup">\"\nlast backup: \"</string>
     <string name="noBackup">-- no backup existing --</string>
-        <string name="itemsEmpty">All items are empty, no backup executed.</string>
+    <string name="itemsEmpty">All items are empty, no backup executed.</string>
     <string name="backupData">Backup data</string>
     <string name="wantBackupData">Do you want to backup the current data to:\n\n</string>
     <string name="overWrite">\n\nThe files named above will be overwritten.</string>
@@ -228,4 +228,7 @@
     <string name="selectNextTen">Select next 10 items</string>
     <string name="selectMonth">Select month</string>
     <string name="toggleItemSelection">Toggle item selection:</string>
+    <string name="makeBackup">Consider making a backup</string>
+    <string name="useBackupReminder">Backup outdated reminder</string>
+    <string name="nextReminderOneWeek">Next reminder in one week?</string>
 </resources>
