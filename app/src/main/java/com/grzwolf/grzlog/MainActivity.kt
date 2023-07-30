@@ -279,8 +279,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         lvMain.arrayList!![itemPosition].setSelected(!lvMain.arrayList!![itemPosition].isSelected())
                         lvMain.adapter!!.notifyDataSetChanged()
                     } else {
-                        // show item attachment OR www text link
-                        lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
+                        // does the click happen on a selected item
+                        if (lvMain.arrayList!![itemPosition].isSelected() && sharedPref.getBoolean("clickSelectedItemsToClipboard", false) ) {
+                            shareBody = lvMain.folderSelectedItems
+                            clipboard = shareBody
+                            centeredToast(this, getString(R.string.copyClipboard), 50)
+                        } else {
+                            // show item attachment OR www text link
+                            lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
+                        }
                     }
                 }, DOUBLECLICK_MS)
             }

@@ -73,6 +73,13 @@
             app:summaryOn="@string/askAlways"
             app:title="@string/askAutoFillSkippedDates" />
 
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="clickSelectedItemsToClipboard"
+            app:summaryOff="@string/showLink"
+            app:summaryOn="@string/copyClipboard"
+            app:title="@string/clickSelectedItemsToClipboard" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/BackupRestore">
