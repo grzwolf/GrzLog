@@ -261,7 +261,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             // if condition for a double click event is met, the single click handler gets disabled
             if (System.currentTimeMillis() - lvMain.itemLastClickTime < DOUBLECLICK_MS) {
                 lvMain.singleClickHandler.removeCallbacksAndMessages(null)
-                lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
+                // what to do after double click, depends on lvMain.touchSelectItem
+                if (lvMain.touchSelectItem) {
+                    // double click with touchSelectItem shall act as 'show attachment/link'
+                    lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
+                } else {
+                    // double click with touchSelectItem shall execute edit ListView item
+                    onLongClickEditItem(adapterView, itemView, itemPosition, itemId, true, null)
+                }
                 return@OnItemClickListener
             }
             // store the time of the item's click event
