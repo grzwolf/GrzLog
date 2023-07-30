@@ -234,4 +234,5 @@
     <string name="clickSelectedItemsToClipboard">Click on selection</string>
     <string name="showLink">show attachment</string>
     <string name="copyClipboard">copy to clipboard</string>
+    <string name="clickSearchHitToEdit">Click on search hit</string>
 </resources>

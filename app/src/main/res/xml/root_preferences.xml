@@ -80,6 +80,13 @@
             app:summaryOn="@string/copyClipboard"
             app:title="@string/clickSelectedItemsToClipboard" />
 
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="clickSearchHitToEdit"
+            app:summaryOff="@string/showLink"
+            app:summaryOn="@string/EditRow"
+            app:title="@string/clickSearchHitToEdit" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/BackupRestore">

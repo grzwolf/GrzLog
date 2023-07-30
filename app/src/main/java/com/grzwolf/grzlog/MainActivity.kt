@@ -281,12 +281,19 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     } else {
                         // does the click happen on a selected item
                         if (lvMain.arrayList!![itemPosition].isSelected() && sharedPref.getBoolean("clickSelectedItemsToClipboard", false) ) {
+                            // copy to clipboard
                             shareBody = lvMain.folderSelectedItems
                             clipboard = shareBody
                             centeredToast(this, getString(R.string.copyClipboard), 50)
                         } else {
-                            // show item attachment OR www text link
-                            lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
+                            // does the click happen on a search hit item
+                            if (lvMain.arrayList!![itemPosition].isSearchHit() && sharedPref.getBoolean("clickSearchHitToEdit", false) ) {
+                                // execute the click as edit ListView item
+                                onLongClickEditItem(adapterView, itemView, itemPosition, itemId, true, null)
+                            } else {
+                                // show item attachment OR www text link
+                                lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
+                            }
                         }
                     }
                 }, DOUBLECLICK_MS)

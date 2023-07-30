@@ -233,5 +233,6 @@
     <string name="clickSelectedItemsToClipboard">Klick auf Auswahl</string>
     <string name="showLink">Anhang zeigen</string>
     <string name="copyClipboard">Kopieren in Zwischenablage</string>
+    <string name="clickSearchHitToEdit">Klick auf Suchtreffer</string>
 </resources>
 
