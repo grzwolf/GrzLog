@@ -52,10 +52,12 @@ class HelpActivity : AppCompatActivity() {
         "       Toggle line as header\n" +
         "       Delete line\n" +
         "   !revert latest change via Menu bar Undo!\n\n" +
-        "b) tap item somewhere  -> show item content\n\n" +
-        "c) double tap item     -> show item content\n\n" +
-        "d) tap item left bound -> toggle item selection\n\n" +
-        "e) tap long selection  -> 'What to do ...' dialog\n" +
+        "b) tap item somewhere   -> show item content\n\n" +
+        "c) double tap item x<30 -> show item content\n\n" +
+        "d) double tap item x>30 -> edit item\n\n" +
+        "e) tap item left x<30   -> toggle item selection\n\n" +
+        "f) tap selection x>30   -> copy selection to clipboard\n\n" +
+        "g) tap long selection   -> 'What to do ...' dialog\n" +
         "       Toggle item selection\n" +
         "       Select next 10 items\n" +
         "       Select items of day\n" +
