@@ -23,9 +23,9 @@ import java.util.zip.ZipFile
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
 
 
-class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
+public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
     // listener for any pref change: https://stackoverflow.com/questions/2542938/sharedpreferences-onsharedpreferencechangelistener-not-being-called-consistently
-    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, s: String) {
+    public override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, s: String?) {
         // s == null after reset all preferences
         if (s == null) {
             return
