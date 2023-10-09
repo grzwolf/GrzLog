@@ -151,6 +151,7 @@
     <string name="audio">[Audio]</string>
     <string name="errorRenameBakFolder">BAK kann nicht erstellt werden.</string>
     <string name="deleteSelectedItems">Ausgewählte Items löschen?</string>
+    <string name="deleteSelectedItemsFromApp">Auswahl der Items in GrzLog Galerie löschen?</string>
     <string name="whatToDoWithItems">Was soll mit der Auswahl geschehen?</string>
     <string name="unselectAll">Selektion aufheben</string>
     <string name="selectAll">Alle selektieren</string>

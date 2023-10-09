@@ -24,7 +24,6 @@ class GalleryActivity : AppCompatActivity() {
 
     lateinit var gridView: GridView
     var adapter : ThumbGridAdapter? = null
-    var thumbsList = mutableListOf<GrzThumbNail>()
     var galleryMenu: Menu? = null
     var returnPayload = true
 
@@ -57,7 +56,6 @@ class GalleryActivity : AppCompatActivity() {
         } else {
             returnPayload = true
         }
-
         // GridView is the main UI component
         gridView = findViewById(R.id.galleryList)
         // click shall provide a larger image
@@ -73,28 +71,40 @@ class GalleryActivity : AppCompatActivity() {
         }
         // long press shall select item
         gridView.setOnItemLongClickListener(AdapterView.OnItemLongClickListener { parent, view, position, id ->
-            if (!returnPayload) {
-                return@OnItemLongClickListener true
-            }
             if (adapter!!.list[position].fileName.isEmpty()) {
                 return@OnItemLongClickListener true
             }
-            if (prevSelGridItem != position) {
-                adapter!!.selGridItemChk = true
+            // either have one item selected as payload or allow multiple item selection to be able to delete it/them
+            if (returnPayload) {
+                // select one item as later payload
+                if (prevSelGridItem != position) {
+                    adapter!!.selGridItemChk = true
+                } else {
+                    adapter!!.selGridItemChk = !adapter!!.selGridItemChk
+                }
+                adapter!!.selGridItemPos = position
+                adapter!!.notifyDataSetChanged()
+                prevSelGridItem = position
+                gridItemSelected = adapter!!.selGridItemChk
+                // change active color of upload icon
+                var itemUpload = galleryMenu!!.findItem(R.id.action_Ok)
+                if (gridItemSelected) {
+                    // individual action bar icon color: https://stackoverflow.com/questions/60412934/drawable-setcolorfilter-marked-as-deprecated
+                    itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
+                } else {
+                    itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                }
             } else {
-                adapter!!.selGridItemChk = !adapter!!.selGridItemChk
-            }
-            adapter!!.selGridItemPos = position
-            adapter!!.notifyDataSetChanged()
-            prevSelGridItem = position
-            gridItemSelected = adapter!!.selGridItemChk
-            var item = galleryMenu!!.findItem(R.id.action_Ok)
-            item.isVisible = gridItemSelected
-            // individual action bar icon color: https://stackoverflow.com/questions/60412934/drawable-setcolorfilter-marked-as-deprecated
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                item.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
-            } else {
-                item.icon?.setColorFilter(ContextCompat.getColor(this, R.color.yellow), PorterDuff.Mode.SRC_IN)
+                // allow multiple item selection
+                adapter!!.list[position].selected = !adapter!!.list[position].selected
+                // change active color of delete icon
+                var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+                if (adapter!!.list.any { it.selected == true }) {
+                    itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
+                } else {
+                    itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                }
+                adapter!!.notifyDataSetChanged()
             }
             true
         })
@@ -113,9 +123,6 @@ class GalleryActivity : AppCompatActivity() {
             getAppGalleryThumbs()
             // just dummy data
             val listDummy = mutableListOf<GrzThumbNail>()
-            for (i in 1..10) {
-                listDummy.add(GrzThumbNail("[dummy$i]", "", this.getDrawable(android.R.drawable.gallery_thumb)!!))
-            }
             var adapterDummy = ThumbGridAdapter(this@GalleryActivity, listDummy.toTypedArray())
             gridView.setAdapter(adapterDummy)
             adapterDummy.notifyDataSetChanged()
@@ -128,11 +135,23 @@ class GalleryActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.menu_gallery, menu)
         // needed to work in onOptionsItemSelected
         galleryMenu = menu
+        // visibility of two action menu items
+        var itemUpload = galleryMenu!!.findItem(R.id.action_Ok)
+        var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+        itemUpload.isVisible = returnPayload
+        itemDelete.isVisible = !returnPayload
+        itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+        itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
         return true
     }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // back to MainActivity
         if (item.itemId == android.R.id.home) {
+            for (item in adapter!!.list) {
+                item.selected = false
+            }
+            var item = galleryMenu!!.findItem(R.id.action_Delete)
+            item.isVisible = false
             onBackPressed()
         }
         // refresh gallery data
@@ -143,10 +162,10 @@ class GalleryActivity : AppCompatActivity() {
                 getString(R.string.appGalleryData),
                 getString(R.string.refresh),
                 {
-                    var item = galleryMenu!!.findItem(R.id.action_Ok)
-                    item.isVisible = false
                     prevSelGridItem = -1
                     gridItemSelected = false
+                    adapter!!.selGridItemChk = false
+                    adapter!!.selGridItemPos = -1
                     getAppGalleryThumbs()
                 },
                 { null }
@@ -166,6 +185,32 @@ class GalleryActivity : AppCompatActivity() {
                 adapter!!.selGridItemPos = -1
                 finish()
             }
+        }
+        // take selection and delete files
+        if (item.itemId == R.id.action_Delete) {
+            if (adapter!!.list.all { it.selected == false }) {
+                return super.onOptionsItemSelected(item)
+            }
+            decisionBox(
+                this,
+                DECISION.YESNO,
+                getString(R.string.appGalleryData),
+                getString(R.string.deleteSelectedItemsFromApp),
+                {
+                    for (item in adapter!!.list) {
+                        if (item.selected) {
+                            val appImagesPath = applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/"
+                            val fullFilePath = appImagesPath + item.fileName
+                            val delFile = File(fullFilePath)
+                            if (delFile.exists()) {
+                                delFile.delete()
+                            }
+                        }
+                    }
+                    getAppGalleryThumbs()
+                },
+                { null }
+            )
         }
         return super.onOptionsItemSelected(item)
     }
@@ -219,11 +264,17 @@ class GalleryActivity : AppCompatActivity() {
                 // set text and thumbnail
                 tv.text = list[position].fileName
                 iv.setImageDrawable(list[position].thumbNail)
-                // handle select status
+                // how to render an item depends on its selection status: single payload selection or multiple delete selection
                 if ((position == selGridItemPos) && selGridItemChk) {
+                    // handle item as payload select status, if selGridItemChk is true
                     cv.setBackgroundColor(Color.YELLOW)
                 } else {
-                    cv.setBackgroundColor(Color.WHITE)
+                    // treat multiple item selection for deletion
+                    if (list[position].selected) {
+                        cv.setBackgroundColor(Color.YELLOW)
+                    } else {
+                        cv.setBackgroundColor(Color.WHITE)
+                    }
                 }
             }
             return cv
@@ -231,16 +282,17 @@ class GalleryActivity : AppCompatActivity() {
     }
 
     // data set consisting of filename and bitmap
-    class GrzThumbNail constructor(fileName: String, fileDate: String, thumbNail: Drawable?) {
+    class GrzThumbNail constructor(fileName: String, fileDate: String, thumbNail: Drawable?, selected: Boolean = false) {
         var fileName = fileName
         var fileDate = fileDate
         var thumbNail = thumbNail
+        var selected = selected
     }
 
     // get list of thumbnail images
     fun getAppGalleryThumbs() {
         var success = false
-        thumbsList = mutableListOf<GrzThumbNail>()
+        var thumbsList = mutableListOf<GrzThumbNail>()
         val appImagesPath = applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/"
         val listGrzThumbNail = getFolderFiles(appImagesPath)
         val pw = ProgressWindow(this@GalleryActivity, getString(R.string.scanAppGallery))
@@ -249,6 +301,14 @@ class GalleryActivity : AppCompatActivity() {
                 if (success) {
                     adapter = ThumbGridAdapter(this@GalleryActivity, thumbsList.toTypedArray())
                     if (adapter != null) {
+                        // visibility of two action menu items
+                        var itemUpload = galleryMenu!!.findItem(R.id.action_Ok)
+                        var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+                        itemUpload.isVisible = returnPayload
+                        itemDelete.isVisible = !returnPayload
+                        itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                        itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                        // update view
                         gridView.setAdapter(adapter)
                         adapter!!.notifyDataSetChanged()
                         MainActivity.appGalleryAdapter = adapter
