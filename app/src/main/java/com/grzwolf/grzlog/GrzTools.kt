@@ -94,6 +94,10 @@ fun unpackZipArchive(
                 }
                 fout.close()
                 retVal = true
+                val fi = File("$outPath/$filename")
+                ze?.let {
+                    fi.setLastModified(it.time)
+                }
             } catch (e: IOException) {
                 e.printStackTrace()
                 retVal = false
@@ -142,9 +146,11 @@ fun createZipArchive(
                     })
                     //
                     println("Adding: " + files[i])
-                    val fi = FileInputStream(srcFolder + "/" + sd + "/" + files[i])
-                    origin = BufferedInputStream(fi, BUFFER)
+                    val fis = FileInputStream(srcFolder + "/" + sd + "/" + files[i])
+                    origin = BufferedInputStream(fis, BUFFER)
                     val entry = ZipEntry(sd + "/" + files[i])
+                    val fi = File(srcFolder + "/" + sd + "/" + files[i])
+                    entry.time = fi.lastModified()
                     out.putNextEntry(entry)
                     var count: Int
                     while (origin!!.read(data, 0, BUFFER).also { count = it } != -1) {
@@ -153,9 +159,10 @@ fun createZipArchive(
                     }
                 }
             } else {
-                val fi = FileInputStream(f)
-                origin = BufferedInputStream(fi, BUFFER)
+                val fis = FileInputStream(f)
+                origin = BufferedInputStream(fis, BUFFER)
                 val entry = ZipEntry(sd)
+                entry.time = f.lastModified()
                 out.putNextEntry(entry)
                 var count: Int
                 while (origin!!.read(data, 0, BUFFER).also { count = it } != -1) {
