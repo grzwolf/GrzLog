@@ -123,7 +123,7 @@ fun createZipArchive(
     srcFolder: String,
     outFolder: String,
     zipName: String,
-    pw: ProgressWindow
+    pw: ProgressWindow?
 ): Boolean {
     val BUFFER = 2048
     try {
@@ -141,9 +141,11 @@ fun createZipArchive(
                 val files = f.list()
                 for (i: Int in files?.indices!!) {
                     // set progress
-                    (context as Activity).runOnUiThread(Runnable {
-                        pw.incCount++
-                    })
+                    if (pw != null) {
+                        (context as Activity).runOnUiThread(Runnable {
+                            pw.incCount++
+                        })
+                    }
                     //
                     println("Adding: " + files[i])
                     val fis = FileInputStream(srcFolder + "/" + sd + "/" + files[i])

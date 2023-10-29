@@ -232,6 +232,9 @@
     <string name="makeBackup">Consider making a backup</string>
     <string name="useBackupReminder">Backup outdated reminder</string>
     <string name="nextReminderOneWeek">Next reminder in one week?</string>
+    <string name="backupInForeground">Backup in foreground</string>
+    <string name="foreground">foreground</string>
+    <string name="background">background</string>
     <string name="clickSelectedItemsToClipboard">Click on selection</string>
     <string name="showLink">show attachment</string>
     <string name="copyClipboard">copy to clipboard</string>

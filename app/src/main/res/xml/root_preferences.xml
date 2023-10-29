@@ -94,6 +94,12 @@
             app:defaultValue="true"
             app:key="backupReminder"
             app:title="@string/useBackupReminder" />
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="backupForeground"
+            app:summaryOn="@string/foreground"
+            app:summaryOff="@string/background"
+            app:title="@string/backupInForeground" />
         <Preference
             android:selectable="false"
             android:title="@string/BackupInfo"

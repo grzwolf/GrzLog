@@ -5,13 +5,19 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.content.*
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
+import android.media.ThumbnailUtils
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
+import android.util.Size
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
@@ -21,6 +27,7 @@ import java.util.*
 import java.util.zip.ZipFile
 
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
+import java.text.SimpleDateFormat
 
 
 public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
@@ -161,18 +168,33 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                         DialogInterface.OnClickListener { dialog, which ->
                             // backup DataStore to text file in Downloads as a measure of last resort after a data crash
                             createTxtBackup(appContext!!, downloadDir, MainActivity.ds)
-                            // data export into the zip is the real backup, which is done in background
+                            // data export into the zip is the real backup
                             val appPath = appContext!!.getExternalFilesDir(null)!!.absolutePath
-                            val maxProgressCount = countFiles(File(appPath))
-                            generateBackupProgress(
-                                requireContext(),
-                                appPath,
-                                downloadDir,
-                                "$appName.zip",
-                                maxProgressCount,
-                                backupInfo,
-                                getString(R.string.lastBackup)
-                            )
+                            // distinguish backup in foreground vs. background
+                            val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
+                            if (sharedPref.getBoolean("backupForeground", false)) {
+                                val maxProgressCount = countFiles(File(appPath))
+                                generateBackupProgress(
+                                    requireContext(),
+                                    appPath,
+                                    downloadDir,
+                                    "$appName.zip",
+                                    maxProgressCount,
+                                    backupInfo,
+                                    getString(R.string.lastBackup)
+                                )
+                            } else {
+                                if (!MainActivity.backupOngoing) {
+                                    generateBackupSilent(
+                                        requireContext(),
+                                        appPath,
+                                        downloadDir,
+                                        "$appName.zip",
+                                    )
+                                } else {
+                                    centeredToast(MainActivity.contextMainActivity, "GrzLog silent backup ongoing", 3000)
+                                }
+                            }
                             // done
                             dialog.dismiss()
                             return@OnClickListener
@@ -416,6 +438,30 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                 e.printStackTrace()
                 progressWindow.dialog.setOnDismissListener(false)
                 progressWindow.close()
+            }
+        }
+
+        // get list of thumbnail images silently - called from MainActivity ideally before GalleryActivity is called
+        fun generateBackupSilent(context: Context,
+                                 srcFolder: String?,
+                                 outFolder: String,
+                                 zipName: String) {
+            try {
+                Thread {
+                    MainActivity.backupOngoing = true
+                    var success = createZipArchive(context, srcFolder!!, outFolder, zipName, null)
+                    MainActivity.backupOngoing = false
+                    // jump back to UI
+                    (context as Activity).runOnUiThread(Runnable {
+                        if (success) {
+                            centeredToast(MainActivity.contextMainActivity, "GrzLog silent backup: Success", 3000)
+                        } else {
+                            centeredToast(MainActivity.contextMainActivity, "GrzLog backup: ERROR", 10000)
+                        }
+                    })
+                }.start()
+            } catch (e: Exception) {
+                centeredToast(MainActivity.contextMainActivity, "GrzLog backup error: " + e.message.toString(), 3000)
             }
         }
 

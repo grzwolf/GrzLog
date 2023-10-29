@@ -6167,6 +6167,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         var appGalleryScanning = false
         var appScanCurrent = 0
         var appScanTotal = 0
+        // backup ongoing
+        @JvmField
+        var backupOngoing = false
 
         // make context accessible from everywhere
         lateinit var contextMainActivity: MainActivity
