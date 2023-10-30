@@ -1,33 +1,32 @@
 package com.grzwolf.grzlog
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
+import android.app.PendingIntent
 import android.content.*
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
-import android.media.ThumbnailUtils
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-import android.util.Size
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
+import com.grzwolf.grzlog.FileUtils.Companion.getPath
 import java.io.*
 import java.util.*
 import java.util.zip.ZipFile
-
-import com.grzwolf.grzlog.FileUtils.Companion.getPath
-import java.text.SimpleDateFormat
 
 
 public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
@@ -170,10 +169,10 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                             createTxtBackup(appContext!!, downloadDir, MainActivity.ds)
                             // data export into the zip is the real backup
                             val appPath = appContext!!.getExternalFilesDir(null)!!.absolutePath
+                            val maxProgressCount = countFiles(File(appPath))
                             // distinguish backup in foreground vs. background
                             val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
                             if (sharedPref.getBoolean("backupForeground", false)) {
-                                val maxProgressCount = countFiles(File(appPath))
                                 generateBackupProgress(
                                     requireContext(),
                                     appPath,
@@ -190,6 +189,7 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                                         appPath,
                                         downloadDir,
                                         "$appName.zip",
+                                        maxProgressCount
                                     )
                                 } else {
                                     centeredToast(MainActivity.contextMainActivity, "GrzLog silent backup ongoing", 3000)
@@ -421,7 +421,7 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             try {
                 Thread {
                     var success = progressWindow.let {
-                        createZipArchive(context, srcFolder!!, outFolder, zipName, it)
+                        createZipArchive(context, srcFolder!!, outFolder, zipName, it, null, null, 0)
                     }
                     // jump back to UI
                     (context as Activity).runOnUiThread(Runnable {
@@ -441,18 +441,44 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             }
         }
 
-        // get list of thumbnail images silently - called from MainActivity ideally before GalleryActivity is called
+        // run backup silently
         fun generateBackupSilent(context: Context,
                                  srcFolder: String?,
                                  outFolder: String,
-                                 zipName: String) {
+                                 zipName: String,
+                                 maxProgress: Int) {
             try {
+                // show progress in notification bar
+                var notificationManager = NotificationManagerCompat.from(MainActivity.contextMainActivity)
+                val channelId = "GrzLog" as String
+                val intent = Intent(MainActivity.contextMainActivity, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                val pendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, intent, 0)
+                val notification = NotificationCompat.Builder(context, channelId)
+                    .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                    .setContentTitle("GrzLog: backup is ongoing")
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .setOngoing(true)
+                    .setOnlyAlertOnce(true)
+                    .setProgress(maxProgress, 0, true)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                with(notificationManager) {
+                    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        centeredToast(MainActivity.contextMainActivity, "GrzLog backup: no progress bar available", 3000)
+                    }
+                    notify(1, notification.build())
+                }
+                // real work
                 Thread {
                     MainActivity.backupOngoing = true
-                    var success = createZipArchive(context, srcFolder!!, outFolder, zipName, null)
+                    var success = createZipArchive(context, srcFolder!!, outFolder, zipName, null, notificationManager, notification, maxProgress)
                     MainActivity.backupOngoing = false
                     // jump back to UI
                     (context as Activity).runOnUiThread(Runnable {
+                        notificationManager.cancelAll()
                         if (success) {
                             centeredToast(MainActivity.contextMainActivity, "GrzLog silent backup: Success", 3000)
                         } else {
@@ -461,6 +487,7 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     })
                 }.start()
             } catch (e: Exception) {
+                MainActivity.backupOngoing = false
                 centeredToast(MainActivity.contextMainActivity, "GrzLog backup error: " + e.message.toString(), 3000)
             }
         }

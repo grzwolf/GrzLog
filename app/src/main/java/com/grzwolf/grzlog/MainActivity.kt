@@ -126,7 +126,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         // register lock screen notification API26+: https://developer.android.com/training/notify-user/build-notification
 //        if (verifyNotificationPermission()) {
-            createNotificationChannel()
+            createNotificationChannels()
             // lock screen notification: register a receiver for "screen on" transitions --> start point for an "immediate notifier"
             // https://stackoverflow.com/questions/4208458/android-notification-of-screen-off-on
             // this is not needed in AOSP; but it's needed for the Huawei launcher, which does not allow to render lockscreen notifications directly and in advance
@@ -6058,17 +6058,28 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     // lock screen notification
     //
     // create the NotificationChannel, only available on >= API 26+
-    private fun createNotificationChannel() {
+    private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name: CharSequence = "grzlog"
-            val description = "grzlog"
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel("grzlog", name, importance)
-            channel.description = description
-            val notificationManager = getSystemService(
+            // channel 1 is the lockscreen reminder
+            val name1: CharSequence = "grzlog"
+            val description1 = "grzlog"
+            val importance1 = NotificationManager.IMPORTANCE_DEFAULT
+            val channel1 = NotificationChannel("grzlog", name1, importance1)
+            channel1.description = description1
+            val notificationManager1 = getSystemService(
                 NotificationManager::class.java
             )
-            notificationManager.createNotificationChannel(channel)
+            notificationManager1.createNotificationChannel(channel1)
+            // channel 2 is the silent backup progress indicator
+            val name2: CharSequence = "GrzLog"
+            val description2 = "Backup is ongoing"
+            val importance2 = NotificationManager.IMPORTANCE_LOW
+            val channel2 = NotificationChannel("GrzLog", name2, importance2)
+            channel2.description = description2
+            val notificationManager2 = getSystemService(
+                NotificationManager::class.java
+            )
+            notificationManager2.createNotificationChannel(channel2)
         }
     }
 

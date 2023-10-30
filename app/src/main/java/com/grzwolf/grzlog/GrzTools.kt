@@ -1,5 +1,6 @@
 package com.grzwolf.grzlog
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
@@ -7,6 +8,7 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.DialogInterface.OnMultiChoiceClickListener
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
@@ -26,6 +28,9 @@ import android.view.Window
 import android.webkit.MimeTypeMap
 import android.widget.*
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
 import androidx.core.content.FileProvider
@@ -123,12 +128,16 @@ fun createZipArchive(
     srcFolder: String,
     outFolder: String,
     zipName: String,
-    pw: ProgressWindow?
+    pw: ProgressWindow?,
+    nm: NotificationManagerCompat?,
+    n: NotificationCompat.Builder?,
+    maxProgress: Int
 ): Boolean {
     val BUFFER = 2048
     try {
         var origin: BufferedInputStream? = null
-        val file = File("$outFolder/$zipName")
+        // need to make sure, a real backup is not interrupted
+        val file = File("$outFolder/$zipName" + "_part")
         val dest = FileOutputStream(file)
         val out = ZipOutputStream(BufferedOutputStream(dest))
         val data = ByteArray(BUFFER)
@@ -140,11 +149,23 @@ fun createZipArchive(
             if (f.isDirectory) {
                 val files = f.list()
                 for (i: Int in files?.indices!!) {
-                    // set progress
+                    // set progress via pw in foreground
                     if (pw != null) {
                         (context as Activity).runOnUiThread(Runnable {
                             pw.incCount++
                         })
+                    }
+                    // set progress via nm in notification bar
+                    if (nm != null) {
+                        with(nm) {
+                            if (androidx.core.app.ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                (context as Activity).runOnUiThread(Runnable {
+                                    n!!.setContentText(i.toString() + "(" + maxProgress.toString() + ")")
+                                        .setProgress(maxProgress, i, false)
+                                    notify(1, n.build())
+                                })
+                            }
+                        }
                     }
                     //
                     println("Adding: " + files[i])
@@ -176,6 +197,18 @@ fun createZipArchive(
         origin!!.close()
         out.flush()
         out.close()
+        // the very last step is a quick file rename
+        try {
+            val src = File("$outFolder/$zipName" + "_part")
+            val dst = File("$outFolder/$zipName")
+            if (src.exists()) {
+                src.renameTo(dst)
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } catch (e:NullPointerException){
+            e.printStackTrace()
+        }
     } catch (e: Exception) {
         return false
     }
