@@ -8,7 +8,7 @@
     <string name="extra_header">Extra</string>
 
     <!-- Messages Preferences -->
-    <string name="signature_title">GrzLog 1.0.19</string>
+    <string name="signature_title">GrzLog 1.0.20</string>
     <string name="signature_summary">\nKontakt: grzwolf.app@gmail.com</string>
 
     <!-- Sync Preferences -->
