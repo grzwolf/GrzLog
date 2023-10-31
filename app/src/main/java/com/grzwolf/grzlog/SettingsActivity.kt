@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
 import android.app.PendingIntent
+import android.app.PendingIntent.*
 import android.content.*
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.pm.PackageManager
@@ -455,7 +456,7 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                             Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }
-                val pendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, intent, 0)
+                val pendingIntent: PendingIntent = getActivity(context, 0, intent, FLAG_IMMUTABLE)
                 val notification = NotificationCompat.Builder(context, channelId)
                     .setSmallIcon(android.R.drawable.ic_dialog_alert)
                     .setContentTitle("GrzLog: backup is ongoing")
