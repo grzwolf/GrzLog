@@ -125,31 +125,24 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
 
         // register lock screen notification API26+: https://developer.android.com/training/notify-user/build-notification
-//        if (verifyNotificationPermission()) {
-            createNotificationChannels()
-            // lock screen notification: register a receiver for "screen on" transitions --> start point for an "immediate notifier"
-            // https://stackoverflow.com/questions/4208458/android-notification-of-screen-off-on
-            // this is not needed in AOSP; but it's needed for the Huawei launcher, which does not allow to render lockscreen notifications directly and in advance
-            val intentFilter = IntentFilter(Intent.ACTION_SCREEN_ON)
-            registerReceiver(object : BroadcastReceiver() {
-                override fun onReceive(context: Context, intent: Intent) {
-                    if (intent.action == Intent.ACTION_SCREEN_ON && lockScreenMessageList.size > 0) {
-                        while (lockScreenMessageList.size > 0) {
-                            generateLockscreenNotification(lockScreenMessageList[0])
-                            lockScreenMessageList.removeAt(0)
-                        }
+        createNotificationChannels()
+        // lock screen notification: register a receiver for "screen on" transitions --> start point for an "immediate notifier"
+        // https://stackoverflow.com/questions/4208458/android-notification-of-screen-off-on
+        // this is not needed in AOSP; but it's needed for the Huawei launcher, which does not allow to render lockscreen notifications directly and in advance
+        val intentFilter = IntentFilter(Intent.ACTION_SCREEN_ON)
+        registerReceiver(object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == Intent.ACTION_SCREEN_ON && lockScreenMessageList.size > 0) {
+                    while (lockScreenMessageList.size > 0) {
+                        generateLockscreenNotification(lockScreenMessageList[0])
+                        lockScreenMessageList.removeAt(0)
                     }
                 }
-            }, intentFilter)
-//        }
+            }
+        }, intentFilter)
 
         // notification permission must be called from NOT RESUMED - aka, not from a onClick handler
         notificationPermissionGranted = verifyNotificationPermission()
-        // all app permissions are requested at first use
-//        verifyMediaPermission()
-//        verifyAudioPermission()
-//        verifyCameraPermission()
-//        verifyExifPermission()
 
         // if camera app returns an image, the app needs a common directory to store it
         // from this place, the image is later copied to GrzLog local
