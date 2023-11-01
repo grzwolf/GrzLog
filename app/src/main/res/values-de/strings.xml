@@ -238,5 +238,6 @@
     <string name="showLink">Anhang zeigen</string>
     <string name="copyClipboard">Kopieren in Zwischenablage</string>
     <string name="clickSearchHitToEdit">Klick auf Suchtreffer</string>
+    <string name="partialBackup">Ein unvollständiges Backup wurde gefunden, Backup erneut ausführen.</string>
 </resources>
 

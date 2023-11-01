@@ -239,4 +239,5 @@
     <string name="showLink">show attachment</string>
     <string name="copyClipboard">copy to clipboard</string>
     <string name="clickSearchHitToEdit">Click on search hit</string>
+    <string name="partialBackup">An incomplete backup was found, execute backup again.</string>
 </resources>

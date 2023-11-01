@@ -390,11 +390,9 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             backupInfo: Preference?,
             infoText: String
         ) {
-            // show progress window
+            // generate progress window
             var progressWindow = ProgressWindow(context, context.getString(R.string.backupData) )
             progressWindow.absCount = maxProgressCount.toFloat()
-            progressWindow.show()
-
             // dialog dismiss listener
             fun Dialog?.setOnDismissListener(success: Boolean) {
                 if (success) {
@@ -417,9 +415,21 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     )
                 }
             }
-
             // generate ZIP async in another thread
             try {
+                // GrzLog.zip might not be writable, if it is a backup from another phone
+                val dst = File("$outFolder/$zipName")
+                if (dst.exists() && !dst.canWrite()) {
+                    okBox(
+                        context,
+                        context.getString(R.string.ZIPcreated) + " = " + context.getString(R.string.Failure),
+                        context.getString(R.string.manualDelete)
+                    )
+                    return;
+                }
+                // show progress window
+                progressWindow.show()
+                // real work
                 Thread {
                     var success = progressWindow.let {
                         createZipArchive(context, srcFolder!!, outFolder, zipName, it, null, null, 0)
@@ -449,6 +459,16 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                                  zipName: String,
                                  maxProgress: Int) {
             try {
+                // GrzLog.zip might not be writable, if it is a backup from another phone
+                val dst = File("$outFolder/$zipName")
+                if (dst.exists() && !dst.canWrite()) {
+                    okBox(
+                        context,
+                        context.getString(R.string.ZIPcreated) + " = " + context.getString(R.string.Failure),
+                        context.getString(R.string.manualDelete)
+                    )
+                    return;
+                }
                 // show progress in notification bar
                 var notificationManager = NotificationManagerCompat.from(MainActivity.contextMainActivity)
                 val channelId = "GrzLog" as String

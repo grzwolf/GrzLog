@@ -161,14 +161,13 @@ fun createZipArchive(
                             if (androidx.core.app.ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                                 (context as Activity).runOnUiThread(Runnable {
                                     n!!.setContentText(i.toString() + "(" + maxProgress.toString() + ")")
-                                        .setProgress(maxProgress, i, false)
+                                       .setProgress(maxProgress, i, false)
                                     notify(1, n.build())
                                 })
                             }
                         }
                     }
-                    //
-                    println("Adding: " + files[i])
+                    // streams
                     val fis = FileInputStream(srcFolder + "/" + sd + "/" + files[i])
                     origin = BufferedInputStream(fis, BUFFER)
                     val entry = ZipEntry(sd + "/" + files[i])
@@ -197,10 +196,18 @@ fun createZipArchive(
         origin!!.close()
         out.flush()
         out.close()
-        // the very last step is a quick file rename
+        // the very last step is a hopefully quick file rename
         try {
             val src = File("$outFolder/$zipName" + "_part")
             val dst = File("$outFolder/$zipName")
+            if (dst.exists()) {
+                val path = Paths.get("$outFolder/$zipName")
+                try {
+                    Files.delete(path)
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+            }
             if (src.exists()) {
                 src.renameTo(dst)
             }
@@ -210,6 +217,7 @@ fun createZipArchive(
             e.printStackTrace()
         }
     } catch (e: Exception) {
+        e.printStackTrace()
         return false
     }
     return true

@@ -161,6 +161,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         window.setBackgroundDrawable(null) // black screen at start or returning from settings
         setContentView(R.layout.activity_main)
 
+        // check for a broken backup: happens, if silent backup is aborted by OS or user
+        val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        appName = this.applicationInfo.loadLabel(this.packageManager).toString()
+        var file = File(downloadDir, "$appName.zip" + "_part")
+        if (file.exists()) {
+            okBox(this, "Note", getString(R.string.partialBackup))
+        }
+
         // toolbar tap listener
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -182,7 +190,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
 
         // GrzLog files folder is initially generated during installation; if folder was removed for whatever reason, the app is in trouble & crashes
-        appName = applicationInfo.loadLabel(packageManager).toString()
         appStoragePath = applicationContext.getExternalFilesDir(null)!!.absolutePath
         var folder = File(appStoragePath)
         if (!folder.exists()) {
