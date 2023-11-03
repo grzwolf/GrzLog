@@ -1734,6 +1734,22 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         } catch ( e:Exception) {}
     }
 
+    // initial size of fabPlus input dialog is called by "(fabPlus.mainDialog)?.setOnShowListener"
+    fun setFabPlusDialogSize() {
+        val fontSize = fabPlus.inputAlertView!!.textSize
+        val lineSpacingExtra = Math.max(fabPlus.inputAlertView!!.lineSpacingExtra, 25f)
+        val lineSpacingMultiplier = fabPlus.inputAlertView!!.lineSpacingMultiplier
+        val lineHeight = fontSize * lineSpacingMultiplier + lineSpacingExtra
+        val heightMax = resources.displayMetrics.heightPixels * 0.50f
+        if (fabPlus.mainDialog != null) {
+            val wnd = (fabPlus.mainDialog)?.getWindow()!!
+            if (wnd != null) {
+                val corr = Math.min((fabPlus.inputAlertView!!.getLineCount() - 1) * lineHeight + 600, heightMax)
+                wnd.setLayout(WindowManager.LayoutParams.MATCH_PARENT, corr.toInt())
+            }
+        }
+    }
+
     // input button click --> simple input of data
     private fun fabPlusOnClick(
         adapterView: AdapterView<*>? = null,
@@ -1780,23 +1796,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         // have a EditText text change listener
         fabPlus.inputAlertView!!.addTextChangedListener(object : TextWatcher {
-
-            // dynamically increase/shrink height of EditText surrounding AlertDialog
-            val fontSize = fabPlus.inputAlertView!!.textSize
-            val lineSpacingExtra = Math.max(fabPlus.inputAlertView!!.lineSpacingExtra, 25f)
-            val lineSpacingMultiplier = fabPlus.inputAlertView!!.lineSpacingMultiplier
-            val lineHeight = fontSize * lineSpacingMultiplier + lineSpacingExtra
-            val heightMax = resources.displayMetrics.heightPixels * 0.50f
-            fun setParentSize() {
-                if (fabPlus.mainDialog != null) {
-                    val wnd = (fabPlus.mainDialog)?.getWindow()!!
-                    if (wnd != null) {
-                        val corr = Math.min((fabPlus.inputAlertView!!.getLineCount() - 1) * lineHeight + 600, heightMax)
-                        wnd.setLayout(WindowManager.LayoutParams.MATCH_PARENT, corr.toInt())
-                    }
-                }
-            }
-
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
                 fabPlus.inputAlertTextSelStart = Math.min(s.length, Math.max(fabPlus.inputAlertTextSelStart, start))
             }
@@ -1805,7 +1804,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
             override fun afterTextChanged(s: Editable) {
                 // dynamically increase/shrink height of EditText surrounding AlertDialog
-                setParentSize()
+                setFabPlusDialogSize()
                 // don't do anything, if tag is set
                 if (fabPlus.inputAlertView!!.tag != null) {
                     fabPlus.inputAlertView!!.tag = null
@@ -2252,10 +2251,12 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         fabPlus.inputAlertView!!.filters = arrayOf()
         // build AlertBuilder dialog
         fabPlus.mainDialog = fabPlusBuilder.create()
+        // the listener matches the initial dialog width to the screen width & the box height to the text length
+        (fabPlus.mainDialog)?.setOnShowListener {
+            setFabPlusDialogSize()
+        }
         // show AlertBuilder dialog
         (fabPlus.mainDialog)?.show()
-        // match dialog width to screen width & height showing one text line: increase/shrink fabPlus.mainDialog via text listener setParentSize()
-        (fabPlus.mainDialog)?.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 600)
         // prevent dlg from disappear, when tap outside: https://stackoverflow.com/questions/42254443/alertdialog-disappears-when-touch-is-outside-android
         (fabPlus.mainDialog)?.setCanceledOnTouchOutside(false)
         // to detect Alert Dialog cancel: Android back button OR dlg quit
