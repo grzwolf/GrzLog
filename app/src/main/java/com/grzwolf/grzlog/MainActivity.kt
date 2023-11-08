@@ -76,25 +76,19 @@ val VIDEO_EXT = "mp4.3gp.webm.mkv"
 // https://stackoverflow.com/questions/31364540/how-to-add-section-header-in-listview-list-item
 class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
 
-    var appName = ""                                      // app name
-    var appStoragePath = ""                               // app external storage location
-
     // Huawei launcher does not show lockscreen notifications generated in advance (though AOSP does), therefore build a list and show it at wakeup/screen on
     var lockScreenMessageList: MutableList<String> = ArrayList()
     var notificationPermissionGranted = false
 
-    var lvMain = GrzListView()                            // ListView shows data according to SHOW_ORDER
     var fabPlus = FabPlus()                               // floating action button is the main UI data input control
-    var appMenu: Menu? = null                             // app has a menu bar: Search, Folder, Share, Settings
     var menuItemsVisible = false                          // control visibility of menu items
     var mainMenuHandler = Handler(Looper.getMainLooper()) // menu action handler
     var searchView: SearchView? = null                    // search function
     var searchViewQuery = ""                              // search query string
     var menuSearchVisible = false                         // visibility flag of search input
     var capturedPhotoUri: Uri? = null                     // needs to be global, bc there is no way a camara app returns uri in onActivityResult
-    var fabBack : FloatingActionButton? = null            // folder as attachment link: if folder is switched, show a return to origin button
 
-    // fabBack is used to switch back to the previous folder + provides data for the function
+    // fabBack is used to switch back to the previous folder, FabBackTag provides data for such functionality
     class FabBackTag(folderName: String, searchHitListGlobal: MutableList<GlobalSearchHit>, listNdx: Int) {
         var folderName: String = folderName
         var searchHitListGlobal: MutableList<GlobalSearchHit> = searchHitListGlobal
@@ -347,7 +341,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             val fbt: FabBackTag = fabBack!!.tag as FabBackTag
             // adjust title and message
             var title = getString(R.string.switchFolder)
-            var message = fbt.folderName
+            var message = getString(R.string.appFolder) + " \"" + fbt.folderName + "\""
             if (fbt.folderName.equals(ds!!.namesSection[ds!!.selectedSection])) {
                 if (fbt.searchHitListGlobal.size > 0) {
                     title = getString(R.string.switchToSearchList)
@@ -374,7 +368,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         }
                         // plus jump back to the search hit list dialog
                         if (fbt.searchHitListGlobal.size > 0) {
-                            jumpToSearchHitInFolderDialog(fbt.searchHitListGlobal, fbt.listNdx)
+                            jumpToSearchHitInFolderDialog(this, fbt.searchHitListGlobal, fbt.listNdx)
                         }
                         // keep list in back button tag
                         fabBack!!.tag = FabBackTag("", fbt.searchHitListGlobal, -1)
@@ -474,7 +468,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             // return from simple show app gallery - back to folder options
             if (showFolderMoreDialog) {
                 showFolderMoreDialog = false
-                moreDialog?.show()
+                folderMoreDialog?.show()
             } else {
                 // return from show app gallery with attachment picked - back to fabPlus input or file picker dialog
                 if (returnAttachmentFromAppGallery.length > 0) {
@@ -1289,8 +1283,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 }
             }
         )
-        var itemMoreDialog = builderItemMore?.create()
-        val listView = itemMoreDialog?.getListView()
+        var itemfolderMoreDialog = builderItemMore?.create()
+        val listView = itemfolderMoreDialog?.getListView()
         listView?.divider = ColorDrawable(Color.GRAY)
         listView?.dividerHeight = 2
         // item 6 shall be disabled, if item is already header
@@ -1311,8 +1305,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 }
                 override fun onChildViewRemoved(view: View?, view1: View?) {}
             })
-        itemMoreDialog?.show()
-        itemMoreDialog?.setCanceledOnTouchOutside(false)
+        itemfolderMoreDialog?.show()
+        itemfolderMoreDialog?.setCanceledOnTouchOutside(false)
     }
 
     // execute the long click as edit ListView item
@@ -2756,19 +2750,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         showMenuItemUndo()
     }
 
-    // show / hide menu item Undo; ds.undoAction == DataStore.ACTION.REVERTADD is special case, if DataStore is empty --> Add --> Cancel
-    fun showMenuItemUndo() {
-        val show = ds!!.undoSection.length > 0 || ds!!.undoAction == ACTION.REVERTADD || ds!!.undoAction == ACTION.REVERTINSERT
-        if (appMenu != null) {
-            val item = appMenu!!.findItem(R.id.action_Undo)
-            item.isVisible = show
-        }
-    }
-
     // handle action bar item clicks
     var changeFolderDialog: AlertDialog? = null
-    var moreDialog: AlertDialog? = null
-    var moreBuilder: AlertDialog.Builder? = null
+    var folderMoreBuilder: AlertDialog.Builder? = null
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // selector
         val id = item.itemId
@@ -3092,7 +3076,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         getString(R.string.useTimestamp),                       // 6 Timestamp
                         getString(R.string.searchFolders)               // 7 search folders
                     )
-                    moreBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    folderMoreBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         AlertDialog.Builder(
                             changeFileBuilderContext,
                             android.R.style.Theme_Material_Dialog
@@ -3100,9 +3084,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     } else {
                         AlertDialog.Builder(changeFileBuilderContext)
                     }
-                    val moreBuilderContext = moreBuilder!!.context
-                    moreBuilder!!.setTitle(getString(R.string.whatTodoWithFolder) + itemText + "'")
-                    moreBuilder!!.setItems(
+                    val folderMoreBuilderContext = folderMoreBuilder!!.context
+                    folderMoreBuilder!!.setTitle(getString(R.string.whatTodoWithFolder) + itemText + "'")
+                    folderMoreBuilder!!.setItems(
                         items,
                         DialogInterface.OnClickListener { dialogRename, which ->
                             //  MORE FILE OPTIONS: Export folder to PDF or RTF
@@ -3138,13 +3122,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                         if (tmpExportSelection == 0) {
                                             val folderName = ds!!.namesSection[selectedSectionTemp]
                                             val rawText = ds!!.dataSection[selectedSectionTemp]
-                                            generatePdf(folderName, rawText, false, moreBuilder)
+                                            generatePdf(folderName, rawText, false, folderMoreBuilder)
                                         }
                                         //  EXPORT OPTIONS: RTF
                                         if (tmpExportSelection == 1) {
                                             val folderName = ds!!.namesSection[selectedSectionTemp]
                                             val rawText = ds!!.dataSection[selectedSectionTemp]
-                                            generateRtf(folderName, rawText, false, moreBuilder)
+                                            generateRtf(folderName, rawText, false, folderMoreBuilder)
                                         }
                                         // EXPORT OPTIONS: copy folder to clipboard
                                         if (tmpExportSelection == 2) {
@@ -3155,7 +3139,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 // EXPORT OPTIONS back
                                 exportBuilder.setNegativeButton(
                                     R.string.back,
-                                    DialogInterface.OnClickListener { dialog, which -> moreDialog!!.show() })
+                                    DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
                                 // EXPORT OPTIONS show
                                 exportBuilder.create().show()
                             }
@@ -3167,23 +3151,23 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     builder =
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                             AlertDialog.Builder(
-                                                moreBuilderContext,
+                                                folderMoreBuilderContext,
                                                 android.R.style.Theme_Material_Dialog
                                             )
                                         } else {
-                                            AlertDialog.Builder(moreBuilderContext)
+                                            AlertDialog.Builder(folderMoreBuilderContext)
                                         }
                                     builder.setTitle(R.string.note)
                                     builder.setMessage(getString(R.string.folderLimit) + DataStore.SECTIONS_COUNT + getString(R.string.folders))
                                     builder.setIcon(android.R.drawable.ic_dialog_alert)
                                     builder.setPositiveButton(
                                         R.string.ok,
-                                        DialogInterface.OnClickListener { dialog, which -> moreDialog!!.show() })
+                                        DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
                                     builder.show()
                                     return@OnClickListener
                                 }
                                 // real add item
-                                val input = EditText(moreBuilderContext)
+                                val input = EditText(folderMoreBuilderContext)
                                 input.inputType = InputType.TYPE_CLASS_TEXT
                                 input.setText(R.string.folder, TextView.BufferType.SPANNABLE)
                                 showEditTextContextMenu(input, false)
@@ -3191,11 +3175,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 addBuilder =
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                         AlertDialog.Builder(
-                                            moreBuilderContext,
+                                            folderMoreBuilderContext,
                                             android.R.style.Theme_Material_Dialog
                                         )
                                     } else {
-                                        AlertDialog.Builder(moreBuilderContext)
+                                        AlertDialog.Builder(folderMoreBuilderContext)
                                     }
                                 addBuilder.setTitle(R.string.folderNewName)
                                 addBuilder.setView(input)
@@ -3206,14 +3190,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                         if ( text.isEmpty()) {
                                             centeredToast(this, getString(R.string.emptyInput), 3000)
                                             Handler().postDelayed({
-                                                moreDialog!!.show()
+                                                folderMoreDialog!!.show()
                                             }, 100)
                                             return@OnClickListener
                                         }
                                         if (isDupeFolder(text)) {
                                             centeredToast(this, getString(R.string.duplicateName), 3000)
                                             Handler().postDelayed({
-                                                moreDialog!!.show()
+                                                folderMoreDialog!!.show()
                                             }, 100)
                                             return@OnClickListener
                                         }
@@ -3232,7 +3216,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                         val imm =
                                             getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                                         imm.hideSoftInputFromWindow(input.windowToken, 0)
-                                        moreDialog!!.show()
+                                        folderMoreDialog!!.show()
                                     })
                                 addBuilder.show()
                                 // tricky way to let the keyboard popup
@@ -3244,7 +3228,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             // MORE FOLDER OPTIONS: Rename
                             if (which == 2) {
                                 // folder name rename dialog
-                                val input = EditText(moreBuilderContext)
+                                val input = EditText(folderMoreBuilderContext)
                                 input.inputType = InputType.TYPE_CLASS_TEXT
                                 input.setText(
                                     ds!!.namesSection[selectedSectionTemp],
@@ -3255,11 +3239,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 renameBuilder =
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                         AlertDialog.Builder(
-                                            moreBuilderContext,
+                                            folderMoreBuilderContext,
                                             android.R.style.Theme_Material_Dialog
                                         )
                                     } else {
-                                        AlertDialog.Builder(moreBuilderContext)
+                                        AlertDialog.Builder(folderMoreBuilderContext)
                                     }
                                 renameBuilder.setTitle(R.string.changeFolderName)
                                 renameBuilder.setView(input)
@@ -3271,14 +3255,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                         if ( text.isEmpty()) {
                                             centeredToast(this, getString(R.string.emptyInput), 3000)
                                             Handler().postDelayed({
-                                                moreDialog!!.show()
+                                                folderMoreDialog!!.show()
                                             }, 100)
                                             return@OnClickListener
                                         }
                                         if (isDupeFolder(text)) {
                                             centeredToast(this, getString(R.string.duplicateName), 3000)
                                             Handler().postDelayed({
-                                                moreDialog!!.show()
+                                                folderMoreDialog!!.show()
                                             }, 100)
                                             return@OnClickListener
                                         }
@@ -3298,8 +3282,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                         // close parent dialog
                                         changeFolderDialog!!.cancel()
                                         // but show more dialog
-                                        moreDialog!!.setTitle(getString(R.string.whatTodoWithFolder) + ds!!.namesSection[selectedSectionTemp] + "'")
-                                        moreDialog!!.show()
+                                        folderMoreDialog!!.setTitle(getString(R.string.whatTodoWithFolder) + ds!!.namesSection[selectedSectionTemp] + "'")
+                                        folderMoreDialog!!.show()
                                     })
                                 // folder name rename cancel
                                 renameBuilder.setNegativeButton(
@@ -3307,7 +3291,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     DialogInterface.OnClickListener { dialogRename, which ->
                                         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                                         imm.hideSoftInputFromWindow(input.windowToken, 0)
-                                        moreDialog!!.show()
+                                        folderMoreDialog!!.show()
                                     })
                                 // folder name rename show
                                 val renameDialog: Dialog = renameBuilder.show()
@@ -3323,11 +3307,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 builder =
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                         AlertDialog.Builder(
-                                            moreBuilderContext,
+                                            folderMoreBuilderContext,
                                             android.R.style.Theme_Material_Dialog
                                         )
                                     } else {
-                                        AlertDialog.Builder(moreBuilderContext)
+                                        AlertDialog.Builder(folderMoreBuilderContext)
                                     }
                                 builder.setTitle(getString(R.string.clearFolderData) + itemText + "' ?")
                                 builder.setPositiveButton(
@@ -3351,7 +3335,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     })
                                 builder.setNegativeButton(
                                     R.string.cancel,
-                                    DialogInterface.OnClickListener { dialogRename, which -> moreDialog!!.show() })
+                                    DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog!!.show() })
                                 builder.show()
                             }
                             //  MORE FOLDER OPTIONS: Remove folder
@@ -3360,11 +3344,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 builder =
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                         AlertDialog.Builder(
-                                            moreBuilderContext,
+                                            folderMoreBuilderContext,
                                             android.R.style.Theme_Material_Dialog
                                         )
                                     } else {
-                                        AlertDialog.Builder(moreBuilderContext)
+                                        AlertDialog.Builder(folderMoreBuilderContext)
                                     }
                                 builder.setTitle(getString(R.string.deleteFolder) + " '" + itemText + "' ?")
                                 builder.setPositiveButton(
@@ -3402,11 +3386,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                                 reReadAppFileData = true
                                                 onResume()
                                             }
-                                        ) { moreDialog!!.show() }
+                                        ) { folderMoreDialog!!.show() }
                                     })
                                 builder.setNegativeButton(
                                     R.string.cancel,
-                                    DialogInterface.OnClickListener { dialogRename, which -> moreDialog!!.show() })
+                                    DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog!!.show() })
                                 builder.show()
                             }
                             //  MORE FOLDER OPTIONS: Move folder up in list
@@ -3452,11 +3436,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 builder =
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                                         AlertDialog.Builder(
-                                            moreBuilderContext,
+                                            folderMoreBuilderContext,
                                             android.R.style.Theme_Material_Dialog
                                         )
                                     } else {
-                                        AlertDialog.Builder(moreBuilderContext)
+                                        AlertDialog.Builder(folderMoreBuilderContext)
                                     }
                                 builder.setTitle(R.string.timestampSetting)
                                 builder.setSingleChoiceItems(
@@ -3471,11 +3455,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                     DialogInterface.OnClickListener { dialog, which ->
                                         ds!!.timeSection[selectedSectionTemp] = selection
                                         writeAppData(appStoragePath, ds, appName) // save data
-                                        moreDialog!!.show()                       // show more dlg again
+                                        folderMoreDialog!!.show()                       // show more dlg again
                                     })
                                 builder.setNegativeButton(
                                     R.string.cancel,
-                                    DialogInterface.OnClickListener { dialog, which -> moreDialog!!.show() })
+                                    DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
                                 dialog = builder.create()
                                 val listView = dialog.listView
                                 listView.divider = ColorDrawable(Color.GRAY)
@@ -3502,13 +3486,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         })
 
                     // MORE FOLDER OPTIONS back/cancel
-                    moreBuilder!!.setNegativeButton(R.string.back) { dialog, which -> changeFolderDialog!!.show() }
+                    folderMoreBuilder!!.setNegativeButton(R.string.back) { dialog, which -> changeFolderDialog!!.show() }
                     // MORE FILE OPTIONS show
-                    moreDialog = moreBuilder!!.create()
-                    val listView = moreDialog?.getListView()
+                    folderMoreDialog = folderMoreBuilder!!.create()
+                    val listView = folderMoreDialog?.getListView()
                     listView?.divider = ColorDrawable(Color.GRAY)
                     listView?.dividerHeight = 2
-                    moreDialog?.show( )
+                    folderMoreDialog?.show( )
                 })
             // CHANGE FOLDER finally show change folder dialog
             changeFolderDialog = changeFileBuilder.create()
@@ -3524,7 +3508,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     fun prepareGlobalSearch(searchHitListGlobal: MutableList<GlobalSearchHit>) {
         if (searchHitListGlobal.size > 0) {
             // re use global search hit list
-            jumpToSearchHitInFolderDialog(searchHitListGlobal, -1)
+            jumpToSearchHitInFolderDialog(this, searchHitListGlobal, -1)
         } else {
             // input dialog for global search phrase
             val inputSearch = EditText(this)
@@ -3549,17 +3533,17 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 // no input --> get out
                 if (searchText.isEmpty()) {
                     inputBuilderDialog!!.dismiss()
-                    moreDialog!!.show()
+                    folderMoreDialog!!.show()
                     return@setPositiveButton
                 }
                 // find all search hits in DataStore
-                var searchHitList: MutableList<GlobalSearchHit> = findTextInDataStore(searchText)
+                var searchHitList: MutableList<GlobalSearchHit> = findTextInDataStore(this, searchText, lvMain)
                 // nothing found --> get out
                 if (searchHitList.size == 0) {
                     centeredToast(this, getString(R.string.nothingFound), 3000)
                     inputBuilderDialog!!.dismiss()
                     Handler().postDelayed({
-                        moreDialog!!.show()
+                        folderMoreDialog!!.show()
                     }, 100)
                     return@setPositiveButton
                 }
@@ -3567,14 +3551,14 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 hideKeyboard(inputSearch)
                 // render search hits and let user pick one to jump to
                 Handler().postDelayed({
-                    jumpToSearchHitInFolderDialog(searchHitList, -1)
+                    jumpToSearchHitInFolderDialog(this, searchHitList, -1)
                 }, 50)
             }
             inputBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
-                moreDialog!!.show()
+                folderMoreDialog?.show()
             }
             inputBuilderDialog = inputBuilder.create()
-            val listView = moreDialog?.getListView()
+            val listView = folderMoreDialog?.getListView()
             listView?.divider = ColorDrawable(Color.BLACK)
             listView?.dividerHeight = 3
             inputBuilderDialog.show()
@@ -3593,113 +3577,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
         }
         return dupe
-    }
-
-    // render search hits and let user pick one to jump to
-    fun jumpToSearchHitInFolderDialog(searchHitListGlobal: MutableList<GlobalSearchHit>, listNdx: Int) {
-        // show search results and let user pick one to jump to
-        val themedContext = ContextThemeWrapper(this, android.R.style.Theme_Holo_Light_Dialog_NoActionBar)
-        val jumpFolderBuilder = AlertDialog.Builder(themedContext)
-        var jumpFolderDialog: AlertDialog? = null
-        jumpFolderBuilder.setTitle(getString(R.string.chooseSearchHit))
-        var hitsNdx = listNdx
-        var lastClickTime = System.currentTimeMillis()
-        var lastSelectedSection = hitsNdx
-        val hits = searchHitListGlobal.map(GlobalSearchHit::textCombined).toTypedArray()
-        jumpFolderBuilder.setSingleChoiceItems(
-            hits,
-            hitsNdx,
-            DialogInterface.OnClickListener { dialog, which ->
-                // double click shall act like ok button
-                hitsNdx = which
-                val nowTime = System.currentTimeMillis()
-                val deltaTime = nowTime - lastClickTime
-                if (deltaTime < 700 && lastSelectedSection == which) {
-                    // programmatically click ok button
-                    jumpFolderDialog?.getButton(DialogInterface.BUTTON_POSITIVE)?.performClick()
-                }
-                lastSelectedSection = which
-                lastClickTime = nowTime
-            }
-        )
-        jumpFolderBuilder.setPositiveButton(R.string.jump) { dialog, which ->
-            // sanity check
-            if (hitsNdx in 0 until hits.size == false) {
-                centeredToast(this, getString(R.string.chooseSearchHit), 3000)
-                Handler().postDelayed({
-                    jumpToSearchHitInFolderDialog(searchHitListGlobal, listNdx)
-                }, 100)
-                return@setPositiveButton
-            }
-            // allow to jump back to search hit list dialog
-            if (fabBack != null) {
-                val dsFolder = ds!!.namesSection[ds!!.selectedSection]
-                fabBack!!.tag = FabBackTag(dsFolder, searchHitListGlobal, hitsNdx)
-                fabBack!!.visibility = VISIBLE
-            }
-            // switch to the selected search hit in its folder
-            var folderName = searchHitListGlobal[hitsNdx].folderName
-            switchToFolderByName(folderName, searchHitListGlobal[hitsNdx].lineNdx)
-        }
-        jumpFolderBuilder.setNegativeButton(R.string.close) { dialog, which ->
-            moreDialog!!.show()
-        }
-        jumpFolderDialog = jumpFolderBuilder.create()
-        jumpFolderDialog.show()
-    }
-
-    // switch to a folder helpers
-    fun switchToFolderByNumber(number: Int, highLightPos: Int = -1) {
-        // sanity check
-        if (number < 0 || number >= ds!!.dataSection.size) {
-            if (fabBack != null) {
-                fabBack!!.visibility = INVISIBLE
-                val fbt = FabBackTag("", ArrayList(), -1)
-                fabBack!!.tag = fbt
-            }
-            centeredToast(this, "Index out of range", 3000)
-            return
-        }
-        // switch folder always cancels undo
-        ds!!.undoSection = ""
-        ds!!.undoText = ""
-        ds!!.undoAction = ACTION.UNDEFINED
-        showMenuItemUndo()
-        // full infra to switch to a DataStore folder
-        ds!!.selectedSection = number
-        writeAppData(appStoragePath, ds, appName)
-        val dsText = ds!!.dataSection[ds!!.selectedSection]
-        lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)
-        lvMain.adapter = LvAdapter(this@MainActivity, lvMain. arrayList)
-        lvMain.listView!!.adapter = lvMain.adapter
-        title = ds!!.namesSection[ds!!.selectedSection]
-        var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList!!.size - 1
-        // if presenting a global search hit, place it somehow vertically centered
-        if (highLightPos != -1) {
-            scrollPos = Math.max(0, highLightPos - 8)
-        }
-        // just scroll ListView
-        lvMain.scrollToItemPos(scrollPos)
-        // temporary highlight item
-        if (highLightPos != -1) {
-            lvMain.arrayList!![highLightPos].setHighLighted(true)
-            // revoke temp. highlighting after timeout
-            Handler().postDelayed({
-                lvMain.arrayList!![highLightPos].setHighLighted(false)
-                lvMain.adapter!!.notifyDataSetChanged()
-            }, 3000)
-        }
-    }
-    fun switchToFolderByName(name: String, scrollPos: Int = -1) {
-        var folderNumber = -1
-        val folderList = ds!!.namesSection.toTypedArray()
-        for (i in folderList.indices) {
-            if (folderList[i].equals(name)) {
-                folderNumber = i
-                break
-            }
-        }
-        switchToFolderByNumber(folderNumber, scrollPos)
     }
 
     fun verifyNotificationPermission(): Boolean {
@@ -6127,40 +6004,23 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         var lineNdx = lineNdx
         var folderName = folderName
     }
-    fun findTextInDataStore(searchText: String): MutableList<GlobalSearchHit> {
-        var hitList: MutableList<GlobalSearchHit> = ArrayList()
-        // iterate all data sections of DataStore
-        for (dsNdx in ds!!.dataSection.indices) {
-            // text from DataStore folder
-            var sectionText = ds!!.dataSection[dsNdx]
-            // take show order into account
-            var arrayList: ArrayList<ListViewItem> = lvMain.makeArrayList(sectionText, lvMain.showOrder)
-            // loop arrayList
-            var sectionName = ""
-            for (i in arrayList.indices) {
-                // save most current section name: it will be used, if there is a search hit
-                if (PATTERN.DateDay.matcher(arrayList[i].title.toString()).find() || arrayList[i].title.toString().startsWith(8.toChar())) {
-                    sectionName = arrayList[i].title.toString()
-                }
-                // save search hits data: the text where the search phrase occurs, its line index, its section name, its folder index
-                if (arrayList[i].title.toString().contains(searchText, ignoreCase = true)) {
-                    val searchHit = arrayList[i].title.toString()
-                    val folderName = ds!!.namesSection[dsNdx]
-                    val textCombined = searchHit + "\n(" + sectionName + " / " + folderName + ")"
-                    val spanCombined = SpannableString(textCombined)
-                    val searchTextStart = searchHit.indexOf(searchText, ignoreCase = true)
-                    spanCombined.setSpan(BackgroundColorSpan(ContextCompat.getColor(this, R.color.yellow)), searchTextStart, searchTextStart + searchText.length, 0)
-                    spanCombined.setSpan(RelativeSizeSpan(0.9F), 0, searchHit.length,0)
-                    spanCombined.setSpan(RelativeSizeSpan(0.7F), searchHit.length, textCombined.length,0)
-                    hitList.add(GlobalSearchHit(spanCombined, i, folderName))
-                }
-            }
-        }
-        return hitList
-    }
 
     // static components accessible from other fragments / activities
     companion object {
+        @JvmField
+        // app name
+        var appName = ""
+        // app has a menu bar: Search, Folder, Share, Settings
+        var appMenu: Menu? = null
+        // app external storage location
+        var appStoragePath = ""
+        // ListView shows data according to SHOW_ORDER
+        @JvmField
+        var lvMain = GrzListView()
+        // global search: show a 'return to origin' button
+        var fabBack: FloatingActionButton? = null
+        // intennt controls whether to jump back to Settings
+        var intentSettings: Intent? = null
         // DataStore holds all data "new at top"
         @JvmField
         var ds: DataStore? = null
@@ -6172,6 +6032,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         var returningFromRestore = false
         // return a filename from app gallery picker
         @JvmField
+        var folderMoreDialog: AlertDialog? = null
         var returningFromAppGallery = false
         var showFolderMoreDialog = false
         var returnAttachmentFromAppGallery = ""
@@ -6221,6 +6082,167 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 ReturnToDialogData.returnToSearchHits = returnToSearchHits
                 ReturnToDialogData.function = function
             }
+        }
+
+        // render search hits and let user pick one to jump to
+        fun jumpToSearchHitInFolderDialog(context: Context, searchHitListGlobal: MutableList<GlobalSearchHit>, listNdx: Int) {
+            // show search results and let user pick one to jump to
+            val themedContext = ContextThemeWrapper(context, android.R.style.Theme_Holo_Light_Dialog_NoActionBar)
+            val jumpFolderBuilder = AlertDialog.Builder(themedContext)
+            var jumpFolderDialog: AlertDialog? = null
+            jumpFolderBuilder.setTitle(contextMainActivity.getString(R.string.chooseSearchHit))
+            var hitsNdx = listNdx
+            var lastClickTime = System.currentTimeMillis()
+            var lastSelectedSection = hitsNdx
+            val hits = searchHitListGlobal.map(GlobalSearchHit::textCombined).toTypedArray()
+            jumpFolderBuilder.setSingleChoiceItems(
+                hits,
+                hitsNdx,
+                DialogInterface.OnClickListener { dialog, which ->
+                    // double click shall act like ok button
+                    hitsNdx = which
+                    val nowTime = System.currentTimeMillis()
+                    val deltaTime = nowTime - lastClickTime
+                    if (deltaTime < 700 && lastSelectedSection == which) {
+                        // programmatically click ok button
+                        jumpFolderDialog?.getButton(DialogInterface.BUTTON_POSITIVE)?.performClick()
+                    }
+                    lastSelectedSection = which
+                    lastClickTime = nowTime
+                }
+            )
+            jumpFolderBuilder.setPositiveButton(R.string.jump) { dialog, which ->
+                // sanity check
+                if (hitsNdx in 0 until hits.size == false) {
+                    centeredToast(context, contextMainActivity.getString(R.string.chooseSearchHit), 3000)
+                    Handler().postDelayed({
+                        jumpToSearchHitInFolderDialog(context, searchHitListGlobal, listNdx)
+                    }, 100)
+                    return@setPositiveButton
+                }
+                // make sure, MainActivity is is active (doesn't harm, if MainActivity is already active )
+                val mainIntent = Intent(contextMainActivity, MainActivity::class.java)
+                contextMainActivity.startActivity(mainIntent)
+                // allow to jump back to search hit list dialog
+                if (fabBack != null) {
+                    val dsFolder = ds!!.namesSection[ds!!.selectedSection]
+                    fabBack!!.tag = FabBackTag(dsFolder, searchHitListGlobal, hitsNdx)
+                    fabBack!!.visibility = VISIBLE
+                }
+                // switch to the selected search hit in its folder
+                var folderName = searchHitListGlobal[hitsNdx].folderName
+                switchToFolderByName(folderName, searchHitListGlobal[hitsNdx].lineNdx)
+            }
+            jumpFolderBuilder.setNegativeButton(R.string.close) { dialog, which ->
+                if (folderMoreDialog != null) {
+                    folderMoreDialog!!.show()
+                }
+                if (intentSettings != null) {
+                    contextMainActivity.startActivity(intentSettings)
+                }
+            }
+            jumpFolderDialog = jumpFolderBuilder.create()
+            jumpFolderDialog.show()
+        }
+
+        // find text in all dataSections (folders) and return a list
+        fun findTextInDataStore(context: Context, searchText: String, lvMain: GrzListView): MutableList<GlobalSearchHit> {
+            var hitList: MutableList<GlobalSearchHit> = ArrayList()
+            // iterate all data sections of DataStore
+            for (dsNdx in ds!!.dataSection.indices) {
+                // text from DataStore folder
+                var sectionText = ds!!.dataSection[dsNdx]
+                // take show order into account
+                var arrayList: ArrayList<ListViewItem> = lvMain.makeArrayList(sectionText, lvMain.showOrder)
+                // loop arrayList
+                var sectionName = ""
+                for (i in arrayList.indices) {
+                    // save most current section name: it will be used, if there is a search hit
+                    if (PATTERN.DateDay.matcher(arrayList[i].title.toString()).find() || arrayList[i].title.toString().startsWith(8.toChar())) {
+                        sectionName = arrayList[i].title.toString()
+                    }
+                    //
+                    var inspectStr = arrayList[i].title.toString()
+                    if (arrayList[i].fullTitle!!.length > 0) {
+                        inspectStr = arrayList[i].fullTitle.toString()
+                    }
+                    // save search hits data: the text where the search phrase occurs, its line index, its section name, its folder index
+                    if (inspectStr.contains(searchText, ignoreCase = true)) {
+                        val folderName = ds!!.namesSection[dsNdx]
+                        val textCombined = inspectStr + "\n(" + sectionName + " / " + folderName + ")"
+                        val spanCombined = SpannableString(textCombined)
+                        val searchTextStart = inspectStr.indexOf(searchText, ignoreCase = true)
+                        spanCombined.setSpan(BackgroundColorSpan(ContextCompat.getColor(context, R.color.yellow)), searchTextStart, searchTextStart + searchText.length, 0)
+                        spanCombined.setSpan(RelativeSizeSpan(0.9F), 0, inspectStr.length,0)
+                        spanCombined.setSpan(RelativeSizeSpan(0.7F), inspectStr.length, textCombined.length,0)
+                        hitList.add(GlobalSearchHit(spanCombined, i, folderName))
+                    }
+                }
+            }
+            return hitList
+        }
+
+        // show / hide menu item Undo; ds.undoAction == DataStore.ACTION.REVERTADD is special case, if DataStore is empty --> Add --> Cancel
+        fun showMenuItemUndo() {
+            val show = ds!!.undoSection.length > 0 || ds!!.undoAction == ACTION.REVERTADD || ds!!.undoAction == ACTION.REVERTINSERT
+            if (appMenu != null) {
+                val item = appMenu!!.findItem(R.id.action_Undo)
+                item.isVisible = show
+            }
+        }
+
+        // switch to a folder helpers
+        fun switchToFolderByNumber(number: Int, highLightPos: Int = -1) {
+            // sanity check
+            if (number < 0 || number >= ds!!.dataSection.size) {
+                if (fabBack != null) {
+                    fabBack!!.visibility = INVISIBLE
+                    val fbt = FabBackTag("", ArrayList(), -1)
+                    fabBack!!.tag = fbt
+                }
+                centeredToast(contextMainActivity, "Index out of range", 3000)
+                return
+            }
+            // switch folder always cancels undo
+            ds!!.undoSection = ""
+            ds!!.undoText = ""
+            ds!!.undoAction = ACTION.UNDEFINED
+            showMenuItemUndo()
+            // full infra to switch to a DataStore folder
+            ds!!.selectedSection = number
+            writeAppData(appStoragePath, ds, appName)
+            val dsText = ds!!.dataSection[ds!!.selectedSection]
+            lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)
+            lvMain.adapter = LvAdapter(contextMainActivity, lvMain. arrayList)
+            lvMain.listView!!.adapter = lvMain.adapter
+            contextMainActivity.title = ds!!.namesSection[ds!!.selectedSection]
+            var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList!!.size - 1
+            // if presenting a global search hit, place it somehow vertically centered
+            if (highLightPos != -1) {
+                scrollPos = Math.max(0, highLightPos - 8)
+            }
+            // just scroll ListView
+            lvMain.scrollToItemPos(scrollPos)
+            // temporary highlight item
+            if (highLightPos != -1) {
+                lvMain.arrayList!![highLightPos].setHighLighted(true)
+                // revoke temp. highlighting after timeout
+                Handler().postDelayed({
+                    lvMain.arrayList!![highLightPos].setHighLighted(false)
+                    lvMain.adapter!!.notifyDataSetChanged()
+                }, 3000)
+            }
+        }
+        fun switchToFolderByName(name: String, scrollPos: Int = -1) {
+            var folderNumber = -1
+            val folderList = ds!!.namesSection.toTypedArray()
+            for (i in folderList.indices) {
+                if (folderList[i].equals(name)) {
+                    folderNumber = i
+                    break
+                }
+            }
+            switchToFolderByNumber(folderNumber, scrollPos)
         }
 
         //
@@ -6455,15 +6477,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         //
         // show app gallery
         //
-        fun showAppGallery(context: Context, activity: Activity, dialog: AlertDialog?) {
+        fun showAppGallery(context: Context, activity: Activity) {
             // start app gallery activity, if scan process is finished - under normal conditions, it's done before someone comes here
             if (appGalleryScanning) {
                 // show a progress window of gallery scanning, when finished, return to provided AlertDialog
                 centeredToast(context, context.getString(R.string.waitForFinish), Toast.LENGTH_SHORT)
                 var pw = ProgressWindow(context, context.getString(R.string.waitForFinish))
                 pw.dialog?.setOnDismissListener {
-                    if (dialog != null ) {
-                        dialog.show()
+                    if (folderMoreDialog != null ) {
+                        folderMoreDialog?.let { it.show() }
                     }
                 }
                 pw.show()

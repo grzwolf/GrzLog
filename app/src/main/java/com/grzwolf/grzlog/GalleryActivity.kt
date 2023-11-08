@@ -1,6 +1,7 @@
 package com.grzwolf.grzlog
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -97,12 +98,15 @@ class GalleryActivity : AppCompatActivity() {
             } else {
                 // allow multiple item selection
                 adapter!!.list[position].selected = !adapter!!.list[position].selected
-                // change active color of delete icon
+                // change active color of usages & delete icons
                 var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+                var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
                 if (adapter!!.list.any { it.selected == true }) {
                     itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
+                    itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
                 } else {
                     itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                    itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
                 }
                 adapter!!.notifyDataSetChanged()
             }
@@ -138,10 +142,13 @@ class GalleryActivity : AppCompatActivity() {
         // visibility of two action menu items
         var itemUpload = galleryMenu!!.findItem(R.id.action_Ok)
         var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+        var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
         itemUpload.isVisible = returnPayload
         itemDelete.isVisible = !returnPayload
+        itemUsages.isVisible = !returnPayload
         itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
         itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+        itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
         return true
     }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -211,6 +218,31 @@ class GalleryActivity : AppCompatActivity() {
                 },
                 { null }
             )
+        }
+        // take last selected item and show its usages in all folders
+        if (item.itemId == R.id.action_Usages) {
+            // something to do ?
+            if (adapter!!.list.all { it.selected == false }) {
+                return super.onOptionsItemSelected(item)
+            }
+            // pick the last selected item: allows to add items to the selection AND search usages
+            var searchText = ""
+            for (item in adapter!!.list) {
+                if (item.selected) {
+                    searchText = item.fileName
+                }
+            }
+            if (searchText.length > 0) {
+                // find all item hits in DataStore
+                var searchHitList: MutableList<MainActivity.GlobalSearchHit> = MainActivity.findTextInDataStore(this, searchText, MainActivity.lvMain)
+                // nothing found --> get out
+                if (searchHitList.size == 0) {
+                    centeredToast(this, getString(R.string.nothingFound), 3000)
+                } else {
+                    // render search results in its own dialog
+                    MainActivity.jumpToSearchHitInFolderDialog(this, searchHitList, -1)
+                }
+            }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -304,10 +336,12 @@ class GalleryActivity : AppCompatActivity() {
                         // visibility of two action menu items
                         var itemUpload = galleryMenu!!.findItem(R.id.action_Ok)
                         var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+                        var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
                         itemUpload.isVisible = returnPayload
                         itemDelete.isVisible = !returnPayload
                         itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
                         itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                        itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
                         // update view
                         gridView.setAdapter(adapter)
                         adapter!!.notifyDataSetChanged()

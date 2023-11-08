@@ -83,6 +83,8 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // Settings menu top left back button detection
         if (item.itemId == android.R.id.home) {
+            // release controlling intent, if Settings are left
+            MainActivity.intentSettings = null
             // we mimic the same behaviour, as if the Android back button were clicked
             super.onBackPressed()
         }
@@ -91,6 +93,8 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
 
     // Android back button detection
     override fun onBackPressed() {
+        // release controlling intent, if Settings are left
+        MainActivity.intentSettings = null
         super.onBackPressed()
     }
 
@@ -271,7 +275,15 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             // action after show app gallery
             val showAppGallery = findPreference("ShowAppGallery") as Preference?
             showAppGallery!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                MainActivity.showAppGallery(activity as Context, activity as Activity, null)
+                // release moreDialog, otherwise it would popup after search dlg close
+                if (MainActivity.folderMoreDialog != null) {
+                    MainActivity.folderMoreDialog?.let { it.dismiss() }
+                    MainActivity.folderMoreDialog = null
+                }
+                // generate a controlling intent to return to Settings, bc. from there the usages search was ignited
+                MainActivity.intentSettings = Intent(MainActivity.contextMainActivity, SettingsActivity::class.java)
+                // show gallery
+                MainActivity.showAppGallery(activity as Context, activity as Activity)
                 true
             }
 
