@@ -6095,6 +6095,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             var lastClickTime = System.currentTimeMillis()
             var lastSelectedSection = hitsNdx
             val hits = searchHitListGlobal.map(GlobalSearchHit::textCombined).toTypedArray()
+            if (listNdx == -1 && hits.size == 1) {
+                hitsNdx = 0
+            }
             jumpFolderBuilder.setSingleChoiceItems(
                 hits,
                 hitsNdx,
