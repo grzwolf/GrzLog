@@ -73,9 +73,9 @@ class HelpActivity : AppCompatActivity() {
         "2.3 Menu bar\n" +
         "~~~~~~~~~~~~\n" +
         "a) tap Hamburger\n" +
-        "       more icons will appear: Loupe, Folder, Share\n" +
+        "       more icons will appear: Loupe, Folder, Share, Wrench\n" +
         "       more icons disappear after 10s\n\n" +
-        "b) 2x tap Hamburger -> Settings window\n" +
+        "b) tap Wrench -> Settings window\n" +
         "       About\n" +
         "       Developer contact data\n" +
         "       Help\n" +
@@ -84,12 +84,18 @@ class HelpActivity : AppCompatActivity() {
         "       Preview image auto close\n" +
         "       Dark mode on or off\n" +
         "       Use GCam (if installed) instead of default one\n" +
+        "       Ask whether to autofill skipped dates\n" +
+        "       Click on selection: copy to clipboard OR show attachment\n" +
+        "       Click on search hit: edit line OR show attachment\n" +
         "       Backup outdated reminder\n" +
+        "       Backup data in background OR foreground\n" +
         "       Backup data info\n" +
         "       Backup data to /Download\n" +
         "       Restore data from /Download\n" +
         "       Restore from file explorer: Android 13 limits file access\n" +
-        "       Show GrzLog file gallery\n" +
+        "       Show / edit GrzLog gallery\n" +
+        "                   find GrzLog gallery usages\n" +
+        "                   delete from GrzLog gallery\n" +
         "       Tidy orphaned files from GrzLog gallery\n" +
         "       Reset app preferences (data are not touched)\n\n" +
         "c) tap Loupe -> type search word + Enter\n" +

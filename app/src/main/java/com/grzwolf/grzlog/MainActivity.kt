@@ -2592,8 +2592,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         searchView = myActionMenuItem.actionView as SearchView?
         // on get focus
         searchView!!.setOnQueryTextFocusChangeListener { view, hasFocus ->
-            // close settings hint
-            CenteredCloseableToast.cancel()
             if (hasFocus) {
                 // clear any listview selection
                 lvMain.unselectSelections()
@@ -2768,10 +2766,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // selector
         val id = item.itemId
-        // close settings hint
-        if (id != R.id.action_Hamburger && id == R.id.action_Settings) {
-            CenteredCloseableToast.cancel()
-        }
         // HAMBURGER / GEAR: show settings activity
         if (id == R.id.action_Hamburger || id == R.id.action_Settings) {
             // Hamburger always cancels undo
@@ -2785,8 +2779,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
             // visible menu items mean, Hamburger is allowed to start Settings
             if (menuItemsVisible) {
-                // close settings hint
-                CenteredCloseableToast.cancel()
                 // cancel callback handler, which reduces menu items to folder & hamburger
                 menuItemsVisible = false
                 mainMenuHandler.removeCallbacksAndMessages(null)
@@ -2805,14 +2797,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     }
                     menuItemsVisible = false
                 }, 10000)
-                // show settings hint
-                Handler().postDelayed({
-                    CenteredCloseableToast.show(
-                        this@MainActivity,
-                        getString(R.string.settingsHint),
-                        5000
-                    )
-                }, 1000)
             }
             return true
         }

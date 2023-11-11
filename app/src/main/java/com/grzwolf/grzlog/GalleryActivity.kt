@@ -88,7 +88,7 @@ class GalleryActivity : AppCompatActivity() {
                 prevSelGridItem = position
                 gridItemSelected = adapter!!.selGridItemChk
                 // change active color of upload icon
-                var itemUpload = galleryMenu!!.findItem(R.id.action_Ok)
+                var itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
                 if (gridItemSelected) {
                     // individual action bar icon color: https://stackoverflow.com/questions/60412934/drawable-setcolorfilter-marked-as-deprecated
                     itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
@@ -140,7 +140,7 @@ class GalleryActivity : AppCompatActivity() {
         // needed to work in onOptionsItemSelected
         galleryMenu = menu
         // visibility of two action menu items
-        var itemUpload = galleryMenu!!.findItem(R.id.action_Ok)
+        var itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
         var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
         var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
         itemUpload.isVisible = returnPayload
@@ -179,7 +179,7 @@ class GalleryActivity : AppCompatActivity() {
             )
         }
         // take selection and go back to MainActivity
-        if (item.itemId == R.id.action_Ok) {
+        if (item.itemId == R.id.action_Payload) {
             if (prevSelGridItem != -1 && gridItemSelected) {
                 var fn = adapter!!.list[prevSelGridItem].fileName
                 val appImagesPath = applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/"
@@ -334,7 +334,7 @@ class GalleryActivity : AppCompatActivity() {
                     adapter = ThumbGridAdapter(this@GalleryActivity, thumbsList.toTypedArray())
                     if (adapter != null) {
                         // visibility of two action menu items
-                        var itemUpload = galleryMenu!!.findItem(R.id.action_Ok)
+                        var itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
                         var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
                         var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
                         itemUpload.isVisible = returnPayload
