@@ -2608,6 +2608,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 // hide irrelevant menu items
                 var item = appMenu!!.findItem(R.id.action_Hamburger)
                 item.isVisible = false
+                item = appMenu!!.findItem(R.id.action_Settings)
+                item.isVisible = false
                 item = appMenu!!.findItem(R.id.action_ChangeFolder)
                 item.isVisible = false
                 item = appMenu!!.findItem(R.id.action_Share)
@@ -2735,8 +2737,18 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     // show / hide menu items BUT Hamburger & Folder
     fun showMenuItems(show: Boolean?) {
-        var item = appMenu!!.findItem(R.id.action_Hamburger)
-        item.isVisible = true
+        var item: MenuItem
+        if (show!!) {
+            item = appMenu!!.findItem(R.id.action_Hamburger)
+            item.isVisible = false
+            item = appMenu!!.findItem(R.id.action_Settings)
+            item.isVisible = true
+        } else {
+            item = appMenu!!.findItem(R.id.action_Hamburger)
+            item.isVisible = true
+            item = appMenu!!.findItem(R.id.action_Settings)
+            item.isVisible = false
+        }
         item = appMenu!!.findItem(R.id.action_ChangeFolder)
         item.isVisible = show!!
         item = appMenu!!.findItem(R.id.action_Share)
@@ -2757,11 +2769,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         // selector
         val id = item.itemId
         // close settings hint
-        if (id != R.id.action_Hamburger) {
+        if (id != R.id.action_Hamburger && id == R.id.action_Settings) {
             CenteredCloseableToast.cancel()
         }
-        // HAMBURGER: show settings activity
-        if (id == R.id.action_Hamburger) {
+        // HAMBURGER / GEAR: show settings activity
+        if (id == R.id.action_Hamburger || id == R.id.action_Settings) {
             // Hamburger always cancels undo
             ds!!.undoSection = ""
             ds!!.undoText = ""

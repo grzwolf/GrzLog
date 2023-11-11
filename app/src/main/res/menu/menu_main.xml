@@ -34,6 +34,13 @@
         android:icon="@mipmap/grz_hamburger_foreground"
         />
     <item
+        android:id="@+id/action_Settings"
+        android:title=""
+        app:showAsAction="always"
+        android:visible="false"
+        android:icon="@android:drawable/ic_menu_preferences"
+        />
+    <item
         android:id="@+id/action_searchUp"
         android:title=""
         app:showAsAction="always"
