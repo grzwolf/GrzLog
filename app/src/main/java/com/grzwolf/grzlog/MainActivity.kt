@@ -7212,7 +7212,12 @@ internal class LvAdapter : BaseAdapter {
                 spanStr = SpannableString(text)
                 // set icon via spannable
                 res = android.R.drawable.ic_dialog_alert
-                mime = getFileExtension(items!![position].fullTitle!!.substring(0, items!![position].fullTitle!!.lastIndexOf("]")))
+                // title could contain a mime, so exec mime detection on the last part of fullTitle
+                mime = getFileExtension(
+                    items!![position].fullTitle!!.substring(
+                        items!![position].fullTitle!!.indexOf("::::"),
+                        items!![position].fullTitle!!.lastIndexOf("]")
+                    ))
             }
             if (mime.length > 0) {
                 if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
