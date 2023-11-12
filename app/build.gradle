@@ -9,6 +9,7 @@ android {
         targetSdkVersion 34
         versionCode 1
         versionName "1.0.20"
+        versionNameSuffix = ".debug"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         archivesBaseName = "$applicationId-v$versionName"
     }
@@ -16,9 +17,11 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            resValue "string", "app_version", "${defaultConfig.versionName}"
         }
         debug {
             minifyEnabled false
+            resValue "string", "app_version", "${defaultConfig.versionName}${defaultConfig.versionNameSuffix}"
         }
     }
     namespace 'com.grzwolf.grzlog'

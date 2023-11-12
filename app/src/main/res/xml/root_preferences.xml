@@ -23,7 +23,7 @@
             android:selectable="false"
             android:enabled="true"
             android:key="signature"
-            android:title="@string/signature_title"
+            android:title="@string/app_version"
             android:summary="@string/signature_summary" />
 
         <Preference

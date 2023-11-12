@@ -4,11 +4,10 @@
     <string name="title_activity_settings">Settings</string>
 
     <!-- Preference Titles -->
-    <string name="messages_header">About</string>
+    <string name="messages_header">About GrzLog</string>
     <string name="extra_header">Extra</string>
 
     <!-- Messages Preferences -->
-    <string name="signature_title">GrzLog 1.0.20</string>
     <string name="signature_summary">\nContact: grzwolf.app@gmail.com</string>
 
     <!-- Sync Preferences -->
