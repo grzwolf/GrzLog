@@ -6376,6 +6376,32 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
         }
 
+        // needed after app gallery file deletion: https://stackoverflow.com/questions/23908189/clear-cache-in-android-application-programmatically
+        fun deleteAppDataCache(context: Context) {
+            try {
+                val dir = context.cacheDir
+                deleteDir(dir)
+            } catch (e: java.lang.Exception) {
+                e.printStackTrace()
+            }
+        }
+        fun deleteDir(dir: File?): Boolean {
+            return if (dir != null && dir.isDirectory) {
+                val children = dir.list()
+                for (i in children.indices) {
+                    val success = deleteDir(File(dir, children[i]))
+                    if (!success) {
+                        return false
+                    }
+                }
+                dir.delete()
+            } else if (dir != null && dir.isFile) {
+                dir.delete()
+            } else {
+                false
+            }
+        }
+
         // copy a file named by uriString to GrzLog Images folder and return just the filename (we don't need more than the filename, because we know the app storage path)
         fun copyAttachmentToApp(context: Context, uriString: String, uri: Uri?, appAttachmentPath: String): String {
             // file path

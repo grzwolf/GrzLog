@@ -215,6 +215,8 @@ class GalleryActivity : AppCompatActivity() {
                         }
                     }
                     getAppGalleryThumbs()
+                    MainActivity.deleteAppDataCache(MainActivity.contextMainActivity)
+                    MainActivity.reReadAppFileData = true
                 },
                 { null }
             )
