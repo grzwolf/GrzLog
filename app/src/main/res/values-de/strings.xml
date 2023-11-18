@@ -229,9 +229,9 @@
     <string name="toggleItemSelection">Toggle Item Auswahl:</string>
     <string name="makeBackup">Empfehlung: Backup ausführen</string>
     <string name="useBackupReminder">Backup Erinnerung</string>
-    <string name="backupInForeground">Backup im Vordergrund</string>
-    <string name="foreground">Vordergrund</string>
-    <string name="background">Hintergrund</string>
+    <string name="backupExecution">Backup Ausführung</string>
+    <string name="foreground">im Vordergrund</string>
+    <string name="background">im Hintergrund</string>
     <string name="nextReminderOneWeek">Nächste Erinnerung in 1 Woche?</string>
     <string name="clickSelectedItemsToClipboard">Klick auf Auswahl</string>
     <string name="showLink">Anhang zeigen</string>

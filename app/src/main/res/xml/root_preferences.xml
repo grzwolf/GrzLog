@@ -99,7 +99,7 @@
             app:key="backupForeground"
             app:summaryOn="@string/foreground"
             app:summaryOff="@string/background"
-            app:title="@string/backupInForeground" />
+            app:title="@string/backupExecution" />
         <Preference
             android:selectable="false"
             android:title="@string/BackupInfo"
