@@ -72,6 +72,7 @@ const val MS_TO_DAYS = 1.0 / 1000.0 / 60.0 / 60.0 / 24.0
 val IMAGE_EXT = "jpg.png.bmp.jpeg.gif"
 val AUDIO_EXT = "mp3.m4a.aac.amr.flac.ogg.wav"
 val VIDEO_EXT = "mp4.3gp.webm.mkv"
+val ERROR_EXT = "file-error"
 
 // https://stackoverflow.com/questions/31364540/how-to-add-section-header-in-listview-list-item
 class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
@@ -6248,6 +6249,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         // verify attachment links, make attachments app local (if needed) and delete orphaned files
         //
         fun tidyOrphanedFiles(context: Context, appAttachmentsPath: String, appName: String) {
+            // clear app cache before doing anything
+            deleteAppDataCache(MainActivity.contextMainActivity)
             val filePath = File(appAttachmentsPath)
             val attachmentsList = filePath.listFiles()
             val fileUsed = arrayOfNulls<Boolean>(attachmentsList!!.size)
@@ -6423,7 +6426,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (pos != -1) {
                 fileName = inputPath.substring(pos)
             } else {
-                return "file-error"
+                return uriString + "." + ERROR_EXT
             }
             val outputPath = appAttachmentPath + fileName
             // no override if file already exists
@@ -6466,10 +6469,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     secondTryOk = copyUriToAppImages(context, uri, outputPath)
                 }
                 if (!secondTryOk) {
-                    return "file-error"
+                    return uriString + "." + ERROR_EXT
                 }
             } catch (e: Exception) {
-                return "file-error"
+                return uriString + "." + ERROR_EXT
             }
             // return the filename of the copied file with a leading /
             return uriString.substring(uriString.lastIndexOf("/"))
@@ -7235,21 +7238,24 @@ internal class LvAdapter : BaseAdapter {
                                 if (mime.equals("txt", ignoreCase = true)) {
                                     res = android.R.drawable.ic_dialog_email
                                 } else {
-                                    // www attachment link goes here, bc www mime is not empty
-                                    val fullItemText = items!![position].fullTitle
-                                    val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
-                                    if (m?.find() == true) { // www attachment link
-                                        val result = m.group()
-                                        val key = result.substring(1, result.length - 1)
-                                        val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                                        if (lnkParts != null && lnkParts.size == 2) {
-                                            var fileName = lnkParts[1]
-                                            if (fileName.startsWith("/") == false) {
-                                                res = android.R.drawable.ic_menu_compass
-                                            }
-                                            // in case a folder name contains a .
-                                            if (fileName.startsWith("folder/")) {
-                                                res = android.R.drawable.ic_menu_agenda
+                                    // mime could be .file-error due to a lost attachment file
+                                    if (!mime.equals(ERROR_EXT, ignoreCase = true)) {
+                                        // www attachment link goes here, bc www mime is not empty
+                                        val fullItemText = items!![position].fullTitle
+                                        val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                                        if (m?.find() == true) { // www attachment link
+                                            val result = m.group()
+                                            val key = result.substring(1, result.length - 1)
+                                            val lnkParts = key.split("::::".toRegex()).toTypedArray()
+                                            if (lnkParts != null && lnkParts.size == 2) {
+                                                var fileName = lnkParts[1]
+                                                if (fileName.startsWith("/") == false) {
+                                                    res = android.R.drawable.ic_menu_compass
+                                                }
+                                                // in case a folder name contains a .
+                                                if (fileName.startsWith("folder/")) {
+                                                    res = android.R.drawable.ic_menu_agenda
+                                                }
                                             }
                                         }
                                     }
