@@ -511,12 +511,17 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     MainActivity.backupOngoing = false
                     // jump back to UI
                     (context as Activity).runOnUiThread(Runnable {
-                        notificationManager.cancelAll()
                         if (success) {
-                            centeredToast(MainActivity.contextMainActivity, "GrzLog silent backup: Success", 3000)
+                            notification.setContentTitle(context.getString(R.string.grzlog_silent_backup_success))
+                                        .setContentText("")
+                                        .setProgress(maxProgress, maxProgress, false)
+                            centeredToast(MainActivity.contextMainActivity, context.getString(R.string.grzlog_silent_backup_success), 3000)
                         } else {
-                            centeredToast(MainActivity.contextMainActivity, "GrzLog backup: ERROR", 10000)
+                            notification.setContentTitle(context.getString(R.string.grzlog_backup_error))
+                            notification.setContentText(context.getString(R.string.something_went_wrong))
+                            centeredToast(MainActivity.contextMainActivity, context.getString(R.string.grzlog_backup_error), 10000)
                         }
+                        notificationManager.notify(1, notification.build())
                     })
                 }.start()
             } catch (e: Exception) {

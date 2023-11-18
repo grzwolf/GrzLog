@@ -239,4 +239,7 @@
     <string name="copyClipboard">copy to clipboard</string>
     <string name="clickSearchHitToEdit">Click on search hit</string>
     <string name="partialBackup">An incomplete backup was found, execute backup again.</string>
+    <string name="grzlog_silent_backup_success">GrzLog silent backup: Success</string>
+    <string name="grzlog_backup_error">GrzLog backup: ERROR</string>
+    <string name="something_went_wrong">something went wrong</string>
 </resources>
