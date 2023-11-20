@@ -178,7 +178,7 @@
     <string name="manualDelete">Die Dateien \'GrzLog.zip\' und \'GrzLog.txt\' in /Download können nicht überschrieben werden. Bitte diese händisch mit einem Datei Manager löschen.</string>
     <string name="manualDeletePDF">Diese PDF Datei in /Download konnte nicht überschrieben werden. Bitte diese händisch mit einem Datei Manager löschen und neu versuchen.</string>
     <string name="noSelection">keine Items ausgewählt</string>
-    <string name="selectDay">Items des Tages auswählen</string>
+    <string name="selectDay">Toggle Items Tag</string>
     <string name="title_activity_gallery">GrzLog Galerie</string>
     <string name="scanAppGallery">Scanning App Galerie</string>
     <string name="appGalleryData">App Galerie Daten</string>
@@ -225,7 +225,8 @@
     <string name="askNever">nie fragen</string>
     <string name="askAlways">immer fragen</string>
     <string name="selectNextTen">Auswahl nächste 10 Items</string>
-    <string name="selectMonth">Auswahl Monat</string>
+    <string name="selectWeek">Toggle Auswahl Woche</string>
+    <string name="selectMonth">Toggle Auswahl Monat</string>
     <string name="toggleItemSelection">Toggle Item Auswahl:</string>
     <string name="makeBackup">Empfehlung: Backup ausführen</string>
     <string name="useBackupReminder">Backup Erinnerung</string>

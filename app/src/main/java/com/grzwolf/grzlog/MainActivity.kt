@@ -55,6 +55,8 @@ import com.grzwolf.grzlog.MainActivity.GrzEditText
 import java.io.*
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.regex.Pattern
 
@@ -1385,6 +1387,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             getString(R.string.toggleItemSelection) + " " + itemPosition,
             getString(R.string.selectNextTen),
             getString(R.string.selectDay),
+            getString(R.string.selectWeek),
             getString(R.string.selectMonth),
             getString(R.string.unselectAll),
             getString(R.string.selectAll),
@@ -1410,18 +1413,24 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
                 2 -> { // Select items of today
-                    lvMain.selectGivenDay(itemPosition)
+                    lvMain.toggleSelectGivenDay(itemPosition)
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                3 -> { // Select items of month
-                    lvMain.selectGivenMonth(itemPosition)
+                3 -> { // Select items of week
+                    lvMain.toggleSelectGivenWeek(itemPosition)
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                4 -> { // Unselect all
+                4 -> { // Select items of month
+                    lvMain.toggleSelectGivenMonth(itemPosition)
+                    lvMain.adapter!!.notifyDataSetChanged()
+                    dialog.dismiss()
+                    whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                }
+                5 -> { // Unselect all
                     for (i in lvMain.arrayList!!.indices) {
                         lvMain.arrayList!![i].setSelected(false)
                     }
@@ -1429,7 +1438,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                5 -> { // Select all
+                6 -> { // Select all
                     for (i in lvMain.arrayList!!.indices) {
                         lvMain.arrayList!![i].setSelected(true)
                     }
@@ -1437,7 +1446,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                6 -> { // Invert selection
+                7 -> { // Invert selection
                     for (i in lvMain.arrayList!!.indices) {
                         lvMain.arrayList!![i].setSelected(!lvMain.arrayList!![i].isSelected())
                     }
@@ -1445,25 +1454,25 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                7 -> { // empty space as separator
+                8 -> { // empty space as separator
                     dialog.dismiss()
                     Handler().postDelayed({
                         whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                     }, 100)
                 }
-                8 -> { // Copy to clipboard / shareBody
+                9 -> { // Copy to clipboard / shareBody
                     shareBody = lvMain.folderSelectedItems
                     clipboard = shareBody
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                9 -> { // empty space as separator
+                10 -> { // empty space as separator
                     dialog.dismiss()
                     Handler().postDelayed({
                         whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                     }, 100)
                 }
-                10 -> { // Cut to clipboard / shareBody
+                11 -> { // Cut to clipboard / shareBody
                     var itemsSelected = false
                     for (i in lvMain.arrayList!!.indices) {
                         if (lvMain.arrayList!![i].isSelected()) {
@@ -1488,7 +1497,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         centeredToast(this, getString(R.string.noSelection), 3000 )
                     }
                 }
-                11 -> { // Delete from ListView
+                12 -> { // Delete from ListView
                     var itemsSelected = false
                     for (i in lvMain.arrayList!!.indices) {
                         if (lvMain.arrayList!![i].isSelected()) {
@@ -6743,9 +6752,12 @@ class GrzListView {
         } catch(e: Exception) {}
     }
 
-    // select a complete day in ListView
-    fun selectGivenDay(position: Int) {
+    // toggle selection of a complete day in ListView
+    fun toggleSelectGivenDay(position: Int) {
         try {
+            // get select toggle status
+            var selectStatus = !arrayList!![position].isSelected()
+
             var dayStart = 0
             var dayEnd = -1
             // climb ListView up until a valid date is found
@@ -6783,19 +6795,96 @@ class GrzListView {
             }
             // select items according to the given range
             for (i in dayStart..dayEnd) {
-                arrayList!![i].setSelected(true)
+                arrayList!![i].setSelected(selectStatus)
             }
-        } catch(e: Exception) {}
+        } catch(e: Exception) {
+            Log.d("selectGivenDay", e.message!!)
+        }
     }
 
-    // select a complete month in ListView
-    fun selectGivenMonth(position: Int) {
+    // toggle selection of a complete week in ListView
+    fun toggleSelectGivenWeek(position: Int) {
         try {
+            // get select toggle status
+            var selectStatus = !arrayList!![position].isSelected()
+
+            var dayChanges = 0
+            var dayStart = 0
+            var dayEnd = -1
+            // climb ListView up until a Sunday is found
+            for (i in position downTo 0) {
+                // check '2020-03-03 Thu' pattern
+                if ( arrayList!![i].isSection ) {
+                    // a regex pattern for "yyyy-mm-dd
+                    val curText = arrayList!![i].title
+                    var m = PATTERN.Date.matcher(curText.toString())
+                    if (m.find()) {
+                        // care about skipped days
+                        dayChanges++
+                        if (dayChanges > 7) {
+                            dayStart = position
+                            break
+                        }
+                        // check for Sunday: Mon = 1 ... Sun = 7
+                        var curr = m.group()
+                        val date = LocalDate.parse(curr, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                        if (date.dayOfWeek.value == 7) {
+                            dayStart = i
+                            break
+                        }
+                    }
+                }
+            }
+            // climb ListView down until a valid date is found
+            dayChanges = 0
+            for (i in position until arrayList!!.size) {
+                // check '2020-03-03 Thu' pattern and extract name of day
+                if ( arrayList!![i].isSection ) {
+                    var splitArr = arrayList!![i].title?.split(" ")
+                    if (splitArr?.size == 2) {
+                        // a regex pattern for "yyyy-mm-dd
+                        val curText = arrayList!![i].title
+                        var m = PATTERN.Date.matcher(curText.toString())
+                        if (m.find()) {
+                            // care about skipped days
+                            dayChanges++
+                            if (dayChanges > 7) {
+                                dayEnd = position
+                                break
+                            }
+                            // check for Sunday: Mon = 1 ... Sun = 7
+                            var curr = m.group()
+                            val date = LocalDate.parse(curr, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                            if (date.dayOfWeek.value == 7) {
+                                dayEnd = i - 1
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+            if (dayEnd == -1) {
+                dayEnd = arrayList!!.size - 1
+            }
+            // select items according to the given range
+            for (i in dayStart..dayEnd) {
+                arrayList!![i].setSelected(selectStatus)
+            }
+        } catch(e: Exception) {
+            Log.d("selectGivenWeek", e.message!!)
+        }
+    }
+
+    // toggle selection of a complete month in ListView
+    fun toggleSelectGivenMonth(position: Int) {
+        try {
+            // get select toggle status
+            var selectStatus = !arrayList!![position].isSelected()
+
             var monthStartPos = 0
             var monthEndPos = -1
-
-            // climb ListView up until a date pattern is found, which is set to "today"
             var todayYearMonthStr = ""
+            // climb ListView up until a date pattern is found, which is set to "today"
             for (i in position downTo 0) {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
                 val curText = arrayList!![i].title
@@ -6853,7 +6942,7 @@ class GrzListView {
 
             // select items according to the above calculated range
             for (i in monthStartPos..monthEndPos) {
-                arrayList!![i].setSelected(true)
+                arrayList!![i].setSelected(selectStatus)
             }
 
         } catch(e: Exception) {
