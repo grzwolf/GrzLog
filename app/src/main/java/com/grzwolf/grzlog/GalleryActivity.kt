@@ -143,12 +143,14 @@ class GalleryActivity : AppCompatActivity() {
         var itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
         var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
         var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
+        var itemRefresh = galleryMenu!!.findItem(R.id.action_Refresh)
         itemUpload.isVisible = returnPayload
         itemDelete.isVisible = !returnPayload
         itemUsages.isVisible = !returnPayload
         itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
         itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
         itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+        itemRefresh.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
         return true
     }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
