@@ -496,7 +496,7 @@ fun dayNumberOfWeek(dateStr: String?): Int {
 fun dayNameOfWeek(dateStr: String?): String {
     val date: Date
     val format: DateFormat =
-        SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     date = try {
         format.parse(dateStr.toString()) as Date
     } catch (ex: Exception) {

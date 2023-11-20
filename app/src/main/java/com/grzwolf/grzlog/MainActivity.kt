@@ -2158,7 +2158,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 var dateStr = dateStringLast + "\n"
                 // if topmost date is not today, we need to add the today's date stamp
                 if (dateLast.compareTo(dateToday) != 0) {
-                    dateStr = SimpleDateFormat("yyyy-MM-dd EEE").format(dateToday!!) + "\n"
+                    dateStr = SimpleDateFormat("yyyy-MM-dd EEE", Locale.getDefault()).format(dateToday!!) + "\n"
                     combineNdx = 0
                     addTimeStamp = true
                 }
