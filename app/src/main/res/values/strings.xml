@@ -179,7 +179,7 @@
     <string name="manualDelete">The files \'GrzLog.zip\' and \'GrzLog.txt\' in /Download cannot be overwritten. Please manually delete them with a file manager.</string>
     <string name="manualDeletePDF">This PDF file in /Download cannot be overwritten. Please manually delete it with a file manager and re try.</string>
     <string name="noSelection">no items selected</string>
-    <string name="selectDay">Toggle items selection of day</string>
+    <string name="selectDay">Toggle selection of day</string>
     <string name="title_activity_gallery">GrzLog Gallery</string>
     <string name="scanAppGallery">Scanning app gallery</string>
     <string name="appGalleryData">App gallery data</string>
@@ -193,7 +193,7 @@
     <string name="CopyLine">Copy line</string>
     <string name="noMediaPermission">No media access permission</string>
     <string name="inputOneSpace">Input at least one space</string>
-    <string name="appHelp">Help</string>
+    <string name="appHelp">Help pages</string>
     <string name="title_activity_help">Help</string>
     <string name="mayNotWork">May not work properly</string>
     <string name="androidIssue">Unresolved Android 10 issue</string>
@@ -226,8 +226,8 @@
     <string name="askNever">never ask</string>
     <string name="askAlways">always ask</string>
     <string name="selectNextTen">Select next 10 items</string>
-    <string name="selectWeek">Toggle items selection of week</string>
-    <string name="selectMonth">Toggle items selection of month</string>
+    <string name="selectWeek">Toggle selection of week</string>
+    <string name="selectMonth">Toggle selection of month</string>
     <string name="toggleItemSelection">Toggle item selection:</string>
     <string name="makeBackup">Consider making a backup</string>
     <string name="useBackupReminder">Backup outdated reminder</string>

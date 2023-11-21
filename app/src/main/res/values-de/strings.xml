@@ -178,7 +178,7 @@
     <string name="manualDelete">Die Dateien \'GrzLog.zip\' und \'GrzLog.txt\' in /Download können nicht überschrieben werden. Bitte diese händisch mit einem Datei Manager löschen.</string>
     <string name="manualDeletePDF">Diese PDF Datei in /Download konnte nicht überschrieben werden. Bitte diese händisch mit einem Datei Manager löschen und neu versuchen.</string>
     <string name="noSelection">keine Items ausgewählt</string>
-    <string name="selectDay">Toggle Items Tag</string>
+    <string name="selectDay">Toggle Auswahl Tag</string>
     <string name="title_activity_gallery">GrzLog Galerie</string>
     <string name="scanAppGallery">Scanning App Galerie</string>
     <string name="appGalleryData">App Galerie Daten</string>
@@ -192,7 +192,7 @@
     <string name="CopyLine">Zeile kopieren</string>
     <string name="noMediaPermission">Keine Berechtigung für Medienzugriff</string>
     <string name="inputOneSpace">Minimaler Input ist ein Leerzeichen</string>
-    <string name="appHelp">Hilfe</string>
+    <string name="appHelp">Hilfe Seiten</string>
     <string name="title_activity_help">Hilfe</string>
     <string name="mayNotWork">Funktioniert möglicherweise nicht</string>
     <string name="androidIssue">Ungelöstes Android 10 Problem</string>
