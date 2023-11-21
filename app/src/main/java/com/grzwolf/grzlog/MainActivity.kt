@@ -53,6 +53,7 @@ import com.grzwolf.grzlog.FileUtils.Companion.getFile
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
 import com.grzwolf.grzlog.MainActivity.GrzEditText
 import java.io.*
+import java.lang.NullPointerException
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -463,6 +464,11 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 .startActivities() // --> continues with onCreate(..)
             super.onResume()
             return
+        }
+
+        // unconditionally show Hamburger only
+        if (appMenu != null) {
+            showMenuItems(false)
         }
 
         // switch to matching dialog: either 'folder more dialog' OR 'fabPlus input' OR 'file picker dialog'
@@ -2744,30 +2750,34 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // show / hide menu items BUT Hamburger & Folder
-    fun showMenuItems(show: Boolean?) {
-        var item: MenuItem
-        if (show!!) {
-            item = appMenu!!.findItem(R.id.action_Hamburger)
+    fun showMenuItems(showAll: Boolean) {
+        try {
+            var item: MenuItem
+            if (showAll) {
+                item = appMenu!!.findItem(R.id.action_Hamburger)
+                item.isVisible = false
+                item = appMenu!!.findItem(R.id.action_Settings)
+                item.isVisible = true
+            } else {
+                item = appMenu!!.findItem(R.id.action_Hamburger)
+                item.isVisible = true
+                item = appMenu!!.findItem(R.id.action_Settings)
+                item.isVisible = false
+            }
+            item = appMenu!!.findItem(R.id.action_ChangeFolder)
+            item.isVisible = showAll
+            item = appMenu!!.findItem(R.id.action_Share)
+            item.isVisible = showAll
+            item = appMenu!!.findItem(R.id.action_search)
+            item.isVisible = showAll
+            item = appMenu!!.findItem(R.id.action_searchUp)
             item.isVisible = false
-            item = appMenu!!.findItem(R.id.action_Settings)
-            item.isVisible = true
-        } else {
-            item = appMenu!!.findItem(R.id.action_Hamburger)
-            item.isVisible = true
-            item = appMenu!!.findItem(R.id.action_Settings)
+            item = appMenu!!.findItem(R.id.action_searchDown)
             item.isVisible = false
+            showMenuItemUndo()
+        } catch (npe: NullPointerException) {
+            Log.d("showMenuItems: ", npe.message ?: "empty")
         }
-        item = appMenu!!.findItem(R.id.action_ChangeFolder)
-        item.isVisible = show!!
-        item = appMenu!!.findItem(R.id.action_Share)
-        item.isVisible = show
-        item = appMenu!!.findItem(R.id.action_search)
-        item.isVisible = show
-        item = appMenu!!.findItem(R.id.action_searchUp)
-        item.isVisible = false
-        item = appMenu!!.findItem(R.id.action_searchDown)
-        item.isVisible = false
-        showMenuItemUndo()
     }
 
     // handle action bar item clicks
