@@ -959,6 +959,18 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         return word
     }
 
+    // shorten a given string
+    fun shortenedText(text: String, maxLength: Int) : String {
+        if (text.length < maxLength) {
+            return text
+        }
+        var boundary = maxLength / 2 - 5
+        val mid = " ... "
+        val lead = text.substring(0, boundary)
+        val tail = text.substring(text.length - boundary, text.length - 1)
+        return lead + mid + tail
+    }
+
     // ListView long click handler: show options dialog, how to edit the current item/line
     fun whatToDoWithLongClickItem(adapterView: AdapterView<*>, itemView: View?, itemPosition: Int, itemId: Long, returnToSearchHits: Boolean = false) {
         // this is what the user can click in UI
@@ -976,7 +988,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
         // set custom multiline title: https://stackoverflow.com/questions/9107054/how-to-build-alert-dialog-with-a-multi-line-title
         val headPart = getString(R.string.Options)
-        val headLine = SpannableString(headPart + "\n\n" + item.title)
+        val headLine = SpannableString(headPart + "\n\n" + shortenedText(item.title!!, 200))
         headLine.setSpan(RelativeSizeSpan(1.35F),0, headPart.length,0)
         headLine.setSpan(ForegroundColorSpan(ContextCompat.getColor(this, R.color.white)), 0, headPart.length, 0)
         headLine.setSpan(ForegroundColorSpan(ContextCompat.getColor(this, R.color.yellow)), headPart.length, headLine.length, 0)
@@ -987,7 +999,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val charSequences: MutableList<CharSequence> = ArrayList()
         charSequences.add(getString(R.string.EditLine))                     // ITEM == 0
         charSequences.add(getString(R.string.CopyLine))                     // ITEM == 1
-        charSequences.add(getString(R.string.InsertLineBefore))            // ITEM == 2
+        charSequences.add(getString(R.string.InsertLineBefore))             // ITEM == 2
         charSequences.add(getString(R.string.InsertLineAfter))             // ITEM == 3
         charSequences.add(getString(R.string.SelectItems))           // ITEM == 4
         charSequences.add(getString(R.string.LockscreenReminder))   // ITEM == 5
@@ -1379,6 +1391,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         var listSelPos = lvMain.getSelectedIndexList()
         // range format the list of selected indexes including the included spacers
         var rangeStr = getIntegerRangeFormatted(listSelPos)
+        if (listSelPos.size == 1) {
+            rangeStr = "Item: " + shortenedText(lvMain.arrayList!![listSelPos[0]].title!!, 200)
+        }
         // set custom multiline title: https://stackoverflow.com/questions/9107054/how-to-build-alert-dialog-with-a-multi-line-title
         val headPart = getString(R.string.whatToDoWithItems)
         val headLine = SpannableString(headPart + "\n\n" + rangeStr)
@@ -1390,7 +1405,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builder.setCustomTitle(titleView)
         // dialog OPTIONS
         val options = arrayOf<CharSequence>(
-            getString(R.string.toggleItemSelection) + " " + itemPosition,
+            getString(R.string.toggleItemSelection) + itemPosition,
             getString(R.string.selectNextTen),
             getString(R.string.selectDay),
             getString(R.string.selectWeek),

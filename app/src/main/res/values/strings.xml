@@ -228,7 +228,7 @@
     <string name="selectNextTen">Select next 10 items</string>
     <string name="selectWeek">Toggle selection of week</string>
     <string name="selectMonth">Toggle selection of month</string>
-    <string name="toggleItemSelection">Toggle item selection:</string>
+    <string name="toggleItemSelection">Toggle active item: #</string>
     <string name="makeBackup">Consider making a backup</string>
     <string name="useBackupReminder">Backup outdated reminder</string>
     <string name="nextReminderOneWeek">Next reminder in one week?</string>
