@@ -3,25 +3,27 @@ apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 34
+    def buildTime = new Date()
     defaultConfig {
         applicationId "com.grzwolf.grzlog"
         minSdkVersion 29
         targetSdkVersion 34
         versionCode 1
         versionName "1.1.0"
-        versionNameSuffix = ".debug"
+        versionNameSuffix = ".debug${buildTime.format(' yyyy/MM/dd HH:mm')}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        archivesBaseName = "$applicationId-v$versionName"
+        archivesBaseName = "$applicationId v$versionName"
     }
     buildTypes {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            resValue "string", "app_version", "${defaultConfig.versionName}"
+            resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName}"
+            signingConfig signingConfigs.debug
         }
         debug {
             minifyEnabled false
-            resValue "string", "app_version", "${defaultConfig.versionName}${defaultConfig.versionNameSuffix}"
+            resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName}${defaultConfig.versionNameSuffix}"
         }
     }
     namespace 'com.grzwolf.grzlog'
