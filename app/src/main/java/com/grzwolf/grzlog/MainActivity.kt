@@ -466,9 +466,12 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             return
         }
 
-        // unconditionally show Hamburger only
+        // control menu items visibility
         if (appMenu != null) {
-            showMenuItems(false)
+            if (!menuSearchVisible) {
+                // show Hamburger only
+                showMenuItems(false)
+            }
         }
 
         // switch to matching dialog: either 'folder more dialog' OR 'fabPlus input' OR 'file picker dialog'
