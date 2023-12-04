@@ -3,27 +3,59 @@ apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 34
-    def buildTime = new Date()
+
+    def buildNum = 0
     defaultConfig {
         applicationId "com.grzwolf.grzlog"
         minSdkVersion 29
         targetSdkVersion 34
-        versionCode 1
-        versionName "1.1.0"
-        versionNameSuffix = ".debug${buildTime.format(' yyyy/MM/dd HH:mm')}"
+
+        // the one & only places to change the app version name and code version
+        versionCode 1       // playstore relevant
+        versionName "1.1.0" // user relevant
+
+        //
+        def buildTime = new Date()
+        versionNameSuffix = "${buildTime.format(' yyyy/MM/dd__HH:mm:ss')}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         archivesBaseName = "$applicationId v$versionName"
     }
+
     buildTypes {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName}"
+            resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName} ${defaultConfig.versionNameSuffix}"
             signingConfig signingConfigs.debug
         }
         debug {
             minifyEnabled false
-            resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName}${defaultConfig.versionNameSuffix}"
+            // memorize build number
+            buildConfigField("int", "BUILD_NUM", "${buildNum}")
+            def nameVer = ''
+            def codeVer = 1
+            def Properties versionProps = new Properties()
+            def versionPropsFile = file('version.properties')
+            if(versionPropsFile.exists()) {
+                versionProps.load(new FileInputStream(versionPropsFile))
+                codeVer = (versionProps['VERSION_CODE'] ?: "0").toInteger()
+                nameVer = (versionProps['VERSION_NAME'] ?: "")
+                // if name or code change, start build number from 0
+                if (!nameVer.equals(defaultConfig.versionName) || codeVer != defaultConfig.versionCode) {
+                    buildNum = 0
+                } else {
+                    buildNum = (versionProps['BUILD_NUM'] ?: "0").toInteger() + 1
+                }
+                // max allowed value, otherwise exception
+                if(buildNum >= 2000000000) {
+                    buildNum = 0
+                }
+            }
+            versionProps['BUILD_NUM'] = buildNum.toString()
+            versionProps['VERSION_NAME'] = defaultConfig.versionName
+            versionProps['VERSION_CODE'] = defaultConfig.versionCode.toString()
+            versionProps.store(versionPropsFile.newWriter(), null)
+            resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName}-${defaultConfig.versionCode}-${buildNum} debug ${defaultConfig.versionNameSuffix}"
         }
     }
     namespace 'com.grzwolf.grzlog'

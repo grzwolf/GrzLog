@@ -1,3 +1,4 @@
+version.properties
 *.iml
 .gradle
 /local.properties
