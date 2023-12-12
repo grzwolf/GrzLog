@@ -3841,6 +3841,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                                 catch (ex: OutOfMemoryError) {}
                                 runOnUiThread {
                                     pw.close()
+                                    // finally show, what was supposed to be shown
+                                    val galleryIntent = Intent(this, GalleryActivity::class.java)
+                                    startActivity(galleryIntent)
                                 }
                             }.start()
                         } catch (e: Exception) {}
@@ -6545,7 +6548,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         fun showAppGallery(context: Context, activity: Activity) {
             // start app gallery activity, if scan process is finished - under normal conditions, it's done before someone comes here
             if (appGalleryScanning) {
-                // show a progress window of gallery scanning, when finished, return to provided AlertDialog
+                // show a progress window of gallery scanning, show gallery when scan finished
                 centeredToast(context, context.getString(R.string.waitForFinish), Toast.LENGTH_SHORT)
                 var pw = ProgressWindow(context, context.getString(R.string.waitForFinish))
                 pw.dialog?.setOnDismissListener {
@@ -6570,6 +6573,10 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         catch (ex: OutOfMemoryError) {}
                         activity.runOnUiThread {
                             pw.close()
+                            // finally show, what was supposed to be shown
+                            val galleryIntent = Intent(context, GalleryActivity::class.java)
+                            galleryIntent.putExtra("ReturnPayload", false)
+                            activity.startActivity(galleryIntent)
                         }
                     }.start()
                 } catch (e: Exception) {}
