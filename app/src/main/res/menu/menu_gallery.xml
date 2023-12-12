@@ -7,7 +7,7 @@
         android:title=""
         app:showAsAction="always"
         android:visible="false"
-        android:icon="@android:drawable/stat_notify_chat"
+        android:icon="@drawable/watch"
         />
     <item
         android:id="@+id/action_Delete"

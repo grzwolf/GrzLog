@@ -38,7 +38,7 @@
         android:title=""
         app:showAsAction="always"
         android:visible="false"
-        android:icon="@android:drawable/ic_menu_preferences"
+        android:icon="@drawable/settings"
         />
     <item
         android:id="@+id/action_searchUp"
