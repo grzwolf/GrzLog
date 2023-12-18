@@ -35,6 +35,8 @@ class HelpActivity : AppCompatActivity() {
         "         TXT file\n" +
         "         WWW link\n" +
         "         GrzLog folder\n" +
+        "         My Location coordinates\n" +
+        "         Edit existing attachment\n" +
         "   !revert latest change via Menu bar Undo!\n\n" +
         "b) tap long red + button -> 'Jump to ...'\n" +
         "        jump to top\n" +

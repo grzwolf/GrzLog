@@ -12,7 +12,7 @@ android {
 
         // the one & only places to change the app version name and code version
         versionCode 1       // playstore relevant
-        versionName "1.1.0" // user relevant
+        versionName "1.1.1" // user relevant
 
         //
         def buildTime = new Date()
@@ -55,7 +55,7 @@ android {
             versionProps['VERSION_NAME'] = defaultConfig.versionName
             versionProps['VERSION_CODE'] = defaultConfig.versionCode.toString()
             versionProps.store(versionPropsFile.newWriter(), null)
-            resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName}-${defaultConfig.versionCode}-${buildNum} debug ${defaultConfig.versionNameSuffix}"
+            resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName}-vc${defaultConfig.versionCode}-#${buildNum} debug ${defaultConfig.versionNameSuffix}"
         }
     }
     namespace 'com.grzwolf.grzlog'
@@ -87,6 +87,8 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2'
     implementation 'com.github.bumptech.glide:glide:4.13.2'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.13.2'
+    // gps
+    implementation 'com.google.android.gms:play-services:12.0.1'
 }
 repositories {
     mavenCentral()

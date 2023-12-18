@@ -202,6 +202,7 @@
     <string name="wwwLink">Insert www link below</string>
     <string name="openLinksInBrowser">Open text links with browser</string>
     <string name="editExistingLink">Edit existing attachment</string>
+    <string name="location">My Location</string>
     <string name="linkDestroyed">Cancel, due to destroyed attachment link</string>
     <string name="noChange">nothing was changed</string>
     <string name="appFolder">GrzLog folder</string>
@@ -243,4 +244,8 @@
     <string name="grzlog_silent_backup_success">GrzLog silent backup: Success</string>
     <string name="grzlog_backup_error">GrzLog backup: ERROR</string>
     <string name="something_went_wrong">something went wrong</string>
+    <string name="tryAgain">If accepted, try again.</string>
+    <string name="gpsNoFix">Location service has no fix yet.</string>
+    <string name="turnGpsOn">Location service turn on</string>
+    <string name="twiceDeniedPerm">Permission was denied twice, re enable via: Settings --> Location</string>
 </resources>

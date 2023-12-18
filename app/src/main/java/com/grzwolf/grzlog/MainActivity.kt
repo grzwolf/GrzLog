@@ -13,6 +13,7 @@ import android.content.pm.ResolveInfo
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.graphics.pdf.PdfDocument
+import android.location.LocationManager
 import android.media.ExifInterface
 import android.media.MediaMetadataRetriever
 import android.media.MediaScannerConnection
@@ -23,6 +24,7 @@ import android.print.PrintAttributes
 import android.print.PrintAttributes.Resolution
 import android.print.pdf.PrintedPdfDocument
 import android.provider.MediaStore
+import android.provider.Settings
 import android.text.*
 import android.text.style.*
 import android.util.DisplayMetrics
@@ -34,6 +36,7 @@ import android.widget.*
 import android.widget.AdapterView.OnItemClickListener
 import android.widget.AdapterView.OnItemLongClickListener
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.AppCompatTextView
@@ -46,6 +49,11 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.BlendModeColorFilterCompat
 import androidx.core.graphics.BlendModeCompat
 import androidx.preference.PreferenceManager
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.grzwolf.grzlog.DataStore.ACTION
 import com.grzwolf.grzlog.DataStore.TIMESTAMP
@@ -53,7 +61,6 @@ import com.grzwolf.grzlog.FileUtils.Companion.getFile
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
 import com.grzwolf.grzlog.MainActivity.GrzEditText
 import java.io.*
-import java.lang.NullPointerException
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -68,6 +75,7 @@ const val PERMISSION_REQUEST_MEDIA        = 1
 const val PERMISSION_REQUEST_AUDIO        = 2
 const val PERMISSION_REQUEST_EXIFDATA     = 3
 const val PERMISSION_REQUEST_NOTIFICATION = 4
+const val PERMISSION_REQUEST_LOCATION     = 5
 
 const val MS_TO_DAYS = 1.0 / 1000.0 / 60.0 / 60.0 / 24.0
 
@@ -110,7 +118,12 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         const val ZIP     = 7
     }
 
-    var shareBody: String? = "" // mimic clipboard inside app
+    // mimic clipboard inside app
+    var shareBody: String? = ""
+
+    // geo location
+    var fusedLocationClient : FusedLocationProviderClient? = null
+    var locationPermissionDenied : Int = 0
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -656,6 +669,86 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 //                }
             }
         }
+        if (requestCode == PERMISSION_REQUEST_LOCATION) {
+            if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // permission has been granted
+                Toast.makeText(baseContext, "Location data access granted", Toast.LENGTH_LONG).show()
+            } else {
+                // permission request was denied
+                Toast.makeText(baseContext, "Location data access denied", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // get geo location coordinates
+    @SuppressLint("MissingPermission")
+    @RequiresPermission(allOf = arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
+    fun getLastKnownLocation(attachmentAllowed: Boolean = true,
+                             linkText: String = "",
+                             adapterView: AdapterView<*>?,
+                             itemView: View?,
+                             itemPosition: Int,
+                             itemId: Long,
+                             returnToSearchHits: Boolean = false,
+                             function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)? = null) : Boolean {
+        if (verifyLocationPermission()) {
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+            fusedLocationClient!!.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    // work with valid data
+                    fabPlus.pickAttachment = true
+                    fabPlus.attachmentUri = java.lang.String.format(Locale.ENGLISH, "geo:%f,%f", location.latitude, location.longitude)
+                    fabPlus.attachmentUriUri = null
+                    fabPlus.attachmentName = "[gps]"
+                    fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                } else {
+                    // is location service activated at all
+                    val manager = getSystemService(LOCATION_SERVICE) as LocationManager
+                    if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                        // ask for turning on location service
+                        decisionBox(this@MainActivity,
+                            DECISION.YESNO,
+                            getString(R.string.turnGpsOn),
+                            getString(R.string.continueQuestion),
+                            {
+                                // yes means: turn location service on an continue with "add attachment"
+                                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            },
+                            {
+                                // no means: just continue with "add attachment"
+                                startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            }
+                        )
+                    } else {
+                        // if 'GPS on' but 'no fix yet', an explicit data request might help
+                        var locationRequest = LocationRequest()
+                        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+                        locationRequest.interval = 0
+                        locationRequest.fastestInterval = 0
+                        locationRequest.numUpdates = 1
+                        fusedLocationClient!!.requestLocationUpdates(locationRequest, appLocationCallback, Looper.myLooper())
+                        // note: no fix yet, then go exactly back there, where we came from
+                        okBox(
+                            this@MainActivity,
+                            getString(R.string.note),
+                            getString(R.string.gpsNoFix),
+                            { startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function) }
+                        )
+                    }
+                }
+            }
+            return true
+        } else {
+            // if permission was not active before 1st try, but granted now, then retry is ok
+            Toast.makeText(baseContext, getString(R.string.tryAgain), Toast.LENGTH_LONG).show()
+            return false
+        }
+    }
+    // the pure existence of such a callback is needed
+    private val appLocationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+        }
     }
 
     // ListView click handler implementation shows the item's linked content
@@ -746,7 +839,17 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             val matchLink = attachment.let { PATTERN.UriLink.matcher(it.toString()) }
 
             //
-            // 1. handle a clicked attachment in an item's text
+            // 1. handle geo location coordinates
+            //
+            if (matchFullResult.contains("::::geo:") ) {
+                var uri = matchFullResult.substring(matchFullResult.indexOf("::::geo:") + 4, matchFullResult.lastIndexOf("]"))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+                startActivity(intent)
+                return;
+            }
+
+            //
+            // 2. handle a clicked attachment in an item's text
             //
             if (matchFullResult.isNotEmpty() && (matchLink.find() == true)) {
                 // if there is a double match --> attachment was clicked, so show attachment
@@ -790,7 +893,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 }
             } else {
                 //
-                // 2. find a regular clicked url in an item's text and show it in the default browser
+                // 3. find a regular clicked url in an item's text and show it in the default browser
                 //
                 // url was shown indicator
                 var urlWasShown = false
@@ -848,7 +951,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     }
                 }
                 //
-                // 3. not clicked attachment/link (aka click into the void)
+                // 4. not clicked attachment/link (aka click into the void)
                 //
                 if (!urlWasShown) {
                     // specific case: item has attachment but was not clicked in attachment AND not in a text link --> show attachment
@@ -3714,6 +3817,25 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             true
         }
     }
+    fun verifyLocationPermission(): Boolean {
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION ) == PackageManager.PERMISSION_GRANTED) {
+            locationPermissionDenied = 0
+            val spe = sharedPref.edit()
+            spe.putInt("locationPermissionDenied", locationPermissionDenied)
+            spe.apply()
+            return true
+        } else {
+            if ( locationPermissionDenied < 3 ) {
+                locationPermissionDenied++
+                val spe = sharedPref.edit()
+                spe.putInt("locationPermissionDenied", locationPermissionDenied)
+                spe.apply()
+            }
+            requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_REQUEST_LOCATION )
+            return false
+        }
+    }
 
     //
     // extend class EditText to receive 'paste from menu'
@@ -3761,6 +3883,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // file picker dlg for fabPlus
+    @SuppressLint("MissingPermission")
     fun startFilePickerDialog(
         attachmentAllowed: Boolean = true,
         linkText: String = "",
@@ -3790,6 +3913,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             "TXT",
             "WWW",
             getString(R.string.appFolder),
+            getString(R.string.location),
             getString(R.string.editExistingLink)
         )
         pickerBuilder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
@@ -4016,7 +4140,30 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     listView?.dividerHeight = 2
                     getFolderDialog?.show()
                 }
-                9 -> { // edit existing link
+                9 -> { // geo location
+                    val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                    locationPermissionDenied = sharedPref.getInt("locationPermissionDenied", 0)
+                    var execOk : Boolean = getLastKnownLocation(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        if (!execOk && locationPermissionDenied >= 3) {
+                            okBox(
+                                this@MainActivity,
+                                getString(R.string.note),
+                                getString(R.string.twiceDeniedPerm),
+                                { startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function) }
+                            )
+                        } else {
+                            if (!execOk) {
+                                startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            }
+                        }
+                    } else {
+                        if (!execOk) {
+                            startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        }
+                    }
+                }
+                10 -> { // edit existing link
                     // edit dialog
                     var editLinkDialog: AlertDialog? = null
                     // text editor
@@ -4146,12 +4293,12 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     val itemIndex: Int = options.indexOf(text)
                     child.setEnabled(true)
                     if (attachmentAllowed) {
-                        if (itemIndex == 9) {
+                        if (itemIndex == 10) {
                             child.setEnabled(false)
                             child.setOnClickListener(null)
                         }
                     } else {
-                        if (itemIndex < 9) {
+                        if (itemIndex < 10) {
                             child.setEnabled(false)
                             child.setOnClickListener(null)
                         }
@@ -7364,17 +7511,21 @@ internal class LvAdapter : BaseAdapter {
                                 } else {
                                     // mime could be .file-error due to a lost attachment file
                                     if (!mime.equals(ERROR_EXT, ignoreCase = true)) {
-                                        // www attachment link goes here, bc www mime is not empty
+                                        // www attachment link, geo coordinates, GrzLog folder go here
                                         val fullItemText = items!![position].fullTitle
                                         val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
-                                        if (m?.find() == true) { // www attachment link
+                                        if (m?.find() == true) { // www attachment link OR geo coordinates OR GrzLog folder
                                             val result = m.group()
                                             val key = result.substring(1, result.length - 1)
                                             val lnkParts = key.split("::::".toRegex()).toTypedArray()
                                             if (lnkParts != null && lnkParts.size == 2) {
                                                 var fileName = lnkParts[1]
                                                 if (fileName.startsWith("/") == false) {
-                                                    res = android.R.drawable.ic_menu_compass
+                                                    if (fileName.startsWith("geo:")) {
+                                                        res = R.drawable.location
+                                                    } else {
+                                                        res = android.R.drawable.ic_menu_compass
+                                                    }
                                                 }
                                                 // in case a folder name contains a .
                                                 if (fileName.startsWith("folder/")) {

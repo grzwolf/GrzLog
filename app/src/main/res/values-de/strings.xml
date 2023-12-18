@@ -201,6 +201,7 @@
     <string name="wwwLink">WWW Link unten einfügen</string>
     <string name="openLinksInBrowser">Öffnen von Text Links mit Browser</string>
     <string name="editExistingLink">Edit Dateianhang</string>
+    <string name="location">Mein Standort</string>
     <string name="linkDestroyed">Abbruch, weil Link zu Dateianhang zerstört</string>
     <string name="noChange">keine Änderung</string>
     <string name="appFolder">GrzLog Ordner</string>
@@ -242,5 +243,9 @@
     <string name="grzlog_silent_backup_success">GrzLog Hintergrund Backup: Erfolg</string>
     <string name="grzlog_backup_error">GrzLog Backup: FEHLER</string>
     <string name="something_went_wrong">unbekannter Fehler</string>
+    <string name="tryAgain">Wenn bestätigt, erneut versuchen.</string>
+    <string name="gpsNoFix">Ortungsdienst hat noch keinen Fix.</string>
+    <string name="turnGpsOn">Ortungsdienst einschalten</string>
+    <string name="twiceDeniedPerm">Berechtigung wurde 2x verweigert, Erlaubnis via: Settings --> Ortungsdienste</string>
 </resources>
 
