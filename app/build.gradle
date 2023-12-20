@@ -59,6 +59,9 @@ android {
         }
     }
     namespace 'com.grzwolf.grzlog'
+    buildFeatures {
+        buildConfig true
+    }
 }
 
 dependencies {
