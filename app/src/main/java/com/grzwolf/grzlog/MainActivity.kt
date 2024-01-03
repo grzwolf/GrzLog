@@ -1662,6 +1662,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         listView.divider = ColorDrawable(Color.GRAY)
         listView.dividerHeight = 2
         dialog.show()
+        listView.setScrollbarFadingEnabled(false)
         dialog.setCanceledOnTouchOutside(false)
     }
     // https://stackoverflow.com/questions/5744572/is-there-a-java-library-that-will-create-a-number-range-from-a-list-of-numbers
@@ -4307,6 +4308,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 override fun onChildViewRemoved(view: View?, view1: View?) {}
             })
         pickerDialog.show()
+        listView.setScrollbarFadingEnabled(false);
         pickerDialog.setCanceledOnTouchOutside(false)
         // detect cancel: Android back button OR editLinkBuilder NegativeButton
         pickerDialog.setOnCancelListener { dialog ->
