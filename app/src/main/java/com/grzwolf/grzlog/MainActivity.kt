@@ -2404,7 +2404,7 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     // final handling of fabPlusOk as a separate fun to allow option to auto fill skipped dates
-    fun fabPlusOkFinale(finalStr: String, newText: String, plusButtonInput: Boolean, addTimeStamp: Boolean, numAutoFilledDates: Int ) {
+    fun fabPlusOkFinale(finalStr: String, newText: String, addTimeStamp: Boolean, plusButtonInput: Boolean, numAutoFilledDates: Int ) {
 
         // memorize the inserted lines in tagSection
         ds!!.tagSection.clear()
