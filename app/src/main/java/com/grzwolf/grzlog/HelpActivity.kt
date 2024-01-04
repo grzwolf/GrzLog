@@ -77,7 +77,7 @@ class HelpActivity : AppCompatActivity() {
         "a) tap Hamburger\n" +
         "       more icons will appear: Loupe, Folder, Share, Wrench\n" +
         "       more icons disappear after 10s\n\n" +
-        "b) tap Wrench -> Settings window\n" +
+        "b) tap Gear -> Settings window\n" +
         "       About\n" +
         "       Developer contact data\n" +
         "       Help\n" +
