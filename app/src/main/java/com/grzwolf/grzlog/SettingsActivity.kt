@@ -609,6 +609,18 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                 )
                 return
             }
+            // since oriFolder was renamed with ending BAK, it still has to exist
+            if (!oriFolder.exists()) {
+                if (!oriFolder.mkdir()) {
+                    progressWindow.close()
+                    okBox(
+                        context,
+                        context.getString(R.string.Failure),
+                        context.getString(R.string.errorCreateInternalFolder)
+                    )
+                    return
+                }
+            }
             // restore ZIP async in another thread
             try {
                 Thread {

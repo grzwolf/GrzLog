@@ -150,6 +150,7 @@
     <string name="video">[video]</string>
     <string name="audio">[audio]</string>
     <string name="errorRenameBakFolder">Could not rename BAK folder.</string>
+    <string name="errorCreateInternalFolder">Could not create internal folder.</string>
     <string name="deleteSelectedItems">Delete selected items?</string>
     <string name="deleteSelectedItemsFromApp">Delete selected items from GrzLog gallery?</string>
     <string name="whatToDoWithItems">What to do with selection?</string>

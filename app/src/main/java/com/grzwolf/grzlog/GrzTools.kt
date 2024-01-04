@@ -69,6 +69,13 @@ fun unpackZipArchive(
     val fis: InputStream
     val zis: ZipInputStream
     try {
+        // for the sake of mind
+        val outFolder = File(outPath)
+        if (!outFolder.exists()) {
+            if (!outFolder.mkdir()) {
+                return false
+            }
+        }
         var filename: String
         fis = FileInputStream(zipFilePath)
         zis = ZipInputStream(BufferedInputStream(fis))

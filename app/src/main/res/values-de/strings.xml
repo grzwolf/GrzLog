@@ -149,6 +149,7 @@
     <string name="video">[Video]</string>
     <string name="audio">[Audio]</string>
     <string name="errorRenameBakFolder">BAK kann nicht erstellt werden.</string>
+    <string name="errorCreateInternalFolder">Interner Ordner kann nicht erstellt werden.</string>
     <string name="deleteSelectedItems">Ausgewählte Items löschen?</string>
     <string name="deleteSelectedItemsFromApp">Auswahl der Items in GrzLog Galerie löschen?</string>
     <string name="whatToDoWithItems">Was soll mit der Auswahl geschehen?</string>
