@@ -2,7 +2,7 @@
 Text notes / diary / journal / reports with various file attachments, time stamps, Android >= 10 Q "Quince Tart" API 29
 
 # App Installation 
-1. Open in your phone's browser: https://github.com/grzwolf/GrzLog/releases/tag
+1. Open in your phone's browser: https://github.com/grzwolf/GrzLog/tags
 2. Click the most recent tag and scroll down to the Assets section
 3. Click the 1st link shown under Assets (that is the installable app)
 4. Allow 'Download file'
@@ -19,7 +19,7 @@ Text notes / diary / journal / reports with various file attachments, time stamp
 15. Help pages to be found --> Hamburger symbol (top right) --> Gear symbol --> click 'Help pages'
 
 # App Update
-1. Open in your phone's browser: https://github.com/grzwolf/GrzLog/releases/tag
+1. Open in your phone's browser: https://github.com/grzwolf/GrzLog/tags
 2. Click the most recent tag and scroll down to the Assets section
 3. Click the 1st link shown under Assets (that is the installable app)
 4. Allow 'Download file'
