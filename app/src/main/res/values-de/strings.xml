@@ -30,6 +30,8 @@
     <string name="GCam">Google Kamera</string>
 
     <!-- Common Strings-->
+    <string name="githubGrzLog">https://github.com/grzwolf/GrzLog/tags</string>
+    <string name="error">Fehler</string>
     <string name="ok">Ok</string>
     <string name="yes">Ja</string>
     <string name="no">Nein</string>
@@ -38,6 +40,7 @@
     <string name="more">Mehr</string>
     <string name="back">Zurück</string>
     <string name="note">Anmerkung</string>
+    <string name="clickHere">Klick hier</string>
     <string name="continueQuestion">Fortsetzen ?</string>
     <string name="not_existing">- existiert nicht -</string>
     <string name="Failure">Fehler</string>
@@ -195,6 +198,22 @@
     <string name="inputOneSpace">Minimaler Input ist ein Leerzeichen</string>
     <string name="appHelp">Hilfe Seiten</string>
     <string name="title_activity_help">Hilfe</string>
+    <string name="appCheckUpdate">Check GrzLog Update</string>
+    <string name="available">verfügbar</string>
+    <string name="availableUpdate">Update verfügbar</string>
+    <string name="AppAtStartCheckUpdateTxt">Check GrzLog Update bei Start</string>
+    <string name="upToDate">ist aktuell</string>
+    <string name="openBrowserForUpdate">Der Browser öffnet nun\n\nhttps://github.com/grzwolf/GrzLog/tags\n\n fortsetzen?</string>
+    <string name="openBrowserAutoUpdate">Der Browser öffnet nun die Webseite</string>
+    <string name="openBrowserAutoFileUpdate">Der Browser wird nun herunterladen</string>
+    <string name="howToUpdate">Wenn eine neuere Version verfügbar ist:\n\n* Klick auf neuere Version\n* Scrollen bis Assets\n* Klick Item mit .apk Suffix\n* Download erlauben\n* Öffnen erlauben</string>
+    <string name="autoUpdate">Bitte das Folgende tun:\n\n* Scrollen bis Assets\n* Klick Item mit .apk Suffix\n* Download erlauben\n* Öffnen erlauben</string>
+    <string name="autoFileUpdate">Bitte das Folgende tun:\n\n* Download erlauben\n* Öffnen erlauben</string>
+    <string name="InstalledAPK">Installiert:</string>
+    <string name="InstalledNow">Installiere jetzt</string>
+    <string name="ExecUpdate">GrzLog Update ausführen</string>
+    <string name="errorWebsite">Fehler Webseite</string>
+    <string name="errorNoData">Fehler keine Daten</string>
     <string name="mayNotWork">Funktioniert möglicherweise nicht</string>
     <string name="androidIssue">Ungelöstes Android 10 Problem</string>
     <string name="useFilesPicker">Auswahl Video nicht von \'Photos\', besser von \'Dateien\'</string>

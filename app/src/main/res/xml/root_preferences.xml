@@ -28,7 +28,28 @@
 
         <Preference
             android:title="@string/appHelp"
+            android:summary="@string/clickHere"
             android:key="AppHelp" />
+
+        <SwitchPreferenceCompat
+            android:title="@string/AppAtStartCheckUpdateTxt"
+            android:key="AppAtStartCheckUpdateFlag" />
+
+        <Preference
+            android:title="@string/appCheckUpdate"
+            android:summary="@string/clickHere"
+            android:key="AppCheckUpdate" />
+
+        <Preference
+            android:title=""
+            android:summary=""
+            app:isPreferenceVisible="false"
+            android:key="UpdateLink" />
+
+        <Preference
+            android:title="@string/ExecUpdate"
+            android:summary="@string/clickHere"
+            android:key="ExecUpdate" />
 
     </PreferenceCategory>
 
@@ -119,9 +140,11 @@
             android:summary="@string/clickToImport" />
         <Preference
             android:title="@string/showAppGallery"
+            android:summary="@string/clickHere"
             android:key="ShowAppGallery" />
         <Preference
             android:title="@string/tidyOrphanes"
+            android:summary="@string/clickHere"
             android:key="TidyOrphanes" />
     </PreferenceCategory>
 

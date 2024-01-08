@@ -29,8 +29,8 @@ import android.webkit.MimeTypeMap
 import android.widget.*
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
 import androidx.core.content.FileProvider
@@ -42,6 +42,8 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
 import java.io.*
+import java.net.HttpURLConnection
+import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -904,6 +906,46 @@ fun getFileFromUri(context: Context, imageUriOri: Uri): File? {
         file = FileUtils.getFile(context, imageUri)
     }
     return file
+}
+
+// numerical version comparison
+fun isUpdateDue(userVersionSplit: Array<String>, latestVersionSplit: Array<String>): Boolean {
+    try {
+        val majorUserVersion = userVersionSplit[0].toInt()
+        val minorUserVersion = userVersionSplit[1].toInt()
+        val patchUserVersion = userVersionSplit[2].toInt()
+        val majorLatestVersion = latestVersionSplit[0].toInt()
+        val minorLatestVersion = latestVersionSplit[1].toInt()
+        val patchLatestVersion = latestVersionSplit[2].toInt()
+        if (majorUserVersion <= majorLatestVersion) {
+            if (majorUserVersion < majorLatestVersion) {
+                return true
+            } else {
+                if (minorUserVersion <= minorLatestVersion) {
+                    return if (minorUserVersion < minorLatestVersion) {
+                        true
+                    } else {
+                        patchUserVersion < patchLatestVersion
+                    }
+                }
+            }
+        }
+    } catch (ignored: java.lang.Exception) {
+    }
+    return false
+}
+
+// a simple HEAD request checks, whether an url exists
+fun urlExists(uri: String) : Boolean {
+    val url = URL(uri)
+    val huc = url.openConnection() as HttpURLConnection
+    huc.setRequestMethod("HEAD")
+    val responseCode = huc.getResponseCode()
+    if (responseCode == 200) {
+        return true
+    } else {
+        return false
+    }
 }
 
 // show linked attachment

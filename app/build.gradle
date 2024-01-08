@@ -11,8 +11,8 @@ android {
         targetSdkVersion 34
 
         // the one & only places to change the app version name and code version
-        versionCode 1       // playstore relevant
-        versionName "1.1.3" // user relevant
+        versionCode 1       // playstore relevant - increase it to prevent a downgrade
+        versionName "1.1.4" // user relevant
 
         //
         def buildTime = new Date()
@@ -26,6 +26,7 @@ android {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName} ${defaultConfig.versionNameSuffix}"
+            resValue "string", "tag_version", "v${defaultConfig.versionName}"
             signingConfig signingConfigs.debug
         }
         debug {
@@ -56,6 +57,7 @@ android {
             versionProps['VERSION_CODE'] = defaultConfig.versionCode.toString()
             versionProps.store(versionPropsFile.newWriter(), null)
             resValue "string", "app_version", "$defaultConfig.applicationId v${defaultConfig.versionName}-vc${defaultConfig.versionCode}-#${buildNum} debug ${defaultConfig.versionNameSuffix}"
+            resValue "string", "tag_version", "v${defaultConfig.versionName}"
         }
     }
     namespace 'com.grzwolf.grzlog'
@@ -92,6 +94,8 @@ dependencies {
     annotationProcessor 'com.github.bumptech.glide:compiler:4.13.2'
     // gps
     implementation 'com.google.android.gms:play-services:12.0.1'
+    // in app update from GitHub
+    implementation 'com.android.volley:volley:1.2.1'
 }
 repositories {
     mavenCentral()

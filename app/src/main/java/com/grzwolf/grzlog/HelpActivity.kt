@@ -80,7 +80,9 @@ class HelpActivity : AppCompatActivity() {
         "b) tap Gear -> Settings window\n" +
         "       About\n" +
         "       Developer contact data\n" +
-        "       Help\n" +
+        "       Help pages\n" +
+        "       Check GrzLog update\n" +
+        "       Execute GrzLog update\n" +
         "       Input placement: new at top (like email) or at bottom (like messengers)\n" +
         "       Tap widget: show GrzLog or jump to input\n" +
         "       Preview image auto close\n" +

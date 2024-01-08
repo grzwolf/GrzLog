@@ -4,6 +4,7 @@ package com.grzwolf.grzlog
 //import androidx.appcompat.app.AlertDialog
 
 import android.Manifest
+import android.R.string
 import android.annotation.SuppressLint
 import android.app.*
 import android.content.*
@@ -17,6 +18,7 @@ import android.location.LocationManager
 import android.media.ExifInterface
 import android.media.MediaMetadataRetriever
 import android.media.MediaScannerConnection
+import android.media.RingtoneManager
 import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.*
@@ -49,6 +51,11 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.BlendModeColorFilterCompat
 import androidx.core.graphics.BlendModeCompat
 import androidx.preference.PreferenceManager
+import com.android.volley.Request
+import com.android.volley.Response
+import com.android.volley.VolleyError
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -178,6 +185,23 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         var file = File(downloadDir, "$appName.zip" + "_part")
         if (file.exists()) {
             okBox(this, "Note", getString(R.string.partialBackup))
+        }
+
+        // at app start check app update availability just once a day
+        if (sharedPref.getBoolean("AppAtStartCheckUpdateFlag", false)) {
+            // check if today was already checked
+            var dateCheckLastStr = sharedPref.getString("AppAtStartCheckUpdateDate", "1900-01-01")
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ENGLISH)
+            val dateCheckLast = LocalDate.parse(dateCheckLastStr, formatter)
+            val dateToday = LocalDate.now()
+            if (dateToday.compareTo(dateCheckLast) != 0) {
+                // since check is allowed for today, save today as last check date
+                val spe = sharedPref.edit()
+                spe.putString("AppAtStartCheckUpdateDate", formatter.format(dateToday))
+                spe.apply()
+                // check for app update
+                checkForAppUpdate()
+            }
         }
 
         // toolbar tap listener
@@ -6183,6 +6207,69 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         spe.putInt("notificationNumber", ++notificationNumber)
         spe.apply()
     }
+
+    // http request to communicate with GitHub GrzLog release site
+    fun checkForAppUpdate() {
+        val queue = Volley.newRequestQueue(this)
+        var appVer = getString(R.string.tag_version).substring(1)
+        val stringRequest = StringRequest(Request.Method.GET, getString(R.string.githubGrzLog),
+            object : Response.Listener<String?> {
+                override fun onResponse(response: String?) {
+                    if (response != null) {
+                        var listTags: MutableList<String> = ArrayList()
+                        val m = Pattern.compile("tag/v\\d+.\\d+.\\d+").matcher(response!!)
+                        while (m?.find() == true) {
+                            var group = m?.group()!!
+                            if (group.startsWith("tag/v")) {
+                                var result = m?.group()!!.substring(5)
+                                if (!listTags.contains(result!!)) {
+                                    listTags.add(result!!)
+                                }
+                            }
+                        }
+                        var updateAvailable = false
+                        var tagVersion = ""
+                        for (tagVer in listTags) {
+                            if (isUpdateDue(appVer.split('.').toTypedArray(), tagVer.split('.').toTypedArray())) {
+                                updateAvailable = true
+                                tagVersion = tagVer
+                                break
+                            }
+                        }
+                        if (updateAvailable) {
+                            // make notification about available app update
+                            val intent = Intent(applicationContext, MainActivity::class.java)
+                            showNotification(MainActivity.contextMainActivity, "GrzLog", getString(R.string.availableUpdate) + " v" + tagVersion, intent, 1)
+                        }
+                    }
+                }
+            },
+            object : Response.ErrorListener {
+                override fun onErrorResponse(error: VolleyError?) {
+                }
+            })
+        queue.add(stringRequest)
+    }
+    fun showNotification(context: Context, title: String?, message: String?, intent: Intent?, reqCode: Int) {
+        val pendingIntent = PendingIntent.getActivity(context, reqCode, intent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
+        val CHANNEL_ID = "GrzLog-Update-Check"
+        val notificationBuilder: NotificationCompat.Builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.grz_launcher)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setAutoCancel(true)
+            .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+            .setContentIntent(pendingIntent)
+        val notificationManager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name: CharSequence = "GrzLog Update Check"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
+            notificationManager.createNotificationChannel(mChannel)
+        }
+        notificationManager.notify(reqCode, notificationBuilder.build()) // 0 is the request code, it should be unique id
+    }
+
 
     // find text in all dataSections (folders) and return a list
     class GlobalSearchHit(textCombined: SpannableString, lineNdx: Int, folderName: String) {

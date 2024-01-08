@@ -5,18 +5,22 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
 import android.app.PendingIntent
-import android.app.PendingIntent.*
-import android.content.*
+import android.app.PendingIntent.FLAG_IMMUTABLE
+import android.app.PendingIntent.getActivity
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
+import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -24,9 +28,19 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
+import com.android.volley.Request
+import com.android.volley.Response
+import com.android.volley.VolleyError
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
-import java.io.*
-import java.util.*
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Date
+import java.util.regex.Pattern
 import java.util.zip.ZipFile
 
 
@@ -99,6 +113,84 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
+
+        // http request to communicate with a website
+        fun httpCheckForUpdate(context: Context, url: String, updateCheckPref: Preference, updateCheckTitle: String, appVer: String, updateLinkPref: Preference ) {
+            val queue = Volley.newRequestQueue(context)
+            val stringRequest = StringRequest(Request.Method.GET, url,
+                object : Response.Listener<String?> {
+                    override fun onResponse(response: String?) {
+                        if (response != null) {
+                            var listTags: MutableList<String> = ArrayList()
+                            val m = Pattern.compile("tag/v\\d+.\\d+.\\d+").matcher(response!!)
+                            while (m?.find() == true) {
+                                var group = m?.group()!!
+                                if (group.startsWith("tag/v")) {
+                                    var result = m?.group()!!.substring(5)
+                                    if (!listTags.contains(result!!)) {
+                                        listTags.add(result!!)
+                                    }
+                                }
+                            }
+                            var updateAvailable = false
+                            var tagVersion = ""
+                            for (tagVer in listTags) {
+                                if (isUpdateDue(appVer.split('.').toTypedArray(), tagVer.split('.').toTypedArray())) {
+                                    updateAvailable = true
+                                    tagVersion = tagVer
+                                    break
+                                }
+                            }
+                            if (updateAvailable) {
+                                // build update website link
+                                var updateLink = "https://github.com/grzwolf/GrzLog/releases/tag/v" + tagVersion
+                                updateCheckPref.setTitle(updateCheckTitle + " - " + context.getString(R.string.available) + " v" + tagVersion)
+                                updateLinkPref.setTitle(updateLink)
+                                // check matching download urls for APK files
+                                checkDownloadUrls(context, updateLinkPref, tagVersion)
+                            } else {
+                                updateCheckPref.setTitle(updateCheckTitle + " - " + context.getString(R.string.upToDate))
+                            }
+                        } else {
+                            updateCheckPref.setTitle(updateCheckTitle + " - " + context.getString(R.string.errorNoData))
+                        }
+                    }
+                },
+                object : Response.ErrorListener {
+                    override fun onErrorResponse(error: VolleyError?) {
+                        updateCheckPref.setTitle(updateCheckTitle + " - " + context.getString(R.string.errorWebsite))
+                    }
+                })
+            queue.add(stringRequest)
+        }
+        // two urls to check
+        fun checkDownloadUrls(context: Context, updateLinkPref: Preference, tagVersion: String) {
+            // check urls must happen outside of UI thread
+            Thread {
+                // buld update file link
+                var apkLink = "https://github.com/grzwolf/GrzLog/releases/download/" + "v" + tagVersion + "/com.grzwolf.grzlog.v" + tagVersion
+                var apkLinkDeb = apkLink + "-debug.apk"
+                var apkLinkRel = apkLink + "-release.apk"
+                apkLink = ""
+                // check urls
+                if (urlExists(apkLinkRel)) {
+                    // release APK is favorite
+                    apkLink = apkLinkRel
+                } else {
+                    if (urlExists(apkLinkDeb)) {
+                        // debug APK is 2nd choice
+                        apkLink = apkLinkDeb
+                    }
+                }
+                if (apkLink.length > 0) {
+                    // if all went fine, there will be an APK link
+                    (context as Activity).runOnUiThread {
+                        updateLinkPref.setSummary(apkLink)
+                    }
+                }
+            }.start()
+        }
+
         @Suppress("unused")
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
@@ -131,6 +223,115 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     requireActivity().startActivity(Intent(context, HelpActivity::class.java))
                 } catch (e: Exception) {
                     centeredToast(appContext!!, "Help error: " + e.message.toString(), 3000)
+                }
+                true
+            }
+
+            // action check app update available
+            val updateLinkPref = findPreference("UpdateLink") as Preference?
+            val checkUpdatePref = findPreference("AppCheckUpdate") as Preference?
+            checkUpdatePref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                try {
+                    updateLinkPref!!.setTitle("")
+                    var appVer = getString(R.string.tag_version).substring(1)
+                    httpCheckForUpdate(
+                        MainActivity.contextMainActivity,
+                        getString(R.string.githubGrzLog),
+                        checkUpdatePref, getString(R.string.appCheckUpdate),
+                        appVer,
+                        updateLinkPref!!)
+                } catch (e: Exception) {
+                    checkUpdatePref.setTitle(getString(R.string.appCheckUpdate) + " - " + getString(R.string.error))
+                }
+                true
+            }
+
+            // action execute app update: 1) APK file   2) APK Website   3) GrzLog website on GitHub
+            val execUpdatePref = findPreference("ExecUpdate") as Preference?
+            execUpdatePref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                // if an update was found, use one of the real update links
+                var autoUpdateLink = updateLinkPref!!.title.toString()
+                var autoUpdateFile = updateLinkPref!!.summary.toString()
+                if (autoUpdateFile!!.length > 0 || autoUpdateLink!!.length > 0) {
+                    // an APK file for download is available
+                    if (autoUpdateFile!!.length > 0) {
+                        // ask for using browser
+                        decisionBox(
+                            requireContext(),
+                            DECISION.YESNO,
+                            getString(R.string.note),
+                            getString(R.string.openBrowserAutoFileUpdate) + "\n\n" + autoUpdateFile!!,
+                            {
+                                // provide 'how to update this app'
+                                decisionBox(
+                                    requireContext(),
+                                    DECISION.YESNO,
+                                    getString(R.string.InstalledNow),
+                                    getString(R.string.autoFileUpdate),
+                                    {
+                                        var uri = Uri.parse(autoUpdateFile)
+                                        val builder = CustomTabsIntent.Builder()
+                                        val customTabsIntent = builder.build()
+                                        customTabsIntent.launchUrl(requireContext(), uri)
+                                    },
+                                    null
+                                )
+                            },
+                            null
+                        )
+                    } else {
+                        if (autoUpdateLink!!.length > 0) {
+                            // a website for APK download is available
+                            decisionBox(
+                                requireContext(),
+                                DECISION.YESNO,
+                                getString(R.string.note),
+                                getString(R.string.openBrowserAutoUpdate) + "\n\n" + autoUpdateLink!!,
+                                {
+                                    // provide 'how to update this app'
+                                    decisionBox(
+                                        requireContext(),
+                                        DECISION.YESNO,
+                                        getString(R.string.InstalledAPK) + " " + getString(R.string.tag_version),
+                                        getString(R.string.autoUpdate),
+                                        {
+                                            var uri = Uri.parse(autoUpdateLink)
+                                            val builder = CustomTabsIntent.Builder()
+                                            val customTabsIntent = builder.build()
+                                            customTabsIntent.launchUrl(requireContext(), uri)
+                                        },
+                                        null
+                                    )
+                                },
+                                null
+                            )
+                        }
+                    }
+                } else {
+                    // ask for using browser to check the website containing GrzLog releases
+                    decisionBox(
+                        requireContext(),
+                        DECISION.YESNO,
+                        getString(R.string.note),
+                        getString(R.string.openBrowserForUpdate),
+                        {
+                            // provide 'how to update this app'
+                            decisionBox(
+                                requireContext(),
+                                DECISION.YESNO,
+                                getString(R.string.InstalledAPK) + " " + getString(R.string.tag_version),
+                                getString(R.string.howToUpdate),
+                                {
+                                    var uri = Uri.parse(getString(R.string.githubGrzLog))
+                                    val builder = CustomTabsIntent.Builder()
+                                    val customTabsIntent = builder.build()
+                                    customTabsIntent.launchUrl(requireContext(), uri)
+                                },
+                                null
+                            )
+                        },
+                        null
+                    )
                 }
                 true
             }
@@ -306,7 +507,8 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     // YES
                     builder.setPositiveButton(
                         R.string.yes,
-                        DialogInterface.OnClickListener { dialog, which -> // clear all shared preferences
+                        DialogInterface.OnClickListener { dialog, which ->
+                            // clear all shared preferences
                             val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
                             try {
                                 val spe = sharedPref.edit()
