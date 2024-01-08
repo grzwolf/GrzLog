@@ -19,6 +19,12 @@ Text notes / diary / journal / reports with various file attachments, time stamp
 15. Help pages to be found --> Hamburger symbol (top right) --> Gear symbol --> click 'Help pages'
 
 # App Update
+App version >= v1.1.4
+1. Goto Settings
+2. Click 'Check GrzLog update'
+3. If app update is available, click 'Execute GrzLog update' and follow the guide
+ 
+App version <= v1.1.3
 1. Open in your phone's browser: https://github.com/grzwolf/GrzLog/tags
 2. Click the most recent tag and scroll down to the Assets section
 3. Click the 1st link shown under Assets (that is the installable app)
