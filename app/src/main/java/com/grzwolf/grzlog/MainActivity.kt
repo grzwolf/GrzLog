@@ -4,7 +4,6 @@ package com.grzwolf.grzlog
 //import androidx.appcompat.app.AlertDialog
 
 import android.Manifest
-import android.R.string
 import android.annotation.SuppressLint
 import android.app.*
 import android.content.*
@@ -20,6 +19,7 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaScannerConnection
 import android.media.RingtoneManager
 import android.media.ThumbnailUtils
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.*
 import android.print.PrintAttributes
@@ -185,6 +185,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         var file = File(downloadDir, "$appName.zip" + "_part")
         if (file.exists()) {
             okBox(this, "Note", getString(R.string.partialBackup))
+        }
+
+        // internet connection state
+        if (isNetwork(getApplicationContext())){
+            Toast.makeText(getApplicationContext(), "Internet Ok", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(getApplicationContext(), "Internet error", Toast.LENGTH_SHORT).show()
         }
 
         // at app start check app update availability just once a day
@@ -6206,6 +6213,15 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val spe = sharedPref.edit()
         spe.putInt("notificationNumber", ++notificationNumber)
         spe.apply()
+    }
+
+
+    fun isNetwork(context: Context): Boolean {
+        val cm = context.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val netInfo = cm.activeNetworkInfo
+        return if (netInfo != null && netInfo.isConnectedOrConnecting) {
+            true
+        } else false
     }
 
     // http request to communicate with GitHub GrzLog release site
