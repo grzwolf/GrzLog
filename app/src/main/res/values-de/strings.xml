@@ -14,7 +14,7 @@
     <string name="widgetJumpInput_title">Aktion nach Klick auf Widget</string>
     <string name="widgetJumpInput_summary_on">Direkt zu Eingabe</string>
     <string name="widgetJumpInput_summary_off">Zeige Text</string>
-    <string name="newInputPlace">Platzierung von neuer Eingabe</string>
+    <string name="newInputPlace">Platzierung neuer Eingabe</string>
     <string name="newInputBottom">Zeige neue Eingabe am Ende</string>
     <string name="newInputTop">Zeige neue Eingabe am Anfang</string>
     <string name="darkMode">Dark Modus</string>
@@ -25,7 +25,7 @@
     <string name="clickToBackup">Klicken zum Daten sichern</string>
     <string name="RestoreData">Datenwiederherstellung</string>
     <string name="clickToRestore">Klicken zum Wiederherstellen</string>
-    <string name="useGCam">Verwenden der Google Kamera (falls installiert)</string>
+    <string name="useGCam">Verwendung Google Kamera</string>
     <string name="sysCam">System Kamera</string>
     <string name="GCam">Google Kamera</string>
 
@@ -202,7 +202,7 @@
     <string name="appCheckUpdate">Check GrzLog Update</string>
     <string name="available">verfügbar</string>
     <string name="availableUpdate">Update verfügbar</string>
-    <string name="AppAtStartCheckUpdateTxt">Check GrzLog Update bei Start</string>
+    <string name="AppAtStartCheckUpdateTxt">Check Update bei Start</string>
     <string name="upToDate">ist aktuell</string>
     <string name="openBrowserForUpdate">Der Browser öffnet nun\n\nhttps://github.com/grzwolf/GrzLog/tags\n\n fortsetzen?</string>
     <string name="openBrowserAutoUpdate">Der Browser öffnet nun die Webseite</string>
@@ -220,7 +220,7 @@
     <string name="useFilesPicker">Auswahl Video nicht von \'Photos\', besser von \'Dateien\'</string>
     <string name="missingFileAssociation">Keine Datei Verknüpfung vorhanden</string>
     <string name="wwwLink">WWW Link unten einfügen</string>
-    <string name="openLinksInBrowser">Öffnen von Text Links mit Browser</string>
+    <string name="openLinksInBrowser">Öffnen Links mit Browser</string>
     <string name="editExistingLink">Edit Dateianhang</string>
     <string name="location">Mein Standort</string>
     <string name="linkDestroyed">Abbruch, weil Link zu Dateianhang zerstört</string>
@@ -243,7 +243,7 @@
     <string name="useExistingResults">Diese anzeigen?</string>
     <string name="wwwDisabled">WWW Text Verknüpfung ist deaktiviert</string>
     <string name="autoFillSkippedDates">Einfügen übersprungener Tage?</string>
-    <string name="askAutoFillSkippedDates">Nachfragen bei übersprungenen Tagen</string>
+    <string name="askAutoFillSkippedDates">Nachfrage übersprungener Tage</string>
     <string name="askNever">nie fragen</string>
     <string name="askAlways">immer fragen</string>
     <string name="selectNextTen">Auswahl nächste 10 Items</string>

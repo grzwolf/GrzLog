@@ -81,6 +81,7 @@ class HelpActivity : AppCompatActivity() {
         "       About\n" +
         "       Developer contact data\n" +
         "       Help pages\n" +
+        "       Check GrzLog update at start\n" +
         "       Check GrzLog update\n" +
         "       Execute GrzLog update\n" +
         "       Input placement: new at top (like email) or at bottom (like messengers)\n" +
@@ -127,7 +128,14 @@ class HelpActivity : AppCompatActivity() {
         "       share current folder as PDF\n" +
         "       share current folder as RTF\n\n" +
         "f) Updates download from\n" +
-        "   https://github.com/grzwolf/GrzLog/tags\n" +
+        "   https://github.com/grzwolf/GrzLog/tags\n\n" +
+        "g) GrzLog permissions\n" +
+        "   Camera - needed for attachments: photos, videos\n" +
+        "   Internet - needed for app update\n" +
+        "   Location - needed for attachment: location\n" +
+        "   Media - needed for attachments: photos, videos, audio, docs etc.\n" +
+        "   Notifications - needed for attachment: update available\n" +
+        "   Notifications - needed for attachment: reminder\n" +
         "\n"
 
     override fun onStart() {
