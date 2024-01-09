@@ -267,5 +267,6 @@
     <string name="gpsNoFix">Ortungsdienst hat noch keinen Fix.</string>
     <string name="turnGpsOn">Ortungsdienst einschalten</string>
     <string name="twiceDeniedPerm">Berechtigung wurde 2x verweigert, Erlaubnis via: Settings --> Ortungsdienste</string>
+    <string name="checked">"zuletzt:"</string>
 </resources>
 

@@ -57,6 +57,9 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
         if (s == "darkMode") {
             MainActivity.reReadAppFileData = true
         }
+        if (s == "AppAtStartCheckUpdateFlag") {
+            MainActivity.reReadAppFileData = true
+        }
     }
 
     override fun onStart() {
@@ -193,6 +196,7 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
 
         @Suppress("unused")
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
             val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 
@@ -226,6 +230,28 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                 }
                 true
             }
+
+            // show last update check date
+            val startCheckPref = findPreference("AppAtStartCheckUpdateFlag") as SwitchPreferenceCompat?
+            var lastCheck = sharedPref.getString("AppAtStartCheckUpdateDate", "1900-01-01")
+            if ( lastCheck == "1900-01-01" ) {
+                lastCheck = "?"
+            }
+            // resetting last check date allows a fresh startup check after status change
+            startCheckPref!!.setSummary(getString(R.string.checked) + " " + lastCheck)
+            startCheckPref!!.onPreferenceClickListener =
+                Preference.OnPreferenceClickListener {
+                    // reset the last check date
+                    val spe = sharedPref.edit()
+                    spe.putString("AppAtStartCheckUpdateDate", "1900-01-01")
+                    spe.apply()
+                    var lastCheck = sharedPref.getString("AppAtStartCheckUpdateDate", "1900-01-01")
+                    if ( lastCheck == "1900-01-01" ) {
+                        lastCheck = "?"
+                    }
+                    startCheckPref!!.setSummary(getString(R.string.checked) + " " + lastCheck)
+                    true
+                }
 
             // action check app update available
             val updateLinkPref = findPreference("UpdateLink") as Preference?
@@ -381,7 +407,6 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                             val appPath = appContext!!.getExternalFilesDir(null)!!.absolutePath
                             val maxProgressCount = countFiles(File(appPath))
                             // distinguish backup in foreground vs. background
-                            val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
                             if (sharedPref.getBoolean("backupForeground", false)) {
                                 generateBackupProgress(
                                     requireContext(),
@@ -513,7 +538,6 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                         R.string.yes,
                         DialogInterface.OnClickListener { dialog, which ->
                             // clear all shared preferences
-                            val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
                             try {
                                 val spe = sharedPref.edit()
                                 spe.clear()

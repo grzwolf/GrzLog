@@ -268,4 +268,5 @@
     <string name="gpsNoFix">Location service has no fix yet.</string>
     <string name="turnGpsOn">Location service turn on</string>
     <string name="twiceDeniedPerm">Permission was denied twice, re enable via: Settings --> Location</string>
+    <string name="checked">"checked:"</string>
 </resources>
