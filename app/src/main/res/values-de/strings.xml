@@ -41,6 +41,7 @@
     <string name="back">Zurück</string>
     <string name="note">Anmerkung</string>
     <string name="clickHere">Klick hier</string>
+    <string name="clickExecBelow">Klick \'GrzLog Update ausführen\' weiter unten</string>
     <string name="continueQuestion">Fortsetzen ?</string>
     <string name="not_existing">- existiert nicht -</string>
     <string name="Failure">Fehler</string>

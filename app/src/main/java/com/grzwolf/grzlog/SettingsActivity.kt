@@ -151,17 +151,22 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                                 updateLinkPref.setTitle(updateLink)
                                 // check matching download urls for APK files
                                 checkDownloadUrls(context, updateLinkPref, tagVersion)
+                                // leave guide hint
+                                updateCheckPref.setSummary(R.string.clickExecBelow)
                             } else {
                                 updateCheckPref.setTitle(updateCheckTitle + " - " + context.getString(R.string.upToDate))
+                                updateCheckPref.setSummary(R.string.clickHere)
                             }
                         } else {
                             updateCheckPref.setTitle(updateCheckTitle + " - " + context.getString(R.string.errorNoData))
+                            updateCheckPref.setSummary(R.string.clickHere)
                         }
                     }
                 },
                 object : Response.ErrorListener {
                     override fun onErrorResponse(error: VolleyError?) {
                         updateCheckPref.setTitle(updateCheckTitle + " - " + context.getString(R.string.errorWebsite))
+                        updateCheckPref.setSummary(R.string.clickHere)
                     }
                 })
             queue.add(stringRequest)
@@ -256,6 +261,7 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             // action check app update available
             val updateLinkPref = findPreference("UpdateLink") as Preference?
             val checkUpdatePref = findPreference("AppCheckUpdate") as Preference?
+            checkUpdatePref!!.setSummary(R.string.clickHere)
             checkUpdatePref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 // internet connection state
                 if (!isNetworkAvailable(MainActivity.contextMainActivity)){

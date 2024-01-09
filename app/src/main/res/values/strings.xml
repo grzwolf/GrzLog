@@ -41,6 +41,7 @@
     <string name="back">Back</string>
     <string name="note">Note</string>
     <string name="clickHere">Click here</string>
+    <string name="clickExecBelow">Click \'Execute GrzLog update\' below</string>
     <string name="continueQuestion">Continue ?</string>
     <string name="not_existing">- not existing -</string>
     <string name="Failure">Failure</string>
