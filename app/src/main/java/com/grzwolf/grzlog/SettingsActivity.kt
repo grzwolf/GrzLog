@@ -231,6 +231,10 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             val updateLinkPref = findPreference("UpdateLink") as Preference?
             val checkUpdatePref = findPreference("AppCheckUpdate") as Preference?
             checkUpdatePref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                // internet connection state
+                if (!isNetworkAvailable(MainActivity.contextMainActivity)){
+                   Toast.makeText(requireContext(), "Internet error", Toast.LENGTH_LONG).show()
+                }
                 try {
                     updateLinkPref!!.setTitle("")
                     var appVer = getString(R.string.tag_version).substring(1)

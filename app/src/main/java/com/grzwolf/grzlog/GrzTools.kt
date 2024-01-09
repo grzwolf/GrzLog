@@ -16,6 +16,7 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.media.ExifInterface
 import android.media.ThumbnailUtils
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.CountDownTimer
@@ -27,6 +28,7 @@ import android.view.View
 import android.view.Window
 import android.webkit.MimeTypeMap
 import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -933,6 +935,15 @@ fun isUpdateDue(userVersionSplit: Array<String>, latestVersionSplit: Array<Strin
     } catch (ignored: java.lang.Exception) {
     }
     return false
+}
+
+//  internet availability
+fun isNetworkAvailable(context: Context): Boolean {
+    val cm = context.getSystemService(AppCompatActivity.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val netInfo = cm.activeNetworkInfo
+    return if (netInfo != null && netInfo.isConnectedOrConnecting) {
+        true
+    } else false
 }
 
 // a simple HEAD request checks, whether an url exists

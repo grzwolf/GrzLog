@@ -187,13 +187,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             okBox(this, "Note", getString(R.string.partialBackup))
         }
 
-        // internet connection state
-        if (isNetwork(getApplicationContext())){
-            Toast.makeText(getApplicationContext(), "Internet Ok", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(getApplicationContext(), "Internet error", Toast.LENGTH_SHORT).show()
-        }
-
         // at app start check app update availability just once a day
         if (sharedPref.getBoolean("AppAtStartCheckUpdateFlag", false)) {
             // check if today was already checked
@@ -206,8 +199,13 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 val spe = sharedPref.edit()
                 spe.putString("AppAtStartCheckUpdateDate", formatter.format(dateToday))
                 spe.apply()
-                // check for app update
-                checkForAppUpdate()
+                // internet connection state
+                if (isNetworkAvailable(getApplicationContext())){
+                    // check for app update
+                    checkForAppUpdate()
+                } else {
+                    Toast.makeText(getApplicationContext(), "Internet error", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -6213,15 +6211,6 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val spe = sharedPref.edit()
         spe.putInt("notificationNumber", ++notificationNumber)
         spe.apply()
-    }
-
-
-    fun isNetwork(context: Context): Boolean {
-        val cm = context.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        val netInfo = cm.activeNetworkInfo
-        return if (netInfo != null && netInfo.isConnectedOrConnecting) {
-            true
-        } else false
     }
 
     // http request to communicate with GitHub GrzLog release site
