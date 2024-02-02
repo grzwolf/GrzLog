@@ -1144,7 +1144,8 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             charSequences.add(getString(R.string.ToggleLineAsHeader))     // ITEM == 6
         }
         charSequences.add("")                              // ITEM == 7
-        charSequences.add(getString(R.string.RemoveLine))                   // ITEM == 8
+        charSequences.add(getString(R.string.cutToClipboard))              // ITEM == 8
+        charSequences.add(getString(R.string.RemoveLine))                   // ITEM == 9
         val itemsMore = charSequences.toTypedArray()
         builderItemMore?.setItems(
             itemsMore,
@@ -1390,8 +1391,49 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                 }
 
-                // ITEM == 8 'current line delete'
+                // ITEM == 8 'cut line to clipboard'
                 if (which == 8) {
+                    val message = lvMain.arrayList!![itemPosition].title
+                    var youSureBld: AlertDialog.Builder?
+                    youSureBld =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            AlertDialog.Builder(
+                                this@MainActivity,
+                                android.R.style.Theme_Material_Dialog
+                            )
+                        } else {
+                            AlertDialog.Builder(this@MainActivity)
+                        }
+                    youSureBld.setTitle(R.string.cutToClipboard)
+                    youSureBld.setMessage(message)
+                    // 'you sure' dlg OK with quit
+                    youSureBld.setPositiveButton(
+                        R.string.ok,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            // copy to clipboard
+                            shareBody = lvMain.arrayList!![itemPosition].fullTitle
+                            clipboard = shareBody
+                            // clean up
+                            fabPlus.inputAlertText = ""
+                            // select item and let range delete method do its job
+                            lvMain.arrayList!![itemPosition].setSelected(true)
+                            deleteMarkedItems(0)  // type: 0 == delete selected item, type: 1 == delete highlighted search item
+                            // was hidden during input
+                            fabPlus.button!!.show()
+                        })
+                    // 'you sure' dlg CANCEL
+                    youSureBld.setNegativeButton(
+                        R.string.cancel,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
+                        })
+                    val youSureDlg = youSureBld.create()
+                    youSureDlg.setCanceledOnTouchOutside(false)
+                    youSureDlg.show()
+                }
+
+                // ITEM == 9 'current line delete'
+                if (which == 9) {
                     val message = lvMain.arrayList!![itemPosition].title
                     var youSureBld: AlertDialog.Builder?
                     youSureBld =
