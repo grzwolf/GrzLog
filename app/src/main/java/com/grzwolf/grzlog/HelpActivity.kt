@@ -52,6 +52,7 @@ class HelpActivity : AppCompatActivity() {
         "       Select items dialog\n" +
         "       Line as lockscreen reminder\n" +
         "       Toggle line as header\n" +
+        "       Cut to clipboard\n" +
         "       Delete line\n" +
         "   !revert latest change via Menu bar Undo!\n\n" +
         "b) tap item somewhere   -> show item content\n\n" +
