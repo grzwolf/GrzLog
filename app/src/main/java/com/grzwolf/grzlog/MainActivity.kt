@@ -19,7 +19,6 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaScannerConnection
 import android.media.RingtoneManager
 import android.media.ThumbnailUtils
-import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.*
 import android.print.PrintAttributes
@@ -622,6 +621,85 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             spe.apply()
         }
         super.onResume()
+
+        // if app was previously closed, an intent comes here
+        handleSharedIntent(getIntent())
+    }
+
+    // if app is in forground or doesn't go thru onResume: handle event incoming content 'share with'
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        handleSharedIntent(intent)
+    }
+
+    // handle event incoming content 'share with'
+    fun handleSharedIntent(intent: Intent?) {
+        // limited handling
+        if (intent?.action != Intent.ACTION_SEND) {
+            return
+        }
+        // text only
+        if ("text/plain" == intent.type) {
+            intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
+                lvMain.editLongPress = false
+                lvMain.selectedText = ""
+                lvMain.selectedRow = 0
+                lvMain.selectedRowNoSpacers = 0
+                fabPlus.inputAlertText = it
+                fabPlus.editInsertLine = false
+                fabPlusOnClick(null, null, -1, -1, false, null)
+            }
+        }
+        // images and if so text
+        if (intent.type?.startsWith("image/") == true) {
+            (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
+                try {
+                    // WA can send images and text simultaneously
+                    var imgText = ""
+                    intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
+                        imgText = it
+                    }
+                    // image receive handling
+                    var uriOri = it
+                    var uri = uriOri
+                    var imageUriString: String? = uriOri.toString()
+                    if (imageUriString!!.contains("com.google.android.apps.photos.contentprovider", ignoreCase = true)) {
+                        // GooglePhoto needs extra care
+                        val imagepath = FileUtils.getPath(this, uri!!)
+                        val imagefile = File(imagepath.toString())
+                        uri = Uri.fromFile(imagefile)
+                        imageUriString = uri.toString()
+                    } else {
+                        // image drom documents & content
+                        if (imageUriString.startsWith("content://")) {
+                            imageUriString = getPath(this, uri!!)
+                        }
+                    }
+                    if (uri != null) {
+                        // same handling as click on fabPlusButton with attachment
+                        fabPlus.pickAttachment = true
+                        fabPlus.attachmentUri = imageUriString
+                        fabPlus.attachmentUriUri = uriOri
+                        fabPlus.attachmentName = getString(R.string.image)
+                        fabPlus.inputAlertTextSelStart = 0          // insert position for attachment link
+                        lvMain.editLongPress = false
+                        lvMain.selectedText = ""
+                        lvMain.selectedRow = 0
+                        lvMain.selectedRowNoSpacers = 0
+                        fabPlus.inputAlertText = " " + imgText
+                        fabPlus.editInsertLine = false
+                        fabPlusOnClick(null, null, -1, -1, false, null)
+                    }
+                } catch (e: Exception) {
+                    centeredToast(this, e.message.toString(), 3000)
+                }
+            }
+        }
+        // clean up intent
+        intent?.replaceExtras(Bundle())
+        intent?.setAction("")
+        intent?.setData(null)
+        intent?.setFlags(0)
     }
 
     // listener for the status of requested permissions
