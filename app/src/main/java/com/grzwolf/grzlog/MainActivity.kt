@@ -21,6 +21,7 @@ import android.media.RingtoneManager
 import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.*
+import android.os.StrictMode.VmPolicy
 import android.print.PrintAttributes
 import android.print.PrintAttributes.Resolution
 import android.print.pdf.PrintedPdfDocument
@@ -49,6 +50,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.BlendModeColorFilterCompat
 import androidx.core.graphics.BlendModeCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.preference.PreferenceManager
 import com.android.volley.Request
 import com.android.volley.Response
@@ -92,7 +97,9 @@ val VIDEO_EXT = "mp4.3gp.webm.mkv"
 val ERROR_EXT = "file-error"
 
 // https://stackoverflow.com/questions/31364540/how-to-add-section-header-in-listview-list-item
-class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
+class MainActivity : AppCompatActivity(),
+    ActivityCompat.OnRequestPermissionsResultCallback,
+    LifecycleObserver {
 
     // Huawei launcher does not show lockscreen notifications generated in advance (though AOSP does), therefore build a list and show it at wakeup/screen on
     var lockScreenMessageList: MutableList<String> = ArrayList()
@@ -178,12 +185,24 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         window.setBackgroundDrawable(null) // black screen at start or returning from settings
         setContentView(R.layout.activity_main)
 
-        // check for a broken backup: happens, if silent backup is aborted by OS or user
-        val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+//        // if logging “A resource failed to call close.” is needed: https://wh0.github.io/2020/08/12/closeguard.html
+//        StrictMode.setVmPolicy(VmPolicy.Builder(StrictMode.getVmPolicy())
+//            .detectLeakedClosableObjects()
+//            .build())
+
+        // life cycle observer
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+
+        // application name is needed in many places
         appName = this.applicationInfo.loadLabel(this.packageManager).toString()
-        var file = File(downloadDir, "$appName.zip" + "_part")
-        if (file.exists()) {
-            okBox(this, "Note", getString(R.string.partialBackup))
+
+        // check for a broken backup: happens, if silent backup was previously aborted by OS or user
+        if (!backupOngoing) {
+            val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            var file = File(downloadDir, "$appName.zip" + "_part")
+            if (file.exists()) {
+                okBox(this, "Note", getString(R.string.partialBackup))
+            }
         }
 
         // at app start check app update availability just once a day
@@ -624,6 +643,16 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         // if app was previously closed, an intent comes here
         handleSharedIntent(getIntent())
+    }
+
+    // life cycle observer knows, if app is in forgeground or not
+    @OnLifecycleEvent(Lifecycle.Event.ON_START)
+    fun onAppInForeground () {
+        appIsInForeground = true
+    }
+    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+    fun onAppInBackground() {
+        appIsInForeground = false
     }
 
     // if app is in forground or doesn't go thru onResume: handle event incoming content 'share with'
@@ -6441,6 +6470,9 @@ class MainActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         // backup ongoing
         @JvmField
         var backupOngoing = false
+        // app visibility status
+        @JvmField
+        var appIsInForeground = false
 
         // make context accessible from everywhere
         lateinit var contextMainActivity: MainActivity

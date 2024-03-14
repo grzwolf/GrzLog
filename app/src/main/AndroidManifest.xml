@@ -12,6 +12,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- EndlessService -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <!-- API 33 -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
@@ -50,6 +55,15 @@
         android:roundIcon="@mipmap/grz_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <!-- EndlessService -->
+        <service
+            android:name=".EndlessService"
+            android:enabled="true"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+        </service>
+
         <activity
             android:name="com.grzwolf.grzlog.SettingsActivity"
             android:label="@string/title_activity_settings"

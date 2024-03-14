@@ -146,6 +146,10 @@ fun createZipArchive(
 ): Boolean {
     val BUFFER = 2048
     try {
+        var permissionGranted = false
+        if (androidx.core.app.ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            permissionGranted = true
+        }
         var origin: BufferedInputStream? = null
         // need to make sure, a real backup is not interrupted
         val file = File("$outFolder/$zipName" + "_part")
@@ -169,7 +173,7 @@ fun createZipArchive(
                     // set progress via nm in notification bar
                     if (nm != null) {
                         with(nm) {
-                            if (androidx.core.app.ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                            if (permissionGranted) {
                                 (context as Activity).runOnUiThread(Runnable {
                                     n!!.setContentText(i.toString() + "(" + maxProgress.toString() + ")")
                                        .setProgress(maxProgress, i, false)
@@ -190,6 +194,7 @@ fun createZipArchive(
                         out.write(data, 0, count)
                         out.flush()
                     }
+                    fis.close()
                 }
             } else {
                 val fis = FileInputStream(f)
@@ -202,6 +207,7 @@ fun createZipArchive(
                     out.write(data, 0, count)
                     out.flush()
                 }
+                fis.close()
             }
         }
         origin!!.close()

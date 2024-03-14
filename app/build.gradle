@@ -12,7 +12,7 @@ android {
 
         // the one & only places to change the app version name and code version
         versionCode 1       // playstore relevant - increase it to prevent a downgrade
-        versionName "1.1.8" // user relevant
+        versionName "1.1.9" // user relevant
 
         //
         def buildTime = new Date()
@@ -96,6 +96,8 @@ dependencies {
     implementation 'com.google.android.gms:play-services:12.0.1'
     // in app update from GitHub
     implementation 'com.android.volley:volley:1.2.1'
+    // app life cycle observer
+    implementation("androidx.lifecycle:lifecycle-process:2.7.0")
 }
 repositories {
     mavenCentral()

@@ -425,13 +425,14 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                                 )
                             } else {
                                 if (!MainActivity.backupOngoing) {
-                                    generateBackupSilent(
-                                        requireContext(),
-                                        appPath,
-                                        downloadDir,
-                                        "$appName.zip",
-                                        maxProgressCount
-                                    )
+                                    // lame parameter transfer to EndlessService
+                                    gBScontext = requireContext()
+                                    gBSsrcFolder = appPath
+                                    gBSoutFolder = downloadDir
+                                    gBSzipName = "$appName.zip"
+                                    gBSmaxProgress = maxProgressCount
+                                    // start EndlessService, which prevents interrupting the backup
+                                    actionOnService(requireContext(), EndlessService.Companion.Actions.START)
                                 } else {
                                     centeredToast(MainActivity.contextMainActivity, "GrzLog silent backup ongoing", 3000)
                                 }
@@ -700,6 +701,40 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             }
         }
 
+        // start backup in an endless service
+        private fun actionOnService(context: Context, action: EndlessService.Companion.Actions) {
+            var state = EndlessService.Companion.getServiceState(context)
+            // stop service
+            if (state == EndlessService.Companion.ServiceState.STARTED && action == EndlessService.Companion.Actions.STOP) {
+                Intent(context, EndlessService::class.java).also {
+                    it.action = action.name
+                    context.stopService(it)
+                }
+                return
+            }
+            // start service
+            Intent(context, EndlessService::class.java).also {
+                it.action = action.name
+                context.startForegroundService(it)
+            }
+        }
+        // lame parametr transfer to helper for EndlessService
+        lateinit var gBScontext: Context
+        lateinit var gBSsrcFolder: String
+        lateinit var gBSoutFolder: String
+        lateinit var gBSzipName: String
+        var gBSmaxProgress: Int = 0
+        // helper for EndlessService to run backup silently
+        fun generateBackupSilent() {
+            generateBackupSilent(
+                gBScontext,
+                gBSsrcFolder,
+                gBSoutFolder,
+                gBSzipName,
+                gBSmaxProgress
+            )
+        }
+
         // run backup silently
         fun generateBackupSilent(context: Context,
                                  srcFolder: String?,
@@ -747,22 +782,40 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     MainActivity.backupOngoing = false
                     // jump back to UI
                     (context as Activity).runOnUiThread(Runnable {
+                        // stop endless service
+                        actionOnService(context, EndlessService.Companion.Actions.STOP)
+                        // finalize notification
                         if (success) {
                             notification.setContentTitle(context.getString(R.string.grzlog_silent_backup_success))
                                         .setContentText("")
                                         .setProgress(maxProgress, maxProgress, false)
-                            centeredToast(MainActivity.contextMainActivity, context.getString(R.string.grzlog_silent_backup_success), 3000)
+                            if (MainActivity.appIsInForeground) {
+                                centeredToast(MainActivity.contextMainActivity, context.getString(R.string.grzlog_silent_backup_success), 3000)
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.grzlog_silent_backup_success), Toast.LENGTH_LONG)
+                                    .show()
+                            }
                         } else {
                             notification.setContentTitle(context.getString(R.string.grzlog_backup_error))
                             notification.setContentText(context.getString(R.string.something_went_wrong))
-                            centeredToast(MainActivity.contextMainActivity, context.getString(R.string.grzlog_backup_error), 10000)
+                            if (MainActivity.appIsInForeground) {
+                                centeredToast(MainActivity.contextMainActivity, context.getString(R.string.grzlog_backup_error), 10000)
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.grzlog_backup_error), Toast.LENGTH_LONG)
+                                    .show()
+                            }
                         }
                         notificationManager.notify(1, notification.build())
                     })
                 }.start()
             } catch (e: Exception) {
                 MainActivity.backupOngoing = false
-                centeredToast(MainActivity.contextMainActivity, "GrzLog backup error: " + e.message.toString(), 3000)
+                if (MainActivity.appIsInForeground) {
+                    centeredToast(MainActivity.contextMainActivity, "GrzLog backup error: " + e.message.toString(), 3000)
+                } else {
+                    Toast.makeText(context, "GrzLog backup error: " + e.message.toString(), Toast.LENGTH_LONG)
+                        .show()
+                }
             }
         }
 
