@@ -14,8 +14,10 @@ import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.Settings
 import android.util.Log
 import android.view.MenuItem
 import android.widget.Toast
@@ -37,8 +39,6 @@ import com.grzwolf.grzlog.FileUtils.Companion.getPath
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.Date
 import java.util.regex.Pattern
 import java.util.zip.ZipFile
@@ -285,53 +285,57 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             // action execute app update: 1) APK file   2) APK Website   3) GrzLog website on GitHub
             val execUpdatePref = findPreference("ExecUpdate") as Preference?
             execUpdatePref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                // if an update was found, use one of the real update links
-                var autoUpdateLink = updateLinkPref!!.title.toString()
-                var autoUpdateFile = updateLinkPref!!.summary.toString()
-                if (autoUpdateFile!!.length > 0 || autoUpdateLink!!.length > 0) {
+                // if an update was found, use one the real update file
+                var autoUpdateLink = updateLinkPref!!.summary.toString()
+                var autoUpdateFile = autoUpdateLink.substringAfterLast("/")
+                if (autoUpdateLink!!.length > 0) {
                     // an APK file for download is available
-                    if (autoUpdateFile!!.length > 0) {
-                        // ask for using browser
-                        decisionBox(
-                            requireContext(),
-                            DECISION.YESNO,
-                            getString(R.string.note),
-                            getString(R.string.openBrowserAutoFileUpdate) + "\n\n" + autoUpdateFile!!,
-                            {
-                                // provide 'how to update this app'
-                                decisionBox(
-                                    requireContext(),
-                                    DECISION.YESNO,
-                                    getString(R.string.InstalledNow),
-                                    getString(R.string.autoFileUpdate),
-                                    {
-                                        var uri = Uri.parse(autoUpdateFile)
-                                        val builder = CustomTabsIntent.Builder()
-                                        val customTabsIntent = builder.build()
-                                        customTabsIntent.launchUrl(requireContext(), uri)
-                                    },
-                                    null
-                                )
-                            },
-                            null
-                        )
-                    } else {
-                        if (autoUpdateLink!!.length > 0) {
-                            // a website for APK download is available
+                    var granted = context?.getPackageManager()?.canRequestPackageInstalls()
+                    if (granted != null) {
+                        if (!granted) {
+                            // ask for permission
+                            startActivityForResult(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).setData(Uri.parse(String.format("package:%s", context?.getPackageName()))), 1234)
+                        } else {
+                            // ask for exec update
+                            decisionBox(
+                                requireContext(),
+                                DECISION.OKCANCEL,
+                                getString(R.string.note),
+                                getString(R.string.continue_with_app_update),
+                                {
+                                    var downloadController = com.grzwolf.grzlog.DownloadController(requireContext(), autoUpdateLink, autoUpdateFile)
+                                    downloadController.enqueueDownload()
+                                },
+                                null
+                            )
+                        }
+                    }
+                } else {
+                    // ask for update checking vs. manual update
+                    decisionBox(
+                        requireContext(),
+                        DECISION.YESNO,
+                        getString(R.string.note),
+                        getString(R.string.yes_checks_for_updates_no_manual_update),
+                        {
+                            checkUpdatePref!!.performClick()
+                        },
+                        {
+                            // ask for using browser to check the GH website containing GrzLog releases
                             decisionBox(
                                 requireContext(),
                                 DECISION.YESNO,
                                 getString(R.string.note),
-                                getString(R.string.openBrowserAutoUpdate) + "\n\n" + autoUpdateLink!!,
+                                getString(R.string.openBrowserForUpdate),
                                 {
                                     // provide 'how to update this app'
                                     decisionBox(
                                         requireContext(),
                                         DECISION.YESNO,
                                         getString(R.string.InstalledAPK) + " " + getString(R.string.tag_version),
-                                        getString(R.string.autoUpdate),
+                                        getString(R.string.howToUpdate),
                                         {
-                                            var uri = Uri.parse(autoUpdateLink)
+                                            var uri = Uri.parse(getString(R.string.githubGrzLog))
                                             val builder = CustomTabsIntent.Builder()
                                             val customTabsIntent = builder.build()
                                             customTabsIntent.launchUrl(requireContext(), uri)
@@ -342,35 +346,12 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                                 null
                             )
                         }
-                    }
-                } else {
-                    // ask for using browser to check the website containing GrzLog releases
-                    decisionBox(
-                        requireContext(),
-                        DECISION.YESNO,
-                        getString(R.string.note),
-                        getString(R.string.openBrowserForUpdate),
-                        {
-                            // provide 'how to update this app'
-                            decisionBox(
-                                requireContext(),
-                                DECISION.YESNO,
-                                getString(R.string.InstalledAPK) + " " + getString(R.string.tag_version),
-                                getString(R.string.howToUpdate),
-                                {
-                                    var uri = Uri.parse(getString(R.string.githubGrzLog))
-                                    val builder = CustomTabsIntent.Builder()
-                                    val customTabsIntent = builder.build()
-                                    customTabsIntent.launchUrl(requireContext(), uri)
-                                },
-                                null
-                            )
-                        },
-                        null
                     )
                 }
                 true
             }
+            //
+            checkUpdatePref!!.performClick()
 
             // tricky fake buttons in preferences: https://stackoverflow.com/questions/2697233/how-to-add-a-button-to-preferencescreen
             // action after backup

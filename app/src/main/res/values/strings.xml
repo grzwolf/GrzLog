@@ -270,4 +270,6 @@
     <string name="turnGpsOn">Location service turn on</string>
     <string name="twiceDeniedPerm">Permission was denied twice, re enable via: Settings --> Location</string>
     <string name="checked">"checked:"</string>
+    <string name="continue_with_app_update">Continue with app update?</string>
+    <string name="yes_checks_for_updates_no_manual_update">YES: checks for updates\n\nNO: manual update</string>
 </resources>

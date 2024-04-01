@@ -11,8 +11,8 @@ android {
         targetSdkVersion 34
 
         // the one & only places to change the app version name and code version
-        versionCode 1       // playstore relevant - increase it to prevent a downgrade
-        versionName "1.1.9" // user relevant
+        versionCode 1        // playstore relevant - increase it to prevent a downgrade
+        versionName "1.1.10" // user relevant
 
         //
         def buildTime = new Date()

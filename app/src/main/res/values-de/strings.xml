@@ -269,5 +269,7 @@
     <string name="turnGpsOn">Ortungsdienst einschalten</string>
     <string name="twiceDeniedPerm">Berechtigung wurde 2x verweigert, Erlaubnis via: Settings --> Ortungsdienste</string>
     <string name="checked">"zuletzt:"</string>
+    <string name="continue_with_app_update">Weiter mit App Update?</string>
+    <string name="yes_checks_for_updates_no_manual_update">JA: Check Updates\n\nNEIN: Manuelles Update</string>
 </resources>
 
