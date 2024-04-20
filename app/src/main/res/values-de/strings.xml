@@ -135,7 +135,7 @@
     <string name="EditRow">Edit Zeile</string>
     <string name="undo">Rückgängig</string>
     <string name="alienFile">Bitte \'Import Daten aus einer Dateiliste\' auführen.</string>
-    <string name="gcamhint">GCam Bild muss nach Aufnahme aus Galerie selektiert werden.</string>
+    <string name="gcamhint">GCam Bild via \'Teilen\' an GrzLog senden.</string>
     <string name="AppMissing">Keine Applikation verfügbar</string>
     <string name="JumpTo">Springe an ...</string>
     <string name="top">Anfang</string>

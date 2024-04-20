@@ -111,7 +111,7 @@
         <!-- android:grantUriPermissions unknown attribute BUT exception if missing -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.provider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

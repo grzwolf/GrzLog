@@ -655,7 +655,7 @@ class MainActivity : AppCompatActivity(),
         appIsInForeground = false
     }
 
-    // if app is in forground or doesn't go thru onResume: handle event incoming content 'share with'
+    // if app is in foreground or doesn't go thru onResume: handle event incoming content 'share with'
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         handleSharedIntent(intent)
@@ -667,6 +667,15 @@ class MainActivity : AppCompatActivity(),
         if (intent?.action != Intent.ACTION_SEND) {
             return
         }
+
+        // attachment picker dialog might be open after PICK.CAPTURE
+        attachmentPickerDialog?.let {
+            if (it.isShowing) {
+                ReturnToDialogData.reset()
+                attachmentPickerDialog?.let { it.cancel() }
+            }
+        }
+
         // text only
         if ("text/plain" == intent.type) {
             intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
@@ -699,7 +708,7 @@ class MainActivity : AppCompatActivity(),
                         uri = Uri.fromFile(imagefile)
                         imageUriString = uri.toString()
                     } else {
-                        // image drom documents & content
+                        // image from documents & content
                         if (imageUriString.startsWith("content://")) {
                             imageUriString = getPath(this, uri!!)
                         }
@@ -4460,8 +4469,8 @@ class MainActivity : AppCompatActivity(),
             DialogInterface.OnClickListener { dialog, which ->
                 dialog.cancel()
             })
-        val pickerDialog = pickerBuilder.create()
-        val listView = pickerDialog.listView
+        pickerBuilder.create()?.let {attachmentPickerDialog = it}
+        val listView = attachmentPickerDialog!!.listView
         listView.divider = ColorDrawable(Color.GRAY)
         listView.dividerHeight = 2
         // certain items shall be disabled, depending on the flag 'attachmentAllowed'
@@ -4485,15 +4494,17 @@ class MainActivity : AppCompatActivity(),
                 }
                 override fun onChildViewRemoved(view: View?, view1: View?) {}
             })
-        pickerDialog.show()
+        attachmentPickerDialog?.let { it.show() }
         listView.setScrollbarFadingEnabled(false);
-        pickerDialog.setCanceledOnTouchOutside(false)
+        attachmentPickerDialog?.let { it.setCanceledOnTouchOutside(false) }
         // detect cancel: Android back button OR editLinkBuilder NegativeButton
-        pickerDialog.setOnCancelListener { dialog ->
-            // reset static memorize the return data
-            ReturnToDialogData.reset()
-            // back to main input
-            fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+        attachmentPickerDialog?.let {
+            it.setOnCancelListener { dialog ->
+                // reset static memorize the return data
+                ReturnToDialogData.reset()
+                // back to main input
+                fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+            }
         }
     }
 
@@ -4525,7 +4536,6 @@ class MainActivity : AppCompatActivity(),
                 fabPlus.attachmentUri = FileUtils.getPath(this, capturedPhotoUri!!)
                 fabPlus.attachmentName = getString(R.string.capture)
             } else {
-// !! not going here after GCam usage !!
                 startFilePickerDialog(
                     true,
                     ReturnToDialogData.linkText,
@@ -4826,7 +4836,7 @@ class MainActivity : AppCompatActivity(),
             Toast.makeText(this@MainActivity, R.string.AppMissing, Toast.LENGTH_SHORT).show()
             return uri
         }
-        // create the file, where the photo should go
+        // create the file, where the photo should go: the ONLY use case is AOSP camera
         try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                 val photoFile = createImageFile()
@@ -4846,7 +4856,8 @@ class MainActivity : AppCompatActivity(),
         }
         if (uri != null) {
             // Intent captures image via camera app + stores image in gallery
-            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, uri) // <-- stores image in gallery
+            takePictureIntent.putExtra("return-data", true) // needed at all ??
+            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, uri)   // image to gallery
             startActivityForResult(takePictureIntent, PICK.CAPTURE)
         } else {
             // in failure case, jump back to fabPlus dialog
@@ -4856,11 +4867,25 @@ class MainActivity : AppCompatActivity(),
         return uri
     }
 
-    // "com.google.android.GoogleCamera" does not return an image after capture, the captured image needs to be selected from Gallery
+    //
+    // "com.google.android.GoogleCamera", "org.lineageos.aperture" do not directly return an image
+    // --> share the captured image from cam UI to GrzLog
     // AOSP camera will return an image to the calling app
+    //
     // >= Android 11 camera apps are not added during ACTION_IMAGE_CAPTURE scanning
-    // access GCam camera
-    val CAMERA_SPECIFIC_APPS = arrayOf("com.google.android.GoogleCamera")
+    // list of possible camera app candidates
+    val CAMERA_SPECIFIC_APPS = arrayOf(
+        "com.google.android.GoogleCamera",
+        "org.lineageos.aperture",
+        "best.camera",
+        "net.sourceforge.opencamera",
+        "tools.photo.hd.camera",
+        "com.simplemobiletools.camera",
+        "com.flipcamera",
+        "org.witness.sscphase1",
+        "com.lun.chin.aicamera",
+        "com.lightbox.android.camera",
+    )
     private fun getCameraSpecificAppsInfo(context: Context): List<ResolveInfo> {
         val resolveInfo: MutableList<ResolveInfo> = ArrayList()
         val pm = context.packageManager
@@ -4883,28 +4908,37 @@ class MainActivity : AppCompatActivity(),
             var camPackageName = ""
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
             val useGoogleCamera = sharedPref.getBoolean("useGoogleCamera", false)
-            if (useGoogleCamera) {
-                val packageManager = this@MainActivity.packageManager
-                val intentTmp = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                val listCam = packageManager.queryIntentActivities(intentTmp, 0)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    // >= Android 11 camera apps are not added during ACTION_IMAGE_CAPTURE scanning
-                    listCam.addAll(getCameraSpecificAppsInfo(this@MainActivity))
-                }
-                for (res in listCam) {
+            val packageManager = this@MainActivity.packageManager
+            val intentTmp = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            var listCam = packageManager.queryIntentActivities(intentTmp, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // >= Android 11 camera apps are not added during ACTION_IMAGE_CAPTURE scanning
+                listCam.addAll(getCameraSpecificAppsInfo(this@MainActivity))
+            }
+            // loop cam candidates and pick GCam if selected
+            for (res in listCam) {
+                if (useGoogleCamera) {
                     if (res.activityInfo.packageName == "com.google.android.GoogleCamera") {
                         camPackageName = res.activityInfo.packageName
                         break
                     }
+                } else {
+                    if (res.activityInfo.packageName != "com.google.android.GoogleCamera") {
+                        camPackageName = res.activityInfo.packageName
+                    }
                 }
             }
-            intentRet = if (camPackageName.isEmpty()) {
-                // AOSP camera will return an image to the calling app
-                Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            } else {
-                // "com.google.android.GoogleCamera" does not return an image after capture, the captured image needs to be selected from Gallery
-                packageManager.getLaunchIntentForPackage(camPackageName)
-            }
+            // build camera activity intent
+            intentRet =
+                // fallback to AOSP camera, !! it doesn't work if its package name is used !!
+                if (camPackageName.isEmpty() || camPackageName.contains("com.android.camera")) {
+                    // AOSP cam returns an image to the calling app
+                    Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                } else {
+                    // GCam, Aperture do not directly return an image after capture
+                    packageManager.getLaunchIntentForPackage(camPackageName)
+                }
+
             return intentRet
         }
 
@@ -6459,6 +6493,7 @@ class MainActivity : AppCompatActivity(),
         var returningFromRestore = false
         // return a filename from app gallery picker
         @JvmField
+        var attachmentPickerDialog: AlertDialog? = null
         var folderMoreDialog: AlertDialog? = null
         var returningFromAppGallery = false
         var showFolderMoreDialog = false
