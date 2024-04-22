@@ -244,7 +244,7 @@ class GalleryActivity : AppCompatActivity() {
                     centeredToast(this, getString(R.string.nothingFound), 3000)
                 } else {
                     // render search results in its own dialog
-                    MainActivity.jumpToSearchHitInFolderDialog(this, searchHitList, -1)
+                    MainActivity.jumpToSearchHitInFolderDialog(this, searchHitList, -1, searchText)
                 }
             }
         }

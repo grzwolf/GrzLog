@@ -240,7 +240,7 @@
     <string name="jump">Springen</string>
     <string name="searchPhrase">Suchbegriff eingeben</string>
     <string name="searchResultsAvailable">Suchresultate verfügbar</string>
-    <string name="useExistingResults">Diese anzeigen?</string>
+    <string name="useExistingResults">Resultate für:</string>
     <string name="wwwDisabled">WWW Text Verknüpfung ist deaktiviert</string>
     <string name="autoFillSkippedDates">Einfügen übersprungener Tage?</string>
     <string name="askAutoFillSkippedDates">Nachfrage übersprungener Tage</string>
@@ -271,5 +271,6 @@
     <string name="checked">"zuletzt:"</string>
     <string name="continue_with_app_update">Weiter mit App Update?</string>
     <string name="yes_checks_for_updates_no_manual_update">JA: Check Updates\n\nNEIN: Manuelles Update</string>
+    <string name="where_to_search">Wo soll gesucht werden?</string>
 </resources>
 

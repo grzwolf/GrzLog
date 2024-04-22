@@ -50,6 +50,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.BlendModeColorFilterCompat
 import androidx.core.graphics.BlendModeCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -114,10 +115,11 @@ class MainActivity : AppCompatActivity(),
     var capturedPhotoUri: Uri? = null                     // needs to be global, bc there is no way a camara app returns uri in onActivityResult
 
     // fabBack is used to switch back to the previous folder, FabBackTag provides data for such functionality
-    class FabBackTag(folderName: String, searchHitListGlobal: MutableList<GlobalSearchHit>, listNdx: Int) {
+    class FabBackTag(folderName: String, searchHitListGlobal: MutableList<GlobalSearchHit>, listNdx: Int, searchPhrase: String) {
         var folderName: String = folderName
         var searchHitListGlobal: MutableList<GlobalSearchHit> = searchHitListGlobal
         var listNdx: Int = listNdx
+        var searchPhrase: String = searchPhrase
     }
 
     // different attachments
@@ -265,7 +267,7 @@ class MainActivity : AppCompatActivity(),
         lvMain.showOrder = if (sharedPref.getBoolean("newAtBottom", false)) SHOW_ORDER.BOTTOM else SHOW_ORDER.TOP
         fabPlus.button = findViewById(R.id.fabPlus)
         fabBack = findViewById(R.id.fabBack)
-        fabBack!!.tag = FabBackTag("", ArrayList(), -1)
+        fabBack!!.tag = FabBackTag("", ArrayList(), -1, "")
 
         // prevents onPause / onResume to make a text bak: reset flag in onCreate
         returningFromRestore = false
@@ -432,17 +434,17 @@ class MainActivity : AppCompatActivity(),
                         }
                         // plus jump back to the search hit list dialog
                         if (fbt.searchHitListGlobal.size > 0) {
-                            jumpToSearchHitInFolderDialog(this, fbt.searchHitListGlobal, fbt.listNdx)
+                            jumpToSearchHitInFolderDialog(this, fbt.searchHitListGlobal, fbt.listNdx, fbt.searchPhrase)
                         }
                         // keep list in back button tag
-                        fabBack!!.tag = FabBackTag("", fbt.searchHitListGlobal, -1)
+                        fabBack!!.tag = FabBackTag("", fbt.searchHitListGlobal, -1, fbt.searchPhrase)
                     }
                 },
                 {
                     if (fabBack != null) {
                         fabBack!!.visibility = INVISIBLE
                         // keep list in back button tag
-                        fabBack!!.tag = FabBackTag("", fbt.searchHitListGlobal, -1)
+                        fabBack!!.tag = FabBackTag("", fbt.searchHitListGlobal, -1, fbt.searchPhrase)
                     }
                 }
             )
@@ -1017,7 +1019,7 @@ class MainActivity : AppCompatActivity(),
                                     if (fabBack != null) {
                                         val dsFolder = ds!!.namesSection[ds!!.selectedSection]
                                         val fbtOld = fabBack!!.tag as FabBackTag
-                                        val fbt = FabBackTag(dsFolder, fbtOld.searchHitListGlobal, -1)
+                                        val fbt = FabBackTag(dsFolder, fbtOld.searchHitListGlobal, -1, fbtOld.searchPhrase)
                                         fabBack!!.tag = fbt
                                         fabBack!!.visibility = VISIBLE
                                     }
@@ -1121,7 +1123,7 @@ class MainActivity : AppCompatActivity(),
                                         if (fabBack != null) {
                                             val dsFolder = ds!!.namesSection[ds!!.selectedSection]
                                             val fbtOld = fabBack!!.tag as FabBackTag
-                                            val fbt = FabBackTag(dsFolder, fbtOld.searchHitListGlobal, -1)
+                                            val fbt = FabBackTag(dsFolder, fbtOld.searchHitListGlobal, -1, fbtOld.searchPhrase)
                                             fabBack!!.tag = fbt
                                             fabBack!!.visibility = VISIBLE
                                         }
@@ -2908,19 +2910,22 @@ class MainActivity : AppCompatActivity(),
         menuInflater.inflate(R.menu.menu_main, menu)
         // needed to work in conjunction with onResume
         appMenu = menu
-        // hide menu items
+        // hide all other menu items
         showMenuItems(false)
-
-        // handle Search Icon click action in App-Menu-Toolbar
-        val myActionMenuItem = menu.findItem(R.id.action_search)
-        myActionMenuItem.expandActionView()
-        searchView = myActionMenuItem.actionView as SearchView?
+        // handle action_search_view click in App-Menu-Toolbar
+        val searchMenuItem = menu.findItem(R.id.action_search_view)
+        searchMenuItem.expandActionView()
+        searchView = searchMenuItem.actionView as SearchView?
+        // hide action_search_view menu item
+        searchMenuItem.isVisible = false
+        // hide view
+        searchView!!.isVisible = false
         // on get focus
         searchView!!.setOnQueryTextFocusChangeListener { view, hasFocus ->
             if (hasFocus) {
                 // clear any listview selection
                 lvMain.unselectSelections()
-                // starting a search shall quit the auto menu handler: aka search hides other menu items
+                // starting a search shall quit the '10s auto clear' menu handler: aka search hides other menu items
                 menuSearchVisible = true
                 mainMenuHandler.removeCallbacksAndMessages(null)
                 // let kbd popup
@@ -2975,6 +2980,9 @@ class MainActivity : AppCompatActivity(),
             fabPlus.button!!.show()
             // hide keyboard
             hideKeyboard()
+            // hide search view icon
+            var searchviewMenuItem = appMenu!!.findItem(R.id.action_search_view)
+            searchviewMenuItem!!.isVisible = false
             false
         }
         // search action begins
@@ -3035,7 +3043,7 @@ class MainActivity : AppCompatActivity(),
             )
             return
         }
-        // save query globally for for later use
+        // save query phrase for later use
         searchViewQuery = query
         // adapter refresh
         lvMain.adapter!!.notifyDataSetChanged()
@@ -3052,7 +3060,7 @@ class MainActivity : AppCompatActivity(),
             lvMain.searchNdx = lvMain.searchHitListFolder.size
             onOptionsItemSelected(itemUp)
         }
-        // quit search
+        // quit folder search
         searchView!!.onActionViewCollapsed()
         // keep search query in memory
         searchView!!.setQuery(query, false)
@@ -3128,6 +3136,58 @@ class MainActivity : AppCompatActivity(),
                 }, 10000)
             }
             return true
+        }
+        // SEARCH: tap icon action_search, it's a proxy for search actions local vs. global
+        if (id == R.id.action_search) {
+            // stop  menu '10s auto clear' mechanism
+            menuItemsVisible = false
+            mainMenuHandler.removeCallbacksAndMessages(null)
+            // two search options (current folder, GrzLog) + cancel
+            twoChoicesDialog(this,
+                "Option",
+                getString(R.string.where_to_search),
+                "'" + ds!!.namesSection[ds!!.selectedSection] + "'",
+                "GrzLog",
+                { // runner CANCEL
+                    // simply return to main activity
+                    showMenuItems(false)
+                    searchView!!.setQuery(searchViewQuery, false)
+                    searchViewQuery = ""
+                    title = ds!!.namesSection[ds!!.selectedSection]
+                    fabPlus.button!!.show()
+                },
+                { // runner current folder search
+                    // show the 'current folder' search view
+                    onPrepareOptionsMenu(appMenu)
+                    searchView!!.isIconified = false
+                    var searchMenuItem = appMenu!!.findItem(R.id.action_search_view)
+                    searchMenuItem.expandActionView()
+                    searchMenuItem.isVisible = true
+                    searchView!!.isVisible = true
+                    // hide loupe icon
+                    var loupeMenuItem = appMenu!!.findItem(R.id.action_search)
+                    loupeMenuItem!!.isVisible = false
+                },
+                { // runner global GrzLog search
+                    // hide menu items
+                    showMenuItems(false)
+                    // execute global search
+                    val fbt = fabBack!!.tag as FabBackTag
+                    if (fbt.searchHitListGlobal.size > 0) {
+                        decisionBox(
+                            this,
+                            DECISION.YESNO,
+                            getString(R.string.searchResultsAvailable),
+                            getString(R.string.useExistingResults) + " " + fbt.searchPhrase,
+                            { prepareGlobalSearch(fbt.searchHitListGlobal, fbt.searchPhrase) },
+                            { prepareGlobalSearch(ArrayList(), "") }
+                        )
+                    } else {
+                        prepareGlobalSearch(ArrayList(), "")
+                    }
+                }
+            )
+
         }
         // SEARCH: down
         if (id == R.id.action_searchDown) {
@@ -3336,7 +3396,7 @@ class MainActivity : AppCompatActivity(),
             if (fabBack != null) {
                 fabBack!!.visibility = INVISIBLE
                 val fbtOld = fabBack!!.tag as FabBackTag
-                val fbt = FabBackTag("", fbtOld.searchHitListGlobal, -1)
+                val fbt = FabBackTag("", fbtOld.searchHitListGlobal, -1, fbtOld.searchPhrase)
                 fabBack!!.tag = fbt
             }
             // change folder always cancels undo
@@ -3594,7 +3654,7 @@ class MainActivity : AppCompatActivity(),
                                         // reset global search results
                                         if (fabBack != null) {
                                             fabBack!!.visibility = INVISIBLE
-                                            val fbt = FabBackTag("", ArrayList(), -1)
+                                            val fbt = FabBackTag("", ArrayList(), -1, "")
                                             fabBack!!.tag = fbt
                                         }
                                         ds!!.namesSection[selectedSectionTemp] = text.toString()
@@ -3645,7 +3705,7 @@ class MainActivity : AppCompatActivity(),
                                         // reset global search results
                                         if (fabBack != null) {
                                             fabBack!!.visibility = INVISIBLE
-                                            val fbt = FabBackTag("", ArrayList(), -1)
+                                            val fbt = FabBackTag("", ArrayList(), -1, "")
                                             fabBack!!.tag = fbt
                                         }
                                         // cleanup
@@ -3688,7 +3748,7 @@ class MainActivity : AppCompatActivity(),
                                                 // reset global search results
                                                 if (fabBack != null) {
                                                     fabBack!!.visibility = INVISIBLE
-                                                    val fbt = FabBackTag("", ArrayList(), -1)
+                                                    val fbt = FabBackTag("", ArrayList(), -1, "")
                                                     fabBack!!.tag = fbt
                                                 }
                                                 // remove folder
@@ -3800,12 +3860,12 @@ class MainActivity : AppCompatActivity(),
                                         this,
                                         DECISION.YESNO,
                                         getString(R.string.searchResultsAvailable),
-                                        getString(R.string.useExistingResults),
-                                        { prepareGlobalSearch(fbt.searchHitListGlobal) },
-                                        { prepareGlobalSearch(ArrayList()) }
+                                        getString(R.string.useExistingResults) + " " + fbt.searchPhrase,
+                                        { prepareGlobalSearch(fbt.searchHitListGlobal, fbt.searchPhrase) },
+                                        { prepareGlobalSearch(ArrayList(), "") }
                                     )
                                 } else {
-                                    prepareGlobalSearch(ArrayList())
+                                    prepareGlobalSearch(ArrayList(), "")
                                 }
                             }
                         })
@@ -3830,10 +3890,10 @@ class MainActivity : AppCompatActivity(),
     }
 
     // provide global search results
-    fun prepareGlobalSearch(searchHitListGlobal: MutableList<GlobalSearchHit>) {
+    fun prepareGlobalSearch(searchHitListGlobal: MutableList<GlobalSearchHit>, searchPhrase: String) {
         if (searchHitListGlobal.size > 0) {
             // re use global search hit list
-            jumpToSearchHitInFolderDialog(this, searchHitListGlobal, -1)
+            jumpToSearchHitInFolderDialog(this, searchHitListGlobal, -1, searchPhrase)
         } else {
             // input dialog for global search phrase
             val inputSearch = EditText(this)
@@ -3876,7 +3936,7 @@ class MainActivity : AppCompatActivity(),
                 hideKeyboard(inputSearch)
                 // render search hits and let user pick one to jump to
                 Handler().postDelayed({
-                    jumpToSearchHitInFolderDialog(this, searchHitList, -1)
+                    jumpToSearchHitInFolderDialog(this, searchHitList, -1, searchText)
                 }, 50)
             }
             inputBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
@@ -6550,7 +6610,7 @@ class MainActivity : AppCompatActivity(),
         }
 
         // render search hits and let user pick one to jump to
-        fun jumpToSearchHitInFolderDialog(context: Context, searchHitListGlobal: MutableList<GlobalSearchHit>, listNdx: Int) {
+        fun jumpToSearchHitInFolderDialog(context: Context, searchHitListGlobal: MutableList<GlobalSearchHit>, listNdx: Int, searchText: String) {
             // show search results and let user pick one to jump to
             val themedContext = ContextThemeWrapper(context, android.R.style.Theme_Holo_Light_Dialog_NoActionBar)
             val jumpFolderBuilder = AlertDialog.Builder(themedContext)
@@ -6584,7 +6644,7 @@ class MainActivity : AppCompatActivity(),
                 if (hitsNdx in 0 until hits.size == false) {
                     centeredToast(context, contextMainActivity.getString(R.string.chooseSearchHit), 3000)
                     Handler().postDelayed({
-                        jumpToSearchHitInFolderDialog(context, searchHitListGlobal, listNdx)
+                        jumpToSearchHitInFolderDialog(context, searchHitListGlobal, listNdx, searchText)
                     }, 100)
                     return@setPositiveButton
                 }
@@ -6594,7 +6654,7 @@ class MainActivity : AppCompatActivity(),
                 // allow to jump back to search hit list dialog
                 if (fabBack != null) {
                     val dsFolder = ds!!.namesSection[ds!!.selectedSection]
-                    fabBack!!.tag = FabBackTag(dsFolder, searchHitListGlobal, hitsNdx)
+                    fabBack!!.tag = FabBackTag(dsFolder, searchHitListGlobal, hitsNdx, searchText)
                     fabBack!!.visibility = VISIBLE
                 }
                 // switch to the selected search hit in its folder
@@ -6602,6 +6662,12 @@ class MainActivity : AppCompatActivity(),
                 switchToFolderByName(folderName, searchHitListGlobal[hitsNdx].lineNdx)
             }
             jumpFolderBuilder.setNegativeButton(R.string.close) { dialog, which ->
+                // allow to jump back to search hit list dialog
+                if (fabBack != null) {
+                    val dsFolder = ds!!.namesSection[ds!!.selectedSection]
+                    fabBack!!.tag = FabBackTag(dsFolder, searchHitListGlobal, hitsNdx, searchText)
+                    fabBack!!.visibility = INVISIBLE
+                }
                 if (folderMoreDialog != null) {
                     folderMoreDialog!!.show()
                 }
@@ -6665,7 +6731,7 @@ class MainActivity : AppCompatActivity(),
             if (number < 0 || number >= ds!!.dataSection.size) {
                 if (fabBack != null) {
                     fabBack!!.visibility = INVISIBLE
-                    val fbt = FabBackTag("", ArrayList(), -1)
+                    val fbt = FabBackTag("", ArrayList(), -1, "")
                     fabBack!!.tag = fbt
                 }
                 centeredToast(contextMainActivity, "Index out of range", 3000)

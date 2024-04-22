@@ -8,12 +8,19 @@
         app:showAsAction="always"
         android:icon="@mipmap/grz_undo_foreground"
         />
-    <!-- instead of: android:actionViewClass="android.widget.SearchView" use app:actionViewClass="android.widget.SearchView" -->
+    <!-- action_search_view only becomes active, if folder search is selected -->
+    <item
+        android:id="@+id/action_search_view"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="search"
+        app:actionViewClass="android.widget.SearchView"
+        android:visible="true"
+        app:showAsAction="always" />
+    <!-- action_search is a visible proxy to start search options -->
     <item
         android:id="@+id/action_search"
         android:icon="@android:drawable/ic_menu_search"
         android:title="search"
-        app:actionViewClass="android.widget.SearchView"
         app:showAsAction="always" />
     <item
         android:id="@+id/action_ChangeFolder"

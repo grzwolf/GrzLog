@@ -241,7 +241,7 @@
     <string name="jump">Jump</string>
     <string name="searchPhrase">Input global search phrase</string>
     <string name="searchResultsAvailable">Search results available</string>
-    <string name="useExistingResults">Use existing results?</string>
+    <string name="useExistingResults">Results for:</string>
     <string name="wwwDisabled">WWW text links are disabled</string>
     <string name="autoFillSkippedDates">Add skipped dates?</string>
     <string name="askAutoFillSkippedDates">Ask for auto fill on skipped dates</string>
@@ -272,4 +272,5 @@
     <string name="checked">"checked:"</string>
     <string name="continue_with_app_update">Continue with app update?</string>
     <string name="yes_checks_for_updates_no_manual_update">YES: checks for updates\n\nNO: manual update</string>
+    <string name="where_to_search">Where to search?</string>
 </resources>

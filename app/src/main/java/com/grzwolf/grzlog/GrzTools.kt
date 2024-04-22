@@ -1,6 +1,5 @@
 package com.grzwolf.grzlog
 
-import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
@@ -8,7 +7,6 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.DialogInterface.OnMultiChoiceClickListener
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
@@ -30,7 +28,6 @@ import android.webkit.MimeTypeMap
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -558,6 +555,56 @@ fun okBox(context: Context?, title: String?, message: String, runnerOk: Runnable
         builder.show()
     } catch (e: Exception) {
     }
+}
+
+// dialog with two choices: a) or b) or camcel
+fun twoChoicesDialog(
+    context: Context,
+    title: String,
+    message: String,
+    choicePositive: String,
+    choiceNegative: String,
+    runnerPositive: Runnable?,
+    runnerNeutral: Runnable?,
+    runnerNegative: Runnable?
+) {
+
+    var dialog: AlertDialog?
+    var builder: AlertDialog.Builder?
+    builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+    } else {
+        AlertDialog.Builder(context)
+    }
+    builder.setTitle(title)
+    builder.setMessage("\n" + message)
+    builder.setPositiveButton(
+        R.string.cancel,
+        DialogInterface.OnClickListener { dialog, which ->
+            runnerPositive?.run()
+            return@OnClickListener
+        })
+    builder.setNeutralButton(
+        choicePositive,
+        DialogInterface.OnClickListener { dialog, which ->
+            runnerNeutral?.run()
+            dialog.dismiss()
+        })
+    builder.setNegativeButton(
+        choiceNegative,
+        DialogInterface.OnClickListener { dialog, which ->
+            runnerNegative?.run()
+            dialog.dismiss()
+        })
+    dialog = builder.create()
+    dialog.show()
+    dialog.setCanceledOnTouchOutside(false)
+    val buttonPositive: Button = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+    buttonPositive.setTextColor(Color.rgb(255, 100, 100))
+    val buttonNeutral: Button = dialog.getButton(DialogInterface.BUTTON_NEUTRAL)
+    buttonNeutral.isAllCaps = false
+    val buttonNegative: Button = dialog.getButton(DialogInterface.BUTTON_NEGATIVE)
+    buttonNegative.isAllCaps = false
 }
 
 enum class DECISION {
