@@ -21,7 +21,6 @@ import android.media.RingtoneManager
 import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.*
-import android.os.StrictMode.VmPolicy
 import android.print.PrintAttributes
 import android.print.PrintAttributes.Resolution
 import android.print.pdf.PrintedPdfDocument
@@ -3098,8 +3097,6 @@ class MainActivity : AppCompatActivity(),
     }
 
     // handle action bar item clicks
-    var changeFolderDialog: AlertDialog? = null
-    var folderMoreBuilder: AlertDialog.Builder? = null
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // selector
         val id = item.itemId
@@ -3385,508 +3382,539 @@ class MainActivity : AppCompatActivity(),
             shareDialog.show()
             shareDialog.setCanceledOnTouchOutside(false)
         }
-
         // change data base folder
         if (id == R.id.action_ChangeFolder) {
-            // it looks awkward, if search stays open
-            if (searchView != null) {
-                searchView!!.onActionViewCollapsed()
-            }
-            // reset visibility of the folder switch back button
-            if (fabBack != null) {
-                fabBack!!.visibility = INVISIBLE
-                val fbtOld = fabBack!!.tag as FabBackTag
-                val fbt = FabBackTag("", fbtOld.searchHitListGlobal, -1, fbtOld.searchPhrase)
-                fabBack!!.tag = fbt
-            }
-            // change folder always cancels undo
-            ds!!.undoSection = ""
-            ds!!.undoText = ""
-            ds!!.undoAction = ACTION.UNDEFINED
-            showMenuItemUndo()
-            // CHANGE FOLDER
-            var changeFileBuilder: AlertDialog.Builder? = null
-            changeFileBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            folderChangeDialog(item)
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    // "Change Folder Dialog"
+    var changeFolderDialog: AlertDialog? = null
+    var changeFolderDialogIsDirty = false
+    fun folderChangeDialog(item: MenuItem) {
+        // it looks awkward, if search stays open
+        if (searchView != null) {
+            searchView!!.onActionViewCollapsed()
+        }
+        // reset visibility of the folder switch back button
+        if (fabBack != null) {
+            fabBack!!.visibility = INVISIBLE
+            val fbtOld = fabBack!!.tag as FabBackTag
+            val fbt = FabBackTag("", fbtOld.searchHitListGlobal, -1, fbtOld.searchPhrase)
+            fabBack!!.tag = fbt
+        }
+        // change folder always cancels undo
+        ds!!.undoSection = ""
+        ds!!.undoText = ""
+        ds!!.undoAction = ACTION.UNDEFINED
+        showMenuItemUndo()
+        // CHANGE FOLDER
+        var changeFolderBuilder: AlertDialog.Builder? = null
+        changeFolderBuilder =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
             } else {
                 AlertDialog.Builder(this@MainActivity)
             }
-            val changeFileBuilderContext = changeFileBuilder.context
-            changeFileBuilder.setTitle(R.string.selectFolder)
-            var selectedSectionTemp = ds!!.selectedSection
-            var lastClickTime = System.currentTimeMillis()
-            var lastSelectedSection = ds!!.selectedSection
-            // add a radio button list containing all the folder names from DataStore
-            val array = ds!!.namesSection.toTypedArray()
-            changeFileBuilder.setSingleChoiceItems(
-                array,
-                ds!!.selectedSection,
-                DialogInterface.OnClickListener { dialog, which ->
-                    // the current file selection is temporary, unless we confirm with OK
-                    selectedSectionTemp = which
-                    // check double click event: it shall behave like OK, means make the folder change permanent
-                    val nowTime = System.currentTimeMillis()
-                    val deltaTime = nowTime - lastClickTime
-                    if (deltaTime < 700 && lastSelectedSection == which) {
-                        // now the file selection becomes permanent
-                        switchToFolderByNumber(selectedSectionTemp)
-                        dialog.cancel()
-                    }
-                    lastSelectedSection = which
-                    lastClickTime = nowTime
-                })
-            // CHANGE FOLDER selection OK
-            changeFileBuilder.setPositiveButton(
-                R.string.ok,
-                DialogInterface.OnClickListener { dialog, which ->
+        changeFolderBuilder.setTitle(R.string.selectFolder)
+        var selectedSectionTemp = ds!!.selectedSection
+        var lastClickTime = System.currentTimeMillis()
+        var lastSelectedSection = ds!!.selectedSection
+        // add a radio button list containing all the folder names from DataStore
+        val array = ds!!.namesSection.toTypedArray()
+        changeFolderBuilder.setSingleChoiceItems(
+            array,
+            ds!!.selectedSection,
+            DialogInterface.OnClickListener { dialog, which ->
+                // the current file selection is temporary, unless we confirm with OK
+                selectedSectionTemp = which
+                // check double click event: it shall behave like OK, means make the folder change permanent
+                val nowTime = System.currentTimeMillis()
+                val deltaTime = nowTime - lastClickTime
+                if (deltaTime < 700 && lastSelectedSection == which) {
                     // now the file selection becomes permanent
                     switchToFolderByNumber(selectedSectionTemp)
                     dialog.cancel()
+                }
+                lastSelectedSection = which
+                lastClickTime = nowTime
+            })
+        // CHANGE FOLDER selection OK
+        changeFolderBuilder.setPositiveButton(
+            R.string.ok,
+            DialogInterface.OnClickListener { dialog, which ->
+                // reset dirty flag
+                changeFolderDialogIsDirty = false
+                // now the file selection becomes permanent
+                switchToFolderByNumber(selectedSectionTemp)
+                dialog.cancel()
+            })
+        // CHANGE FOLDER selection Cancel
+        if (changeFolderDialogIsDirty == false) {
+            changeFolderBuilder.setNegativeButton(
+                R.string.back,
+                DialogInterface.OnClickListener { dialog, which ->
+                    dialog.cancel()
                 })
-            // CHANGE FOLDER selection Cancel
-            changeFileBuilder.setNegativeButton(R.string.back, null)
-            // CHANGE FILE selection MORE FILE OPTIONS
-            changeFileBuilder.setNeutralButton(
-                R.string.more,
-                DialogInterface.OnClickListener { dialogMore, which ->
-                    val itemText = ds!!.namesSection[selectedSectionTemp]
-                    // MORE FOLDER OPTIONS
-                    val items = arrayOf<CharSequence>(     // x = FOLDER options
-                        getString(R.string.export),                          // 0 Export
-                        getString(R.string.newFolder),                      // 1 New
-                        getString(R.string.renFolder),                          // 2 Rename
-                        getString(R.string.clearFolder),                   // 3 Clear
-                        getString(R.string.removeFolder),                          // 4 Remove
-                        getString(R.string.moveFolderUp),                 // 5 Move up
-                        getString(R.string.useTimestamp),                       // 6 Timestamp
-                        getString(R.string.searchFolders)               // 7 search folders
-                    )
-                    folderMoreBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        AlertDialog.Builder(
-                            changeFileBuilderContext,
-                            android.R.style.Theme_Material_Dialog
-                        )
-                    } else {
-                        AlertDialog.Builder(changeFileBuilderContext)
-                    }
-                    val folderMoreBuilderContext = folderMoreBuilder!!.context
-                    folderMoreBuilder!!.setTitle(getString(R.string.whatTodoWithFolder) + itemText + "'")
-                    folderMoreBuilder!!.setItems(
-                        items,
-                        DialogInterface.OnClickListener { dialogRename, which ->
-                            //  MORE FILE OPTIONS: Export folder to PDF or RTF
-                            if (which == 0) {
-                                // EXPORT FOLDER to PDF or RTF
-                                var exportBuilder: AlertDialog.Builder?
-                                exportBuilder =
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                        AlertDialog.Builder(
-                                            this@MainActivity,
-                                            android.R.style.Theme_Material_Dialog
-                                        )
-                                    } else {
-                                        AlertDialog.Builder(this@MainActivity)
-                                    }
-                                var tmpExportSelection = 0
-                                exportBuilder.setTitle(R.string.exportFolder)
-                                exportBuilder.setSingleChoiceItems(
-                                    arrayOf(
-                                        getString(R.string.GeneratePDF),
-                                        getString(R.string.GenerateRTF),
-                                        getString(R.string.copyToClip)
-                                    ),
-                                    0,
-                                    DialogInterface.OnClickListener { dialog, which ->
-                                        tmpExportSelection = which
-                                    })
-                                // EXPORT OPTIONS ok
-                                exportBuilder.setPositiveButton(
-                                    R.string.ok,
-                                    DialogInterface.OnClickListener { dialog, which ->
-                                        //  EXPORT OPTIONS: PDF
-                                        if (tmpExportSelection == 0) {
-                                            val folderName = ds!!.namesSection[selectedSectionTemp]
-                                            val rawText = ds!!.dataSection[selectedSectionTemp]
-                                            generatePdf(folderName, rawText, false, folderMoreBuilder)
-                                        }
-                                        //  EXPORT OPTIONS: RTF
-                                        if (tmpExportSelection == 1) {
-                                            val folderName = ds!!.namesSection[selectedSectionTemp]
-                                            val rawText = ds!!.dataSection[selectedSectionTemp]
-                                            generateRtf(folderName, rawText, false, folderMoreBuilder)
-                                        }
-                                        // EXPORT OPTIONS: copy folder to clipboard
-                                        if (tmpExportSelection == 2) {
-                                            shareBody = ds!!.dataSection[selectedSectionTemp]
-                                            clipboard = shareBody
-                                        }
-                                    })
-                                // EXPORT OPTIONS back
-                                exportBuilder.setNegativeButton(
-                                    R.string.back,
-                                    DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
-                                // EXPORT OPTIONS show
-                                exportBuilder.create().show()
+        }
+        // CHANGE FILE selection MORE FILE OPTIONS
+        changeFolderBuilder.setNeutralButton(
+            R.string.more,
+            DialogInterface.OnClickListener { dialog, which ->
+                folderMoreDialog(changeFolderBuilder.context, selectedSectionTemp, item)
+            })
+        // CHANGE FOLDER create dialog
+        changeFolderDialog = changeFolderBuilder.create()
+        val listView = changeFolderDialog?.getListView()
+        listView?.divider = ColorDrawable(Color.GRAY)
+        listView?.dividerHeight = 2
+        // CHANGE FOLDER finally show change folder dialog
+        changeFolderDialog?.show()
+    }
+
+    // follow up dialog to "Change Folder Dialog" with options for one folder
+    fun folderMoreDialog(changeFileBuilderContext: Context, selectedSectionTemp: Int, item: MenuItem) {
+        val itemText = ds!!.namesSection[selectedSectionTemp]
+        // MORE FOLDER OPTIONS
+        val items = arrayOf<CharSequence>(     // x = FOLDER options
+            getString(R.string.export),                          // 0 Export
+            getString(R.string.newFolder),                      // 1 New
+            getString(R.string.renFolder),                          // 2 Rename
+            getString(R.string.clearFolder),                   // 3 Clear
+            getString(R.string.removeFolder),                          // 4 Remove
+            getString(R.string.moveFolderUp),                 // 5 Move up
+            getString(R.string.useTimestamp),                       // 6 Timestamp
+            getString(R.string.searchFolders)               // 7 search folders
+        )
+        var folderMoreBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            AlertDialog.Builder(
+                changeFileBuilderContext,
+                android.R.style.Theme_Material_Dialog
+            )
+        } else {
+            AlertDialog.Builder(changeFileBuilderContext)
+        }
+        val folderMoreBuilderContext = folderMoreBuilder!!.context
+        folderMoreBuilder!!.setTitle(getString(R.string.whatTodoWithFolder) + itemText + "'")
+        folderMoreBuilder!!.setItems(
+            items,
+            DialogInterface.OnClickListener { dialogRename, which ->
+                //  MORE FILE OPTIONS: Export folder to PDF or RTF
+                if (which == 0) {
+                    // EXPORT FOLDER to PDF or RTF
+                    var exportBuilder: AlertDialog.Builder?
+                    exportBuilder =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            AlertDialog.Builder(
+                                this@MainActivity,
+                                android.R.style.Theme_Material_Dialog
+                            )
+                        } else {
+                            AlertDialog.Builder(this@MainActivity)
+                        }
+                    var tmpExportSelection = 0
+                    exportBuilder.setTitle(R.string.exportFolder)
+                    exportBuilder.setSingleChoiceItems(
+                        arrayOf(
+                            getString(R.string.GeneratePDF),
+                            getString(R.string.GenerateRTF),
+                            getString(R.string.copyToClip)
+                        ),
+                        0,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            tmpExportSelection = which
+                        })
+                    // EXPORT OPTIONS ok
+                    exportBuilder.setPositiveButton(
+                        R.string.ok,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            //  EXPORT OPTIONS: PDF
+                            if (tmpExportSelection == 0) {
+                                val folderName = ds!!.namesSection[selectedSectionTemp]
+                                val rawText = ds!!.dataSection[selectedSectionTemp]
+                                generatePdf(folderName, rawText, false, folderMoreBuilder)
                             }
-                            //  MORE FILE OPTIONS: New
-                            if (which == 1) {
-                                // reject add item
-                                if (ds!!.namesSection.size >= DataStore.SECTIONS_COUNT) {
-                                    var builder: AlertDialog.Builder? = null
-                                    builder =
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                            AlertDialog.Builder(
-                                                folderMoreBuilderContext,
-                                                android.R.style.Theme_Material_Dialog
-                                            )
-                                        } else {
-                                            AlertDialog.Builder(folderMoreBuilderContext)
-                                        }
-                                    builder.setTitle(R.string.note)
-                                    builder.setMessage(getString(R.string.folderLimit) + DataStore.SECTIONS_COUNT + getString(R.string.folders))
-                                    builder.setIcon(android.R.drawable.ic_dialog_alert)
-                                    builder.setPositiveButton(
-                                        R.string.ok,
-                                        DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
-                                    builder.show()
-                                    return@OnClickListener
-                                }
-                                // real add item
-                                val input = EditText(folderMoreBuilderContext)
-                                input.inputType = InputType.TYPE_CLASS_TEXT
-                                input.setText(R.string.folder, TextView.BufferType.SPANNABLE)
-                                showEditTextContextMenu(input, false)
-                                var addBuilder: AlertDialog.Builder?
-                                addBuilder =
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                        AlertDialog.Builder(
-                                            folderMoreBuilderContext,
-                                            android.R.style.Theme_Material_Dialog
-                                        )
-                                    } else {
-                                        AlertDialog.Builder(folderMoreBuilderContext)
-                                    }
-                                addBuilder.setTitle(R.string.folderNewName)
-                                addBuilder.setView(input)
-                                addBuilder.setPositiveButton(
-                                    R.string.ok,
-                                    DialogInterface.OnClickListener { dialogChange, which ->
-                                        var text = input.text.toString()
-                                        if ( text.isEmpty()) {
-                                            centeredToast(this, getString(R.string.emptyInput), 3000)
-                                            Handler().postDelayed({
-                                                folderMoreDialog!!.show()
-                                            }, 100)
-                                            return@OnClickListener
-                                        }
-                                        if (isDupeFolder(text)) {
-                                            centeredToast(this, getString(R.string.duplicateName), 3000)
-                                            Handler().postDelayed({
-                                                folderMoreDialog!!.show()
-                                            }, 100)
-                                            return@OnClickListener
-                                        }
-                                        ds!!.dataSection.add("")
-                                        ds!!.namesSection.add(text)
-                                        ds!!.selectedSection = ds!!.namesSection.size - 1
-                                        ds!!.timeSection.add(ds!!.selectedSection, TIMESTAMP.OFF)
-                                        ds!!.tagSection = mutableListOf(-1, -1)
-                                        writeAppData(appStoragePath, ds, appName)
-                                        reReadAppFileData = true
-                                        onResume()
-                                    })
-                                addBuilder.setNegativeButton(
-                                    R.string.cancel,
-                                    DialogInterface.OnClickListener { dialogRename, which ->
-                                        val imm =
-                                            getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                                        imm.hideSoftInputFromWindow(input.windowToken, 0)
-                                        folderMoreDialog!!.show()
-                                    })
-                                addBuilder.show()
-                                // tricky way to let the keyboard popup
-                                input.requestFocus()
-                                showKeyboard(input, 0, 0, 250)
-                                // preselect folder input name for easier override, <300ms don't work
-                                input.postDelayed({ input.selectAll() }, 500)
+                            //  EXPORT OPTIONS: RTF
+                            if (tmpExportSelection == 1) {
+                                val folderName = ds!!.namesSection[selectedSectionTemp]
+                                val rawText = ds!!.dataSection[selectedSectionTemp]
+                                generateRtf(folderName, rawText, false, folderMoreBuilder)
                             }
-                            // MORE FOLDER OPTIONS: Rename
-                            if (which == 2) {
-                                // folder name rename dialog
-                                val input = EditText(folderMoreBuilderContext)
-                                input.inputType = InputType.TYPE_CLASS_TEXT
-                                input.setText(
-                                    ds!!.namesSection[selectedSectionTemp],
-                                    TextView.BufferType.SPANNABLE
-                                )
-                                showEditTextContextMenu(input, false) // suppress edit context menu
-                                var renameBuilder: AlertDialog.Builder? = null
-                                renameBuilder =
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                        AlertDialog.Builder(
-                                            folderMoreBuilderContext,
-                                            android.R.style.Theme_Material_Dialog
-                                        )
-                                    } else {
-                                        AlertDialog.Builder(folderMoreBuilderContext)
-                                    }
-                                renameBuilder.setTitle(R.string.changeFolderName)
-                                renameBuilder.setView(input)
-                                // folder name rename ok
-                                renameBuilder.setPositiveButton(
-                                    getString(R.string.ok),
-                                    DialogInterface.OnClickListener { dialogChange, which ->
-                                        var text = input.text.toString()
-                                        if ( text.isEmpty()) {
-                                            centeredToast(this, getString(R.string.emptyInput), 3000)
-                                            Handler().postDelayed({
-                                                folderMoreDialog!!.show()
-                                            }, 100)
-                                            return@OnClickListener
-                                        }
-                                        if (isDupeFolder(text)) {
-                                            centeredToast(this, getString(R.string.duplicateName), 3000)
-                                            Handler().postDelayed({
-                                                folderMoreDialog!!.show()
-                                            }, 100)
-                                            return@OnClickListener
-                                        }
-                                        // reset global search results
-                                        if (fabBack != null) {
-                                            fabBack!!.visibility = INVISIBLE
-                                            val fbt = FabBackTag("", ArrayList(), -1, "")
-                                            fabBack!!.tag = fbt
-                                        }
-                                        ds!!.namesSection[selectedSectionTemp] = text.toString()
-                                        ds!!.selectedSection = selectedSectionTemp
-                                        writeAppData(appStoragePath, ds, appName)
-                                        // call menu item programmatically: https://stackoverflow.com/questions/30002471/how-to-programmatically-trigger-click-on-a-menuitem-in-android
-                                        findViewById<View>(R.id.action_ChangeFolder).callOnClick()
-                                        // update app title bar
-                                        title = ds!!.namesSection[ds!!.selectedSection]
-                                        // close parent dialog
-                                        changeFolderDialog!!.cancel()
-                                        // but show more dialog
-                                        folderMoreDialog!!.setTitle(getString(R.string.whatTodoWithFolder) + ds!!.namesSection[selectedSectionTemp] + "'")
-                                        folderMoreDialog!!.show()
-                                    })
-                                // folder name rename cancel
-                                renameBuilder.setNegativeButton(
-                                    R.string.cancel,
-                                    DialogInterface.OnClickListener { dialogRename, which ->
-                                        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                                        imm.hideSoftInputFromWindow(input.windowToken, 0)
-                                        folderMoreDialog!!.show()
-                                    })
-                                // folder name rename show
-                                val renameDialog: Dialog = renameBuilder.show()
-                                // tricky way to let the keyboard popup
-                                input.requestFocus()
-                                showKeyboard(input, 0, 0, 250)
-                                // select input name
-                                input.postDelayed({ input.selectAll() }, 500)
-                            }
-                            // MORE FOLDER OPTIONS: Clear folder content
-                            if (which == 3) {
-                                var builder: AlertDialog.Builder? = null
-                                builder =
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                        AlertDialog.Builder(
-                                            folderMoreBuilderContext,
-                                            android.R.style.Theme_Material_Dialog
-                                        )
-                                    } else {
-                                        AlertDialog.Builder(folderMoreBuilderContext)
-                                    }
-                                builder.setTitle(getString(R.string.clearFolderData) + itemText + "' ?")
-                                builder.setPositiveButton(
-                                    R.string.ok,
-                                    DialogInterface.OnClickListener { dialogChange, which ->
-                                        // reset global search results
-                                        if (fabBack != null) {
-                                            fabBack!!.visibility = INVISIBLE
-                                            val fbt = FabBackTag("", ArrayList(), -1, "")
-                                            fabBack!!.tag = fbt
-                                        }
-                                        // cleanup
-                                        ds!!.dataSection[selectedSectionTemp] = ""
-                                        ds!!.selectedSection = selectedSectionTemp
-                                        writeAppData(appStoragePath, ds, appName)
-                                        // close parent dialog
-                                        changeFolderDialog!!.cancel()
-                                        // restart with resume()
-                                        reReadAppFileData = true
-                                        onResume()
-                                    })
-                                builder.setNegativeButton(
-                                    R.string.cancel,
-                                    DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog!!.show() })
-                                builder.show()
-                            }
-                            //  MORE FOLDER OPTIONS: Remove folder
-                            if (which == 4) {
-                                var builder: AlertDialog.Builder? = null
-                                builder =
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                        AlertDialog.Builder(
-                                            folderMoreBuilderContext,
-                                            android.R.style.Theme_Material_Dialog
-                                        )
-                                    } else {
-                                        AlertDialog.Builder(folderMoreBuilderContext)
-                                    }
-                                builder.setTitle(getString(R.string.deleteFolder) + " '" + itemText + "' ?")
-                                builder.setPositiveButton(
-                                    R.string.ok,
-                                    DialogInterface.OnClickListener { dialogChange, which ->
-                                        decisionBox(
-                                            this@MainActivity,
-                                            DECISION.YESNO,
-                                            getString(R.string.deleteFolder) + " - " + getString(R.string.continueQuestion),
-                                            getString(R.string.noUndo),
-                                            {
-                                                // reset global search results
-                                                if (fabBack != null) {
-                                                    fabBack!!.visibility = INVISIBLE
-                                                    val fbt = FabBackTag("", ArrayList(), -1, "")
-                                                    fabBack!!.tag = fbt
-                                                }
-                                                // remove folder
-                                                if (ds!!.namesSection.size > 1) {
-                                                    ds!!.namesSection.removeAt(
-                                                        selectedSectionTemp
-                                                    )
-                                                    ds!!.selectedSection = Math.max(selectedSectionTemp - 1, 0)
-                                                    ds!!.dataSection.removeAt(selectedSectionTemp)
-                                                } else {
-                                                    ds!!.namesSection[selectedSectionTemp] = getString(R.string.folder)
-                                                    ds!!.selectedSection = selectedSectionTemp
-                                                    ds!!.dataSection[selectedSectionTemp] = ""
-                                                }
-                                                // save data
-                                                writeAppData(appStoragePath, ds, appName)
-                                                // close parent dialog
-                                                changeFolderDialog!!.cancel()
-                                                // restart with resume()
-                                                reReadAppFileData = true
-                                                onResume()
-                                            }
-                                        ) { folderMoreDialog!!.show() }
-                                    })
-                                builder.setNegativeButton(
-                                    R.string.cancel,
-                                    DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog!!.show() })
-                                builder.show()
-                            }
-                            //  MORE FOLDER OPTIONS: Move folder up in list
-                            if (which == 5) {
-                                if (ds!!.namesSection.size < 2 || selectedSectionTemp == 0) {
-                                    val folderName = ds!!.namesSection[selectedSectionTemp]
-                                    centeredToast(
-                                        this,
-                                        "'" + folderName + "' " + getString(R.string.folderAlreadyAtTop),
-                                        5000
-                                    )
-                                    onOptionsItemSelected(item)
-                                    return@OnClickListener
-                                }
-                                // tmp save current folder -1
-                                val nameTmp = ds!!.namesSection[selectedSectionTemp - 1]
-                                ds!!.selectedSection = selectedSectionTemp - 1
-                                val selectionTmp = ds!!.selectedSection
-                                val dataTmp = ds!!.dataSection[selectedSectionTemp - 1]
-                                // copy current folder one level up
-                                ds!!.namesSection[selectedSectionTemp - 1] = ds!!.namesSection[selectedSectionTemp]
-                                ds!!.selectedSection = selectedSectionTemp - 1
-                                ds!!.dataSection[selectedSectionTemp - 1] = ds!!.dataSection[selectedSectionTemp]
-                                // copy tmp to current
-                                ds!!.namesSection[selectedSectionTemp] = nameTmp
-                                ds!!.selectedSection = selectionTmp
-                                ds!!.dataSection[selectedSectionTemp] = dataTmp
-                                // make change permanent
-                                writeAppData(appStoragePath, ds, appName)
-                                reReadAppFileData = true
-                                onOptionsItemSelected(item)
-                            }
-                            // MORE FOLDER OPTIONS: Timestamp setting
-                            if (which == 6) {
-                                val items = arrayOf<CharSequence>(
-                                    getString(R.string.noTimestamp),
-                                    "hh:mm",
-                                    "hh:mm:ss"
-                                )
-                                var selection = ds!!.timeSection[selectedSectionTemp]
-                                var dialog: AlertDialog?
-                                var builder: AlertDialog.Builder?
-                                builder =
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                        AlertDialog.Builder(
-                                            folderMoreBuilderContext,
-                                            android.R.style.Theme_Material_Dialog
-                                        )
-                                    } else {
-                                        AlertDialog.Builder(folderMoreBuilderContext)
-                                    }
-                                builder.setTitle(R.string.timestampSetting)
-                                builder.setSingleChoiceItems(
-                                    items,
-                                    selection,
-                                    DialogInterface.OnClickListener { dialog, which ->
-                                        selection = which
-                                    })
-                                builder.setPositiveButton(
-                                    "Ok",
-                                    // ok takes over the recently selected option
-                                    DialogInterface.OnClickListener { dialog, which ->
-                                        ds!!.timeSection[selectedSectionTemp] = selection
-                                        writeAppData(appStoragePath, ds, appName) // save data
-                                        folderMoreDialog!!.show()                       // show more dlg again
-                                    })
-                                builder.setNegativeButton(
-                                    R.string.cancel,
-                                    DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
-                                dialog = builder.create()
-                                val listView = dialog.listView
-                                listView.divider = ColorDrawable(Color.GRAY)
-                                listView.dividerHeight = 2
-                                dialog.show()
-                            }
-                            // MORE FOLDER OPTIONS: search all folders
-                            if (which == 7) {
-                                // does fabBack has got useful data
-                                val fbt = fabBack!!.tag as FabBackTag
-                                if (fbt.searchHitListGlobal.size > 0) {
-                                    decisionBox(
-                                        this,
-                                        DECISION.YESNO,
-                                        getString(R.string.searchResultsAvailable),
-                                        getString(R.string.useExistingResults) + " " + fbt.searchPhrase,
-                                        { prepareGlobalSearch(fbt.searchHitListGlobal, fbt.searchPhrase) },
-                                        { prepareGlobalSearch(ArrayList(), "") }
-                                    )
-                                } else {
-                                    prepareGlobalSearch(ArrayList(), "")
-                                }
+                            // EXPORT OPTIONS: copy folder to clipboard
+                            if (tmpExportSelection == 2) {
+                                shareBody = ds!!.dataSection[selectedSectionTemp]
+                                clipboard = shareBody
                             }
                         })
-
-                    // MORE FOLDER OPTIONS back/cancel
-                    folderMoreBuilder!!.setNegativeButton(R.string.back) { dialog, which -> changeFolderDialog!!.show() }
-                    // MORE FILE OPTIONS show
-                    folderMoreDialog = folderMoreBuilder!!.create()
-                    val listView = folderMoreDialog?.getListView()
-                    listView?.divider = ColorDrawable(Color.GRAY)
-                    listView?.dividerHeight = 2
-                    folderMoreDialog?.show( )
-                })
-            // CHANGE FOLDER finally show change folder dialog
-            changeFolderDialog = changeFileBuilder.create()
-            val listView = changeFolderDialog?.getListView()
-            listView?.divider = ColorDrawable(Color.GRAY)
-            listView?.dividerHeight = 2
-            changeFolderDialog?.show()
+                    // EXPORT OPTIONS back
+                    exportBuilder.setNegativeButton(
+                        R.string.back,
+                        DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
+                    // EXPORT OPTIONS show
+                    exportBuilder.create().show()
+                }
+                //  MORE FILE OPTIONS: New
+                if (which == 1) {
+                    // reject add item
+                    if (ds!!.namesSection.size >= DataStore.SECTIONS_COUNT) {
+                        var builder: AlertDialog.Builder? = null
+                        builder =
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                AlertDialog.Builder(
+                                    folderMoreBuilderContext,
+                                    android.R.style.Theme_Material_Dialog
+                                )
+                            } else {
+                                AlertDialog.Builder(folderMoreBuilderContext)
+                            }
+                        builder.setTitle(R.string.note)
+                        builder.setMessage(getString(R.string.folderLimit) + DataStore.SECTIONS_COUNT + getString(R.string.folders))
+                        builder.setIcon(android.R.drawable.ic_dialog_alert)
+                        builder.setPositiveButton(
+                            R.string.ok,
+                            DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
+                        builder.show()
+                        return@OnClickListener
+                    }
+                    // real add item
+                    val input = EditText(folderMoreBuilderContext)
+                    input.inputType = InputType.TYPE_CLASS_TEXT
+                    input.setText(R.string.folder, TextView.BufferType.SPANNABLE)
+                    showEditTextContextMenu(input, false)
+                    var addBuilder: AlertDialog.Builder?
+                    addBuilder =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            AlertDialog.Builder(
+                                folderMoreBuilderContext,
+                                android.R.style.Theme_Material_Dialog
+                            )
+                        } else {
+                            AlertDialog.Builder(folderMoreBuilderContext)
+                        }
+                    addBuilder.setTitle(R.string.folderNewName)
+                    addBuilder.setView(input)
+                    addBuilder.setPositiveButton(
+                        R.string.ok,
+                        DialogInterface.OnClickListener { dialogChange, which ->
+                            var text = input.text.toString()
+                            if (text.isEmpty()) {
+                                centeredToast(this, getString(R.string.emptyInput), 3000)
+                                Handler().postDelayed({
+                                    folderMoreDialog!!.show()
+                                }, 100)
+                                return@OnClickListener
+                            }
+                            if (isDupeFolder(text)) {
+                                centeredToast(this, getString(R.string.duplicateName), 3000)
+                                Handler().postDelayed({
+                                    folderMoreDialog!!.show()
+                                }, 100)
+                                return@OnClickListener
+                            }
+                            changeFolderDialogIsDirty = true
+                            ds!!.dataSection.add("")
+                            ds!!.namesSection.add(text)
+                            ds!!.selectedSection = ds!!.namesSection.size - 1
+                            ds!!.timeSection.add(ds!!.selectedSection, TIMESTAMP.OFF)
+                            ds!!.tagSection = mutableListOf(-1, -1)
+                            writeAppData(appStoragePath, ds, appName)
+                            reReadAppFileData = true
+                            onResume()
+                        })
+                    addBuilder.setNegativeButton(
+                        R.string.cancel,
+                        DialogInterface.OnClickListener { dialogRename, which ->
+                            val imm =
+                                getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                            imm.hideSoftInputFromWindow(input.windowToken, 0)
+                            folderMoreDialog!!.show()
+                        })
+                    addBuilder.show()
+                    // tricky way to let the keyboard popup
+                    input.requestFocus()
+                    showKeyboard(input, 0, 0, 250)
+                    // preselect folder input name for easier override, <300ms don't work
+                    input.postDelayed({ input.selectAll() }, 500)
+                }
+                // MORE FOLDER OPTIONS: Rename
+                if (which == 2) {
+                    // folder name rename dialog
+                    val input = EditText(folderMoreBuilderContext)
+                    input.inputType = InputType.TYPE_CLASS_TEXT
+                    input.setText(
+                        ds!!.namesSection[selectedSectionTemp],
+                        TextView.BufferType.SPANNABLE
+                    )
+                    showEditTextContextMenu(input, false) // suppress edit context menu
+                    var renameBuilder: AlertDialog.Builder? = null
+                    renameBuilder =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            AlertDialog.Builder(
+                                folderMoreBuilderContext,
+                                android.R.style.Theme_Material_Dialog
+                            )
+                        } else {
+                            AlertDialog.Builder(folderMoreBuilderContext)
+                        }
+                    renameBuilder.setTitle(R.string.changeFolderName)
+                    renameBuilder.setView(input)
+                    // folder name rename ok
+                    renameBuilder.setPositiveButton(
+                        getString(R.string.ok),
+                        DialogInterface.OnClickListener { dialogChange, which ->
+                            var text = input.text.toString()
+                            if (text.isEmpty()) {
+                                centeredToast(this, getString(R.string.emptyInput), 3000)
+                                Handler().postDelayed({
+                                    folderMoreDialog!!.show()
+                                }, 100)
+                                return@OnClickListener
+                            }
+                            if (isDupeFolder(text)) {
+                                centeredToast(this, getString(R.string.duplicateName), 3000)
+                                Handler().postDelayed({
+                                    folderMoreDialog!!.show()
+                                }, 100)
+                                return@OnClickListener
+                            }
+                            // no back button in change folder dialog
+                            changeFolderDialogIsDirty = true
+                            // reset global search results
+                            if (fabBack != null) {
+                                fabBack!!.visibility = INVISIBLE
+                                val fbt = FabBackTag("", ArrayList(), -1, "")
+                                fabBack!!.tag = fbt
+                            }
+                            ds!!.namesSection[selectedSectionTemp] = text.toString()
+                            ds!!.selectedSection = selectedSectionTemp
+                            writeAppData(appStoragePath, ds, appName)
+                            // update app title bar
+                            title = ds!!.namesSection[ds!!.selectedSection]
+                            // close parent dialog
+                            changeFolderDialog!!.cancel()
+                            // but show more dialog
+                            folderMoreDialog!!.setTitle(getString(R.string.whatTodoWithFolder) + ds!!.namesSection[selectedSectionTemp] + "'")
+                            folderMoreDialog!!.show()
+                        })
+                    // folder name rename cancel
+                    renameBuilder.setNegativeButton(
+                        R.string.cancel,
+                        DialogInterface.OnClickListener { dialogRename, which ->
+                            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                            imm.hideSoftInputFromWindow(input.windowToken, 0)
+                            folderMoreDialog!!.show()
+                        })
+                    // folder name rename show
+                    renameBuilder.show()
+                    // tricky way to let the keyboard popup
+                    input.requestFocus()
+                    showKeyboard(input, 0, 0, 250)
+                    // select input name
+                    input.postDelayed({ input.selectAll() }, 500)
+                }
+                // MORE FOLDER OPTIONS: Clear folder content
+                if (which == 3) {
+                    var builder: AlertDialog.Builder? = null
+                    builder =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            AlertDialog.Builder(
+                                folderMoreBuilderContext,
+                                android.R.style.Theme_Material_Dialog
+                            )
+                        } else {
+                            AlertDialog.Builder(folderMoreBuilderContext)
+                        }
+                    builder.setTitle(getString(R.string.clearFolderData) + itemText + "' ?")
+                    builder.setPositiveButton(
+                        R.string.ok,
+                        DialogInterface.OnClickListener { dialogChange, which ->
+                            // reset global search results
+                            if (fabBack != null) {
+                                fabBack!!.visibility = INVISIBLE
+                                val fbt = FabBackTag("", ArrayList(), -1, "")
+                                fabBack!!.tag = fbt
+                            }
+                            // no back button in change folder dialog
+                            changeFolderDialogIsDirty = true
+                            // cleanup
+                            ds!!.dataSection[selectedSectionTemp] = ""
+                            ds!!.selectedSection = selectedSectionTemp
+                            writeAppData(appStoragePath, ds, appName)
+                            // close parent dialog
+                            changeFolderDialog!!.cancel()
+                            // restart with resume()
+                            reReadAppFileData = true
+                            onResume()
+                        })
+                    builder.setNegativeButton(
+                        R.string.cancel,
+                        DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog!!.show() })
+                    builder.show()
+                }
+                //  MORE FOLDER OPTIONS: Remove folder
+                if (which == 4) {
+                    var builder: AlertDialog.Builder? = null
+                    builder =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            AlertDialog.Builder(
+                                folderMoreBuilderContext,
+                                android.R.style.Theme_Material_Dialog
+                            )
+                        } else {
+                            AlertDialog.Builder(folderMoreBuilderContext)
+                        }
+                    builder.setTitle(getString(R.string.deleteFolder) + " '" + itemText + "' ?")
+                    builder.setPositiveButton(
+                        R.string.ok,
+                        DialogInterface.OnClickListener { dialogChange, which ->
+                            decisionBox(
+                                this@MainActivity,
+                                DECISION.YESNO,
+                                getString(R.string.deleteFolder) + " - " + getString(R.string.continueQuestion),
+                                getString(R.string.noUndo),
+                                {
+                                    // no back button in change folder dialog
+                                    changeFolderDialogIsDirty = true
+                                    // reset global search results
+                                    if (fabBack != null) {
+                                        fabBack!!.visibility = INVISIBLE
+                                        val fbt = FabBackTag("", ArrayList(), -1, "")
+                                        fabBack!!.tag = fbt
+                                    }
+                                    // remove folder
+                                    if (ds!!.namesSection.size > 1) {
+                                        ds!!.namesSection.removeAt(
+                                            selectedSectionTemp
+                                        )
+                                        ds!!.selectedSection = Math.max(selectedSectionTemp - 1, 0)
+                                        ds!!.dataSection.removeAt(selectedSectionTemp)
+                                    } else {
+                                        ds!!.namesSection[selectedSectionTemp] = getString(R.string.folder)
+                                        ds!!.selectedSection = selectedSectionTemp
+                                        ds!!.dataSection[selectedSectionTemp] = ""
+                                    }
+                                    // save data
+                                    writeAppData(appStoragePath, ds, appName)
+                                    // close parent dialog
+                                    changeFolderDialog!!.cancel()
+                                    // restart with resume()
+                                    reReadAppFileData = true
+                                    onResume()
+                                }
+                            ) { folderMoreDialog!!.show() }
+                        })
+                    builder.setNegativeButton(
+                        R.string.cancel,
+                        DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog!!.show() })
+                    builder.show()
+                }
+                //  MORE FOLDER OPTIONS: Move folder up in list
+                if (which == 5) {
+                    if (ds!!.namesSection.size < 2 || selectedSectionTemp == 0) {
+                        val folderName = ds!!.namesSection[selectedSectionTemp]
+                        centeredToast(
+                            this,
+                            "'" + folderName + "' " + getString(R.string.folderAlreadyAtTop),
+                            5000
+                        )
+                        onOptionsItemSelected(item)
+                        return@OnClickListener
+                    }
+                    // no back button in change folder dialog
+                    changeFolderDialogIsDirty = true
+                    // tmp save current folder -1
+                    val nameTmp = ds!!.namesSection[selectedSectionTemp - 1]
+                    ds!!.selectedSection = selectedSectionTemp - 1
+                    val selectionTmp = ds!!.selectedSection
+                    val dataTmp = ds!!.dataSection[selectedSectionTemp - 1]
+                    // copy current folder one level up
+                    ds!!.namesSection[selectedSectionTemp - 1] = ds!!.namesSection[selectedSectionTemp]
+                    ds!!.selectedSection = selectedSectionTemp - 1
+                    ds!!.dataSection[selectedSectionTemp - 1] = ds!!.dataSection[selectedSectionTemp]
+                    // copy tmp to current
+                    ds!!.namesSection[selectedSectionTemp] = nameTmp
+                    ds!!.selectedSection = selectionTmp
+                    ds!!.dataSection[selectedSectionTemp] = dataTmp
+                    // make change permanent
+                    writeAppData(appStoragePath, ds, appName)
+                    reReadAppFileData = true
+                    onOptionsItemSelected(item)
+                }
+                // MORE FOLDER OPTIONS: Timestamp setting
+                if (which == 6) {
+                    val items = arrayOf<CharSequence>(
+                        getString(R.string.noTimestamp),
+                        "hh:mm",
+                        "hh:mm:ss"
+                    )
+                    var selection = ds!!.timeSection[selectedSectionTemp]
+                    var dialog: AlertDialog?
+                    var builder: AlertDialog.Builder?
+                    builder =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            AlertDialog.Builder(
+                                folderMoreBuilderContext,
+                                android.R.style.Theme_Material_Dialog
+                            )
+                        } else {
+                            AlertDialog.Builder(folderMoreBuilderContext)
+                        }
+                    builder.setTitle(R.string.timestampSetting)
+                    builder.setSingleChoiceItems(
+                        items,
+                        selection,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            selection = which
+                        })
+                    builder.setPositiveButton(
+                        "Ok",
+                        // ok takes over the recently selected option
+                        DialogInterface.OnClickListener { dialog, which ->
+                            // no back button in change folder dialog
+                            changeFolderDialogIsDirty = true
+                            ds!!.timeSection[selectedSectionTemp] = selection
+                            writeAppData(appStoragePath, ds, appName) // save data
+                            folderMoreDialog!!.show()                 // show more dlg again
+                        })
+                    builder.setNegativeButton(
+                        R.string.cancel,
+                        DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
+                    dialog = builder.create()
+                    val listView = dialog.listView
+                    listView.divider = ColorDrawable(Color.GRAY)
+                    listView.dividerHeight = 2
+                    dialog.show()
+                }
+                // MORE FOLDER OPTIONS: search all folders
+                if (which == 7) {
+                    // does fabBack has got useful data
+                    val fbt = fabBack!!.tag as FabBackTag
+                    if (fbt.searchHitListGlobal.size > 0) {
+                        decisionBox(
+                            this,
+                            DECISION.YESNO,
+                            getString(R.string.searchResultsAvailable),
+                            getString(R.string.useExistingResults) + " " + fbt.searchPhrase,
+                            { prepareGlobalSearch(fbt.searchHitListGlobal, fbt.searchPhrase) },
+                            { prepareGlobalSearch(ArrayList(), "") }
+                        )
+                    } else {
+                        prepareGlobalSearch(ArrayList(), "")
+                    }
+                }
+            }
+        )
+        // MORE FOLDER OPTIONS back/cancel
+        folderMoreBuilder!!.setNegativeButton(R.string.back) { dialog, which ->
+            onOptionsItemSelected(item)
         }
-        return super.onOptionsItemSelected(item)
+        // MORE FILE OPTIONS show
+        folderMoreDialog = folderMoreBuilder!!.create()
+        val listView = folderMoreDialog?.getListView()
+        listView?.divider = ColorDrawable(Color.GRAY)
+        listView?.dividerHeight = 2
+        folderMoreDialog?.show( )
     }
 
     // provide global search results
