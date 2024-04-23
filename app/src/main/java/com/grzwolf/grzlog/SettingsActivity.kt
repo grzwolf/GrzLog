@@ -26,6 +26,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.view.isVisible
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
@@ -282,74 +283,86 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                 true
             }
 
-            // action execute app update: 1) APK file   2) APK Website   3) GrzLog website on GitHub
+            // action execute app update
             val execUpdatePref = findPreference("ExecUpdate") as Preference?
             execUpdatePref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                // if an update was found, use one the real update file
+                // if an update was found, use the real update file
                 var autoUpdateLink = updateLinkPref!!.summary.toString()
                 var autoUpdateFile = autoUpdateLink.substringAfterLast("/")
+                var title = getString(R.string.grzlog_update)
+                var choiceNegative = getString(R.string.check_for_update)
                 if (autoUpdateLink!!.length > 0) {
-                    // an APK file for download is available
-                    var granted = context?.getPackageManager()?.canRequestPackageInstalls()
-                    if (granted != null) {
-                        if (!granted) {
-                            // ask for permission
-                            startActivityForResult(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).setData(Uri.parse(String.format("package:%s", context?.getPackageName()))), 1234)
-                        } else {
-                            // ask for exec update
-                            decisionBox(
-                                requireContext(),
-                                DECISION.OKCANCEL,
-                                getString(R.string.note),
-                                getString(R.string.continue_with_app_update),
-                                {
-                                    var downloadController = com.grzwolf.grzlog.DownloadController(requireContext(), autoUpdateLink, autoUpdateFile)
-                                    downloadController.enqueueDownload()
-                                },
-                                null
-                            )
-                        }
-                    }
-                } else {
-                    // ask for update checking vs. manual update
-                    decisionBox(
-                        requireContext(),
-                        DECISION.YESNO,
-                        getString(R.string.note),
-                        getString(R.string.yes_checks_for_updates_no_manual_update),
-                        {
-                            checkUpdatePref!!.performClick()
-                        },
-                        {
-                            // ask for using browser to check the GH website containing GrzLog releases
-                            decisionBox(
-                                requireContext(),
-                                DECISION.YESNO,
-                                getString(R.string.note),
-                                getString(R.string.openBrowserForUpdate),
-                                {
-                                    // provide 'how to update this app'
+                    title = getString(R.string.grzlog_update_available)
+                    choiceNegative = getString(R.string.automatic_update_recommended)
+                }
+                // two choices + cancel
+                twoChoicesDialog(
+                    requireContext(),
+                    title,
+                    getString(R.string.what_to_do),
+                    getString(R.string.manual_update),
+                    choiceNegative,
+                    { // runner CANCEL
+                        null
+                    },
+                    { // runner MANUAL
+                        // ask for using browser to check the GH website containing GrzLog releases
+                        decisionBox(
+                            requireContext(),
+                            DECISION.YESNO,
+                            getString(R.string.note),
+                            getString(R.string.openBrowserForUpdate),
+                            {
+                                // provide 'how to update this app'
+                                decisionBox(
+                                    requireContext(),
+                                    DECISION.YESNO,
+                                    getString(R.string.InstalledAPK) + " " + getString(R.string.tag_version),
+                                    getString(R.string.howToUpdate),
+                                    {
+                                        var uri = Uri.parse(getString(R.string.githubGrzLog))
+                                        val builder = CustomTabsIntent.Builder()
+                                        val customTabsIntent = builder.build()
+                                        customTabsIntent.launchUrl(requireContext(), uri)
+                                    },
+                                    null
+                                )
+                            },
+                            null
+                        )
+                    },
+                    { // runner AUTOMATIC / CHECK AGAIN
+                        if (autoUpdateLink!!.length > 0) {
+                            // an APK file for download is available
+                            var granted = context?.getPackageManager()?.canRequestPackageInstalls()
+                            if (granted != null) {
+                                if (!granted) {
+                                    // ask for permission
+                                    startActivityForResult(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).setData(Uri.parse(String.format("package:%s", context?.getPackageName()))), 1234)
+                                } else {
+                                    // ask for exec update
                                     decisionBox(
                                         requireContext(),
-                                        DECISION.YESNO,
-                                        getString(R.string.InstalledAPK) + " " + getString(R.string.tag_version),
-                                        getString(R.string.howToUpdate),
+                                        DECISION.OKCANCEL,
+                                        getString(R.string.note),
+                                        getString(R.string.continue_with_app_update),
                                         {
-                                            var uri = Uri.parse(getString(R.string.githubGrzLog))
-                                            val builder = CustomTabsIntent.Builder()
-                                            val customTabsIntent = builder.build()
-                                            customTabsIntent.launchUrl(requireContext(), uri)
+                                            var downloadController = com.grzwolf.grzlog.DownloadController(requireContext(), autoUpdateLink, autoUpdateFile)
+                                            downloadController.enqueueDownload()
                                         },
                                         null
                                     )
-                                },
-                                null
-                            )
+                                }
+                            }
+                        } else {
+                            // check again for update
+                            checkUpdatePref!!.performClick()
                         }
-                    )
-                }
+                    }
+                )
                 true
             }
+
             //
             checkUpdatePref!!.performClick()
 

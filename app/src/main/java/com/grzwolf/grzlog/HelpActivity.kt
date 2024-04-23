@@ -127,11 +127,14 @@ class HelpActivity : AppCompatActivity() {
         "       share selected items\n" +
         "       share current folder\n" +
         "       share current folder as PDF\n" +
-        "       share current folder as RTF\n\n" +
-        "f) Updates download from\n" +
+        "       share current folder as RTF\n\n\n" +
+        "3 Miscellaneous\n" +
+        "~~~~~~~~~~~~~~~\n" +
+        "Updates could be manually downloaded from\n" +
         "   https://github.com/grzwolf/GrzLog/tags\n\n" +
-        "g) GrzLog permissions\n" +
+        "GrzLog uses the following permissions\n" +
         "   Camera - needed for attachments: photos, videos\n" +
+        "   Install packages - needed for app update\n" +
         "   Internet - needed for app update\n" +
         "   Location - needed for attachment: location\n" +
         "   Media - needed for attachments: photos, videos, audio, docs etc.\n" +

@@ -3184,7 +3184,6 @@ class MainActivity : AppCompatActivity(),
                     }
                 }
             )
-
         }
         // SEARCH: down
         if (id == R.id.action_searchDown) {

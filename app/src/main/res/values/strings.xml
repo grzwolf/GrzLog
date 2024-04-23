@@ -271,6 +271,12 @@
     <string name="twiceDeniedPerm">Permission was denied twice, re enable via: Settings --> Location</string>
     <string name="checked">"checked:"</string>
     <string name="continue_with_app_update">Continue with app update?</string>
-    <string name="yes_checks_for_updates_no_manual_update">YES: checks for updates\n\nNO: manual update</string>
+    <string name="yes_checks_for_updates_no_manual_update">YES: check for updates\n\nNO: update manually</string>
     <string name="where_to_search">Where to search?</string>
+    <string name="grzlog_update">GrzLog update</string>
+    <string name="grzlog_update_available">GrzLog update available</string>
+    <string name="check_for_update">Check for update</string>
+    <string name="automatic_update_recommended">In-app update (recommended)</string>
+    <string name="what_to_do">What to do?</string>
+    <string name="manual_update">Manual update (via web browser)</string>
 </resources>

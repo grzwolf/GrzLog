@@ -272,5 +272,11 @@
     <string name="continue_with_app_update">Weiter mit App Update?</string>
     <string name="yes_checks_for_updates_no_manual_update">JA: Check Updates\n\nNEIN: Manuelles Update</string>
     <string name="where_to_search">Wo soll gesucht werden?</string>
+    <string name="grzlog_update">GrzLog Update</string>
+    <string name="grzlog_update_available">GrzLog Update verfügbar</string>
+    <string name="check_for_update">Check für Update</string>
+    <string name="automatic_update_recommended">In-App Update (empfohlen)</string>
+    <string name="what_to_do">Was als nächstes?</string>
+    <string name="manual_update">Manuelles Update (Web-Browser)</string>
 </resources>
 
