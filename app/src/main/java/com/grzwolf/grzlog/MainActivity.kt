@@ -388,7 +388,7 @@ class MainActivity : AppCompatActivity(),
 
         // user input button has two use scenarios: click and long press
         (fabPlus.button)?.setOnClickListener(View.OnClickListener { view ->
-            fabPlusOnClick(null, null, -1, -1, false, null)
+            fabPlusOnClick()
         })
         (fabPlus.button)?.setOnLongClickListener(OnLongClickListener { view ->
             fabPlusOnLongClick(view, lvMain.listView)
@@ -686,7 +686,7 @@ class MainActivity : AppCompatActivity(),
                 lvMain.selectedRowNoSpacers = 0
                 fabPlus.inputAlertText = it
                 fabPlus.editInsertLine = false
-                fabPlusOnClick(null, null, -1, -1, false, null)
+                fabPlusOnClick()
             }
         }
         // images and if so text
@@ -727,7 +727,7 @@ class MainActivity : AppCompatActivity(),
                         lvMain.selectedRowNoSpacers = 0
                         fabPlus.inputAlertText = " " + imgText
                         fabPlus.editInsertLine = false
-                        fabPlusOnClick(null, null, -1, -1, false, null)
+                        fabPlusOnClick()
                     }
                 } catch (e: Exception) {
                     centeredToast(this, e.message.toString(), 3000)
@@ -2077,7 +2077,7 @@ class MainActivity : AppCompatActivity(),
         itemPosition: Int = -1,
         itemId: Long = -1,
         returnToSearchHits: Boolean = false,
-        function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)?)
+        function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)? = null)
     {
         // avoid multiple fabPlus instances (example: have one open + home + tap widget)
         if (fabPlus.inputAlertView != null && fabPlus.inputAlertView!!.isShown) {
