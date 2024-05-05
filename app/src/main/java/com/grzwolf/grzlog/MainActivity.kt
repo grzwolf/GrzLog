@@ -234,9 +234,9 @@ class MainActivity : AppCompatActivity(),
         toolbar.setOnTouchListener { v, event ->
             if (event.action == MotionEvent.ACTION_DOWN) {
                 // toolbar tap should close undo
-                ds!!.undoSection = ""
-                ds!!.undoText = ""
-                ds!!.undoAction = ACTION.UNDEFINED
+                ds.undoSection = ""
+                ds.undoText = ""
+                ds.undoAction = ACTION.UNDEFINED
                 showMenuItemUndo()
                 // close menu items after tap Hamburger + NO search operation is ongoing + NOT edit mode
                 if (menuItemsVisible && !menuSearchVisible) {
@@ -275,18 +275,18 @@ class MainActivity : AppCompatActivity(),
         // this is the full workflow sequence from app data file up to show data in ListView
         //
         ds = readAppData(appStoragePath)                                                                   // read complete GrzLog.ser into DataStore
-        val sectionText = ds!!.dataSection[ds!!.selectedSection]                                           // get active section text (folder) from DataStore
+        val sectionText = ds.dataSection[ds.selectedSection]                                               // get active section text (folder) from DataStore
         lvMain.arrayList = lvMain.makeArrayList(sectionText, lvMain.showOrder)                             // generate ListView array list data
         lvMain.adapter = LvAdapter(this, lvMain.arrayList)                                          // make ListView adapter
         (lvMain.listView)?.setAdapter(lvMain.adapter)                                                      // set ListView adapter
-        title = ds!!.namesSection[ds!!.selectedSection]                                                    // set app title
-        lvMain.scrollToItemPos(if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList!!.size - 1) // scroll ListView
+        title = ds.namesSection[ds.selectedSection]                                                        // set app title
+        lvMain.scrollToItemPos(if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList.size - 1)   // scroll ListView
 
         // onCreate shall clear any undo data + set two ds tags to 0 (first and last deleted item positions)
-        ds!!.undoAction = ACTION.UNDEFINED
-        ds!!.undoText = ""
-        ds!!.undoSection = ""
-        ds!!.tagSection.clear()
+        ds.undoAction = ACTION.UNDEFINED
+        ds.undoText = ""
+        ds.undoSection = ""
+        ds.tagSection.clear()
 
         // listview item touch listener determines the screen coordinates of the touch event
         (lvMain.listView)?.setOnTouchListener(OnTouchListener { listView, event ->
@@ -342,18 +342,18 @@ class MainActivity : AppCompatActivity(),
                     if (lvMain.touchSelectItem && !menuSearchVisible) {
                         // handle click on item as item select
                         lvMain.touchSelectItem = false
-                        lvMain.arrayList!![itemPosition].setSelected(!lvMain.arrayList!![itemPosition].isSelected())
+                        lvMain.arrayList[itemPosition].setSelected(!lvMain.arrayList[itemPosition].isSelected())
                         lvMain.adapter!!.notifyDataSetChanged()
                     } else {
                         // does the click happen on a selected item
-                        if (lvMain.arrayList!![itemPosition].isSelected() && sharedPref.getBoolean("clickSelectedItemsToClipboard", false) ) {
+                        if (lvMain.arrayList[itemPosition].isSelected() && sharedPref.getBoolean("clickSelectedItemsToClipboard", false) ) {
                             // copy to clipboard
                             shareBody = lvMain.folderSelectedItems
                             clipboard = shareBody
                             centeredToast(this, getString(R.string.copyClipboard), 50)
                         } else {
                             // does the click happen on a search hit item
-                            if (lvMain.arrayList!![itemPosition].isSearchHit() && sharedPref.getBoolean("clickSearchHitToEdit", false) ) {
+                            if (lvMain.arrayList[itemPosition].isSearchHit() && sharedPref.getBoolean("clickSearchHitToEdit", false) ) {
                                 // execute the click as edit ListView item
                                 onLongClickEditItem(adapterView, itemView, itemPosition, itemId, true, null)
                             } else {
@@ -371,11 +371,11 @@ class MainActivity : AppCompatActivity(),
             // any long press action cancels 'select item mode'
             lvMain.touchSelectItem = false
             // does the long click happen on a search hit item
-            if (lvMain.arrayList!![itemPosition].isSearchHit()) {
+            if (lvMain.arrayList[itemPosition].isSearchHit()) {
                 whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId)
             } else {
                 // does the long click happen on a selected item
-                if (lvMain.arrayList!![itemPosition].isSelected()) {
+                if (lvMain.arrayList[itemPosition].isSelected()) {
                     // handle long click on a selection as 'what to do with selection ?'
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, false, null)
                 } else {
@@ -398,16 +398,16 @@ class MainActivity : AppCompatActivity(),
         // switch back to previous folder: a) after following an attachment link to a GrzLog folder b) after following a search hit into another folder
         (fabBack)?.setOnClickListener(View.OnClickListener { view ->
             // fabBack always cancels undo
-            ds!!.undoSection = ""
-            ds!!.undoText = ""
-            ds!!.undoAction = ACTION.UNDEFINED
+            ds.undoSection = ""
+            ds.undoText = ""
+            ds.undoAction = ACTION.UNDEFINED
             showMenuItemUndo()
             // get data from button tag
             val fbt: FabBackTag = fabBack!!.tag as FabBackTag
             // adjust title and message
             var title = getString(R.string.switchFolder)
             var message = getString(R.string.appFolder) + " \"" + fbt.folderName + "\""
-            if (fbt.folderName.equals(ds!!.namesSection[ds!!.selectedSection])) {
+            if (fbt.folderName.equals(ds.namesSection[ds.selectedSection])) {
                 if (fbt.searchHitListGlobal.size > 0) {
                     title = getString(R.string.switchToSearchList)
                     message = ""
@@ -616,9 +616,9 @@ class MainActivity : AppCompatActivity(),
                 showMenuItems(false)
                 // onResume always cancels undo data, but not if fabPlus.editInsertLine is active (if returning from a cancelled pick)
                 if (!fabPlus.editInsertLine) {
-                    ds!!.undoSection = ""
-                    ds!!.undoText = ""
-                    ds!!.undoAction = ACTION.UNDEFINED
+                    ds.undoSection = ""
+                    ds.undoText = ""
+                    ds.undoAction = ACTION.UNDEFINED
                 }
                 showMenuItemUndo()
             }
@@ -967,14 +967,14 @@ class MainActivity : AppCompatActivity(),
         // obtain the word around the character offset position from text
         var word = getWordAtOffset(text, ofs)
         // word could be a fragmented attachment, get the real attachment name with both enclosing brackets
-        var attachment = getAttachmentFromText(lvMain.arrayList!![itemPosition].title.toString(), word)
+        var attachment = getAttachmentFromText(lvMain.arrayList[itemPosition].title.toString(), word)
 
         // so far, we only know what word/link was clicked on, it's time to show the content
         var title = ""
         var fileName = ""
         try {
             // get the clicked item's full text
-            val fullItemText = lvMain.arrayList!![itemPosition].fullTitle
+            val fullItemText = lvMain.arrayList[itemPosition].fullTitle
             // get the attachment (image, video, audio, txt, pdf, www, folder) in fullItemText
             val matchFull = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
             var matchFullResult = ""
@@ -1016,7 +1016,7 @@ class MainActivity : AppCompatActivity(),
                                 folderName,
                                 {
                                     if (fabBack != null) {
-                                        val dsFolder = ds!!.namesSection[ds!!.selectedSection]
+                                        val dsFolder = ds.namesSection[ds.selectedSection]
                                         val fbtOld = fabBack!!.tag as FabBackTag
                                         val fbt = FabBackTag(dsFolder, fbtOld.searchHitListGlobal, -1, fbtOld.searchPhrase)
                                         fabBack!!.tag = fbt
@@ -1120,7 +1120,7 @@ class MainActivity : AppCompatActivity(),
                                     folderName,
                                     {
                                         if (fabBack != null) {
-                                            val dsFolder = ds!!.namesSection[ds!!.selectedSection]
+                                            val dsFolder = ds.namesSection[ds.selectedSection]
                                             val fbtOld = fabBack!!.tag as FabBackTag
                                             val fbt = FabBackTag(dsFolder, fbtOld.searchHitListGlobal, -1, fbtOld.searchPhrase)
                                             fabBack!!.tag = fbt
@@ -1255,7 +1255,7 @@ class MainActivity : AppCompatActivity(),
         charSequences.add(getString(R.string.InsertLineAfter))             // ITEM == 3
         charSequences.add(getString(R.string.SelectItems))           // ITEM == 4
         charSequences.add(getString(R.string.LockscreenReminder))   // ITEM == 5
-        if (lvMain.arrayList!![itemPosition].isSection) {
+        if (lvMain.arrayList[itemPosition].isSection) {
             charSequences.add(getString(R.string.ToggleLineAsText))       // ITEM == 6
         } else {
             charSequences.add(getString(R.string.ToggleLineAsHeader))     // ITEM == 6
@@ -1277,7 +1277,7 @@ class MainActivity : AppCompatActivity(),
 
                 // ITEM == 1 copy line
                 if (which == 1) {
-                    shareBody = lvMain.arrayList!![itemPosition].fullTitle
+                    shareBody = lvMain.arrayList[itemPosition].fullTitle
                     clipboard = shareBody
                     whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                 }
@@ -1310,22 +1310,22 @@ class MainActivity : AppCompatActivity(),
                     // memorize affected row in array list MINUS spacer count for DataStore
                     var spacers = 0
                     for (i in 0 until itemPosition) {
-                        if (lvMain.arrayList!![i].isSpacer) {
+                        if (lvMain.arrayList[i].isSpacer) {
                             spacers++
                         }
                     }
                     lvMain.selectedRowNoSpacers = itemPosition - spacers
                     // add line before the selected line in ListView array, which is showOrder aligned
-                    lvMain.arrayList!!.add(itemPosition, EntryItem(" ", "", ""))
+                    lvMain.arrayList.add(itemPosition, EntryItem(" ", "", ""))
                     // build finalStr from ListView array
                     var finalStr = lvMain.selectedFolder
                     if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
                         finalStr = toggleTextShowOrder(finalStr)
                     }
                     // save undo data (status before line insert)
-                    ds!!.undoSection = ds!!.dataSection[ds!!.selectedSection]
-                    ds!!.undoText = getString(R.string.InsertRow)
-                    ds!!.undoAction = ACTION.REVERTINSERT
+                    ds.undoSection = ds.dataSection[ds.selectedSection]
+                    ds.undoText = getString(R.string.InsertRow)
+                    ds.undoAction = ACTION.REVERTINSERT
                     showMenuItemUndo()
                     // clean up
                     fabPlus.pickAttachment = false
@@ -1334,7 +1334,7 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.inputAlertText = ""
                     fabPlus.attachmentName = ""
                     // update DataStore dataSection
-                    ds!!.dataSection[ds!!.selectedSection] = finalStr
+                    ds.dataSection[ds.selectedSection] = finalStr
                     // flag to indicate, where the call came from
                     lvMain.editLongPress = true
                     // flag: 1) insert line 2) do not override undo data
@@ -1346,7 +1346,7 @@ class MainActivity : AppCompatActivity(),
                 // ITEM == 3  'line insert after current line'
                 if (which == 3) {
                     // add line after the selected line in ListView array, which is showOrder aligned
-                    lvMain.arrayList!!.add(itemPosition + 1, EntryItem(" ", "", ""))
+                    lvMain.arrayList.add(itemPosition + 1, EntryItem(" ", "", ""))
                     // build finalStr from ListView array
                     var finalStr = lvMain.selectedFolder
                     if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
@@ -1357,15 +1357,15 @@ class MainActivity : AppCompatActivity(),
                     // memorize affected row in array list MINUS spacer count for DataStore
                     var spacers = 0
                     for (i in 0 until itemPosition) {
-                        if (lvMain.arrayList!![i].isSpacer) {
+                        if (lvMain.arrayList[i].isSpacer) {
                             spacers++
                         }
                     }
                     lvMain.selectedRowNoSpacers = itemPosition - spacers + 1
                     // save undo data
-                    ds!!.undoSection = ds!!.dataSection[ds!!.selectedSection]
-                    ds!!.undoText = getString(R.string.InsertRow)
-                    ds!!.undoAction = ACTION.REVERTINSERT
+                    ds.undoSection = ds.dataSection[ds.selectedSection]
+                    ds.undoText = getString(R.string.InsertRow)
+                    ds.undoAction = ACTION.REVERTINSERT
                     showMenuItemUndo()
                     // clean up
                     fabPlus.pickAttachment = false
@@ -1374,7 +1374,7 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.inputAlertText = ""
                     fabPlus.attachmentName = ""
                     // update DataStore
-                    ds!!.dataSection[ds!!.selectedSection] = finalStr
+                    ds.dataSection[ds.selectedSection] = finalStr
                     // logic control flags
                     lvMain.editLongPress = true
                     fabPlus.editInsertLine = true
@@ -1393,7 +1393,7 @@ class MainActivity : AppCompatActivity(),
                     if (!notificationPermissionGranted) {
                         whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                     }
-                    val message = lvMain.arrayList!![itemPosition].title
+                    val message = lvMain.arrayList[itemPosition].title
                     var youSureBld: AlertDialog.Builder? = null
                     youSureBld =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1433,7 +1433,7 @@ class MainActivity : AppCompatActivity(),
                 // ITEM == 6 'set header manually'
                 if (which == 6) {
                     // if item is date header, dismiss
-                    if (PATTERN.DateDay.matcher(lvMain.arrayList!![itemPosition].title.toString()).find()) {
+                    if (PATTERN.DateDay.matcher(lvMain.arrayList[itemPosition].title.toString()).find()) {
                         centeredToast(this, "Line is already header", 3000)
                         dialog.dismiss()
                         return@OnClickListener
@@ -1446,38 +1446,38 @@ class MainActivity : AppCompatActivity(),
                         {
                             // save undo data
                             lvMain.selectedRow = itemPosition
-                            ds!!.undoSection = ds!!.dataSection[ds!!.selectedSection]
-                            ds!!.undoText = charSequences[6].toString()
-                            ds!!.undoAction = ACTION.REVERTEDIT
+                            ds.undoSection = ds.dataSection[ds.selectedSection]
+                            ds.undoText = charSequences[6].toString()
+                            ds.undoAction = ACTION.REVERTEDIT
                             showMenuItemUndo()
                             // modify title and fullTitle
                             var isNowSection: Boolean
                             var newTitle: String
                             var fullTitle: String
-                            if (lvMain.arrayList!![itemPosition].isSection) {
+                            if (lvMain.arrayList[itemPosition].isSection) {
                                 // reset header flag
-                                newTitle = lvMain.arrayList!![itemPosition].title!!.substring(1)
-                                fullTitle = lvMain.arrayList!![itemPosition].fullTitle!!.substring(1)
+                                newTitle = lvMain.arrayList[itemPosition].title!!.substring(1)
+                                fullTitle = lvMain.arrayList[itemPosition].fullTitle!!.substring(1)
                                 isNowSection = false
                             } else {
                                 // set header flag: Tab = 9
-                                newTitle = 9.toChar() + lvMain.arrayList!![itemPosition].title!!
-                                fullTitle = 9.toChar() + lvMain.arrayList!![itemPosition].fullTitle!!
+                                newTitle = 9.toChar() + lvMain.arrayList[itemPosition].title!!
+                                fullTitle = 9.toChar() + lvMain.arrayList[itemPosition].fullTitle!!
                                 isNowSection = true
                             }
-                            lvMain.arrayList!![itemPosition] = SectionItem(newTitle, fullTitle, lvMain.arrayList!![itemPosition].uriStr)
+                            lvMain.arrayList[itemPosition] = SectionItem(newTitle, fullTitle, lvMain.arrayList[itemPosition].uriStr)
                             // build finalStr from modified ListView array via getter selectedFolder
                             var finalStr = lvMain.selectedFolder
                             if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
                                 finalStr = toggleTextShowOrder(finalStr)
                             }
                             // save finalStr to DataStore, to GrzLog.ser and re-read saved data
-                            ds!!.dataSection[ds!!.selectedSection] = finalStr                        // update DataStore dataSection
+                            ds.dataSection[ds.selectedSection] = finalStr                            // update DataStore dataSection
                             writeAppData(appStoragePath, ds, appName)                                // write DataStore
-                            ds!!.clear()                                                             // clear DataStore
+                            ds.clear()                                                               // clear DataStore
                             ds = readAppData(appStoragePath)                                         // read DataStore
-                            val dsText = ds!!.dataSection[ds!!.selectedSection]                      // raw data from DataStore
-                            title = ds!!.namesSection[ds!!.selectedSection]                          // set app title to folder Name
+                            val dsText = ds.dataSection[ds.selectedSection]                          // raw data from DataStore
+                            title = ds.namesSection[ds.selectedSection]                              // set app title to folder Name
                             lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)        // convert & format raw text to array
                             lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList)   // build adapter and populate main listview
                             lvMain.listView!!.adapter = lvMain.adapter                               // populate main listview via adapter
@@ -1485,13 +1485,13 @@ class MainActivity : AppCompatActivity(),
                             // temporary highlight affected item and revert it to normal 3s later
                             var posHighLight: Int
                             if (isNowSection) {
-                                posHighLight = Math.min(itemPosition + 1, lvMain.arrayList!!.size-1)
+                                posHighLight = Math.min(itemPosition + 1, lvMain.arrayList.size-1)
                             } else {
                                 posHighLight = Math.max(itemPosition - 1, 0)
                             }
-                            lvMain.arrayList!![posHighLight].setHighLighted(true)
+                            lvMain.arrayList[posHighLight].setHighLighted(true)
                             lvMain.listView!!.postDelayed({
-                                lvMain.arrayList!![posHighLight].setHighLighted(false)
+                                lvMain.arrayList[posHighLight].setHighLighted(false)
                                 lvMain.adapter!!.notifyDataSetChanged()
                             }, 3000)
                             // get out
@@ -1510,7 +1510,7 @@ class MainActivity : AppCompatActivity(),
 
                 // ITEM == 8 'cut line to clipboard'
                 if (which == 8) {
-                    val message = lvMain.arrayList!![itemPosition].title
+                    val message = lvMain.arrayList[itemPosition].title
                     var youSureBld: AlertDialog.Builder?
                     youSureBld =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1528,15 +1528,15 @@ class MainActivity : AppCompatActivity(),
                         R.string.ok,
                         DialogInterface.OnClickListener { dialog, which ->
                             // copy to clipboard
-                            shareBody = lvMain.arrayList!![itemPosition].fullTitle
+                            shareBody = lvMain.arrayList[itemPosition].fullTitle
                             clipboard = shareBody
                             // clean up
                             fabPlus.inputAlertText = ""
                             // select item and let range delete method do its job
-                            lvMain.arrayList!![itemPosition].setSelected(true)
+                            lvMain.arrayList[itemPosition].setSelected(true)
                             deleteMarkedItems(0)  // type: 0 == delete selected item, type: 1 == delete highlighted search item
                             // was hidden during input
-                            fabPlus.button!!.show()
+                            fabPlus.button?.show()
                         })
                     // 'you sure' dlg CANCEL
                     youSureBld.setNegativeButton(
@@ -1551,7 +1551,7 @@ class MainActivity : AppCompatActivity(),
 
                 // ITEM == 9 'current line delete'
                 if (which == 9) {
-                    val message = lvMain.arrayList!![itemPosition].title
+                    val message = lvMain.arrayList[itemPosition].title
                     var youSureBld: AlertDialog.Builder?
                     youSureBld =
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1571,10 +1571,10 @@ class MainActivity : AppCompatActivity(),
                             // clean up
                             fabPlus.inputAlertText = ""
                             // select item and let range delete method do its job
-                            lvMain.arrayList!![itemPosition].setSelected(true)
+                            lvMain.arrayList[itemPosition].setSelected(true)
                             deleteMarkedItems(0)  // type: 0 == delete selected item, type: 1 == delete highlighted search item
                             // was hidden during input
-                            fabPlus.button!!.show()
+                            fabPlus.button?.show()
                         })
                     // 'you sure' dlg CANCEL
                     youSureBld.setNegativeButton(
@@ -1611,8 +1611,8 @@ class MainActivity : AppCompatActivity(),
                     val text = (child as AppCompatTextView).text
                     val itemIndex: Int = charSequences.indexOf(text)
                     if (itemIndex == 6) {
-                        var curText = lvMain.arrayList!![itemPosition].title.toString()
-                        if (lvMain.arrayList!![itemPosition].isSection && PATTERN.DateDay.matcher(curText).find()) {
+                        var curText = lvMain.arrayList[itemPosition].title.toString()
+                        if (lvMain.arrayList[itemPosition].isSection && PATTERN.DateDay.matcher(curText).find()) {
                             child.setEnabled(false)
                             child.setOnClickListener(null)
                         }
@@ -1629,15 +1629,15 @@ class MainActivity : AppCompatActivity(),
         // flag indicates the usage of fabPlus input as an editor for a 'long press line' input
         lvMain.editLongPress = true
         // delete previous undo data
-        ds!!.undoSection = ""
-        ds!!.undoText = ""
-        ds!!.undoAction = ACTION.UNDEFINED
+        ds.undoSection = ""
+        ds.undoText = ""
+        ds.undoAction = ACTION.UNDEFINED
         showMenuItemUndo()
         // memorize current scroller position
         lvMain.fstVisPos = lvMain.listView!!.firstVisiblePosition
         lvMain.lstVisPos = lvMain.listView!!.lastVisiblePosition
         // the full text of the selected ListView item is data input
-        var lineInput = lvMain.arrayList!![itemPosition].fullTitle
+        var lineInput = lvMain.arrayList[itemPosition].fullTitle
         // search for attachment link in 'long press input': if found, prepare fabPlus input data accordingly
         val m = lineInput?.let { PATTERN.UriLink.matcher(it.toString()) }
         if (m?.find() == true) {
@@ -1663,7 +1663,7 @@ class MainActivity : AppCompatActivity(),
         // memorize affected row in array list MINUS spacer count for DataStore
         var spacers = 0
         for (i in 0 until itemPosition) {
-            if (lvMain.arrayList!![i].isSpacer) {
+            if (lvMain.arrayList[i].isSpacer) {
                 spacers++
             }
         }
@@ -1686,7 +1686,7 @@ class MainActivity : AppCompatActivity(),
         // range format the list of selected indexes including the included spacers
         var rangeStr = getIntegerRangeFormatted(listSelPos)
         if (listSelPos.size == 1) {
-            rangeStr = "Item: " + shortenedText(lvMain.arrayList!![listSelPos[0]].title!!, 200)
+            rangeStr = "Item: " + shortenedText(lvMain.arrayList[listSelPos[0]].title!!, 200)
         }
         // set custom multiline title: https://stackoverflow.com/questions/9107054/how-to-build-alert-dialog-with-a-multi-line-title
         val headPart = getString(R.string.whatToDoWithItems)
@@ -1716,7 +1716,7 @@ class MainActivity : AppCompatActivity(),
         builder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
             when (item) {
                 0 -> { // Toggle the current item's selection status
-                    lvMain.arrayList!![itemPosition].setSelected(!lvMain.arrayList!![itemPosition].isSelected())
+                    lvMain.arrayList[itemPosition].setSelected(!lvMain.arrayList[itemPosition].isSelected())
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
@@ -1746,24 +1746,24 @@ class MainActivity : AppCompatActivity(),
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
                 5 -> { // Unselect all
-                    for (i in lvMain.arrayList!!.indices) {
-                        lvMain.arrayList!![i].setSelected(false)
+                    for (i in lvMain.arrayList.indices) {
+                        lvMain.arrayList[i].setSelected(false)
                     }
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
                 6 -> { // Select all
-                    for (i in lvMain.arrayList!!.indices) {
-                        lvMain.arrayList!![i].setSelected(true)
+                    for (i in lvMain.arrayList.indices) {
+                        lvMain.arrayList[i].setSelected(true)
                     }
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
                 7 -> { // Invert selection
-                    for (i in lvMain.arrayList!!.indices) {
-                        lvMain.arrayList!![i].setSelected(!lvMain.arrayList!![i].isSelected())
+                    for (i in lvMain.arrayList.indices) {
+                        lvMain.arrayList[i].setSelected(!lvMain.arrayList[i].isSelected())
                     }
                     lvMain.adapter!!.notifyDataSetChanged()
                     dialog.dismiss()
@@ -1789,8 +1789,8 @@ class MainActivity : AppCompatActivity(),
                 }
                 11 -> { // Cut to clipboard / shareBody
                     var itemsSelected = false
-                    for (i in lvMain.arrayList!!.indices) {
-                        if (lvMain.arrayList!![i].isSelected()) {
+                    for (i in lvMain.arrayList.indices) {
+                        if (lvMain.arrayList[i].isSelected()) {
                             itemsSelected = true
                             break
                         }
@@ -1814,8 +1814,8 @@ class MainActivity : AppCompatActivity(),
                 }
                 12 -> { // Delete from ListView
                     var itemsSelected = false
-                    for (i in lvMain.arrayList!!.indices) {
-                        if (lvMain.arrayList!![i].isSelected()) {
+                    for (i in lvMain.arrayList.indices) {
+                        if (lvMain.arrayList[i].isSelected()) {
                             itemsSelected = true
                             break
                         }
@@ -1912,16 +1912,16 @@ class MainActivity : AppCompatActivity(),
             override fun onClick(dialog: DialogInterface, item: Int) {
                 when (item) {
                     0 -> { // unselect all
-                        for (i in lvMain.arrayList!!.indices) {
-                            lvMain.arrayList!![i].setSearchHit(false)
+                        for (i in lvMain.arrayList.indices) {
+                            lvMain.arrayList[i].setSearchHit(false)
                         }
                         lvMain.adapter!!.notifyDataSetChanged()
                         whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId)
                     }
                     1 -> { // invert selection
                         run {
-                            for (i in lvMain.arrayList!!.indices) {
-                                lvMain.arrayList!![i].setSearchHit(!lvMain.arrayList!![i].isSearchHit())
+                            for (i in lvMain.arrayList.indices) {
+                                lvMain.arrayList[i].setSearchHit(!lvMain.arrayList[i].isSearchHit())
                             }
                         }
                         lvMain.adapter!!.notifyDataSetChanged()
@@ -1969,9 +1969,9 @@ class MainActivity : AppCompatActivity(),
     fun deleteMarkedItems(type: Int) {
         try {
             // save undo data
-            ds!!.undoSection = ds!!.dataSection[ds!!.selectedSection]
-            ds!!.undoText = getString(R.string.deleteSelection)
-            ds!!.undoAction = ACTION.REVERTDELETE
+            ds.undoSection = ds.dataSection[ds.selectedSection]
+            ds.undoText = getString(R.string.deleteSelection)
+            ds.undoAction = ACTION.REVERTDELETE
             showMenuItemUndo()
             // clean up
             lvMain.editLongPress = false
@@ -1982,37 +1982,37 @@ class MainActivity : AppCompatActivity(),
             fabPlus.inputAlertText = ""
             fabPlus.attachmentName = ""
             // clear tags = fresh start
-            ds!!.tagSection.clear()
+            ds.tagSection.clear()
             // memorize current listview scroll position at index 0
-            ds!!.tagSection.add(lvMain.listView!!.firstVisiblePosition)
+            ds.tagSection.add(lvMain.listView!!.firstVisiblePosition)
             // count spacers above deleted Headers
             var cntSpc = 0
             // memorize last deleted item's type
             var lstDelItemIsHeader = false
             // delete marked items from ListView / arrayList in DataStore tagSection
-            for (i in lvMain.arrayList!!.indices.reversed()) {
+            for (i in lvMain.arrayList.indices.reversed()) {
                 // distinguish between 'selected' and 'search hit'
                 var condition = false
                 if (type == 0) {
-                    condition = lvMain.arrayList!![i].isSelected()
+                    condition = lvMain.arrayList[i].isSelected()
                 }
                 if (type == 1) {
-                    condition = lvMain.arrayList!![i].isSearchHit()
+                    condition = lvMain.arrayList[i].isSearchHit()
                 }
                 if (condition) {
                     // reset bc wait for last deletion
                     lstDelItemIsHeader = false
                     // count spacers above deleted Headers
-                    if (lvMain.arrayList!![i].isSection and (i > 0)) {
-                        if (lvMain.arrayList!![i-1].isSpacer) {
+                    if (lvMain.arrayList[i].isSection and (i > 0)) {
+                        if (lvMain.arrayList[i-1].isSpacer) {
                             cntSpc++
                             lstDelItemIsHeader = true
                         }
                     }
                     // now really remove item
-                    lvMain.arrayList!!.removeAt(i)
+                    lvMain.arrayList.removeAt(i)
                     // memorize deleted item positions
-                    ds!!.tagSection.add(i)
+                    ds.tagSection.add(i)
                 }
             }
             // if topmost deleted item at pos > 0 is Header, correct 'above neighbour' position by 1 BEFORE reloading data
@@ -2026,29 +2026,29 @@ class MainActivity : AppCompatActivity(),
                 finalStr = toggleTextShowOrder(finalStr)
             }
             // save finalStr to DataStore, to GrzLog.ser and re-read saved data
-            ds!!.dataSection[ds!!.selectedSection] = finalStr                        // update DataStore dataSection
+            ds.dataSection[ds.selectedSection] = finalStr                            // update DataStore dataSection
             writeAppData(appStoragePath, ds, appName)                                // write DataStore
-            ds!!.clear()                                                             // clear DataStore
+            ds.clear()                                                               // clear DataStore
             ds = readAppData(appStoragePath)                                         // read DataStore
-            val dsText = ds!!.dataSection[ds!!.selectedSection]                      // raw data from DataStore
-            title = ds!!.namesSection[ds!!.selectedSection]                          // set app title to folder Name
+            val dsText = ds.dataSection[ds.selectedSection]                          // raw data from DataStore
+            title = ds.namesSection[ds.selectedSection]                              // set app title to folder Name
             lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)        // convert & format raw text to array
             lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList)   // build adapter and populate main listview
             lvMain.listView!!.adapter = lvMain.adapter                               // populate main listview via adapter
 
-            var above = ds!!.tagSection[ds!!.tagSection.size - 1] - 1 - corrAbove    // 'neighbour' above highlight position: tagSection[last] == 1st del pos
-            var below = ds!!.tagSection[1] - (ds!!.tagSection.size - 1) + 1 - cntSpc // 'neighbour' below highlight position: tagSection[1] == last del pos
-            if (lvMain.arrayList!![above].isSpacer) above -= 1
-            if (lvMain.arrayList!![below].isSpacer) below += 1
+            var above = ds.tagSection[ds.tagSection.size - 1] - 1 - corrAbove        // 'neighbour' above highlight position: tagSection[last] == 1st del pos
+            var below = ds.tagSection[1] - (ds.tagSection.size - 1) + 1 - cntSpc     // 'neighbour' below highlight position: tagSection[1] == last del pos
+            if (lvMain.arrayList[above].isSpacer) above -= 1
+            if (lvMain.arrayList[below].isSpacer) below += 1
 
-            lvMain.listView!!.setSelection(ds!!.tagSection[0])                       // ListView scroll to last known scroll position: tagSection[0] == scroll pos
+            lvMain.listView!!.setSelection(ds.tagSection[0])                         // ListView scroll to last known scroll position: tagSection[0] == scroll pos
 
-            lvMain.arrayList!![above].setHighLighted(true)                           // temp. highlighting
-            lvMain.arrayList!![below].setHighLighted(true)
+            lvMain.arrayList[above].setHighLighted(true)                             // temp. highlighting
+            lvMain.arrayList[below].setHighLighted(true)
             lvMain.adapter!!.notifyDataSetChanged()
             lvMain.listView!!.postDelayed({                                          // revoke temp. highlighting after timeout
-                lvMain.arrayList!![above].setHighLighted(false)
-                lvMain.arrayList!![below].setHighLighted(false)
+                lvMain.arrayList[above].setHighLighted(false)
+                lvMain.arrayList[below].setHighLighted(false)
                 lvMain.adapter!!.notifyDataSetChanged()
             }, 3000)
         } catch ( e:Exception) {}
@@ -2095,9 +2095,9 @@ class MainActivity : AppCompatActivity(),
 
         // delete undo data with condition
         if (!fabPlus.editInsertLine) {
-            ds!!.undoSection = ""
-            ds!!.undoText = ""
-            ds!!.undoAction = ACTION.UNDEFINED
+            ds.undoSection = ""
+            ds.undoText = ""
+            ds.undoAction = ACTION.UNDEFINED
         }
         showMenuItemUndo()
 
@@ -2260,7 +2260,7 @@ class MainActivity : AppCompatActivity(),
                         linkText = ""
                     }
                     // clicked item's original full text: extract the part after :::: within the brackets
-                    var fullLink = lvMain.arrayList!![itemPosition].fullTitle
+                    var fullLink = lvMain.arrayList[itemPosition].fullTitle
                     // ... but there could be a recently added and not yet saved attachment
                     if (fabPlus.attachmentUri!!.length > 0) {
                         fullLink = "[" + linkTextNoBrackets + "::::" + fabPlus.attachmentUri!! + "]"
@@ -2290,7 +2290,7 @@ class MainActivity : AppCompatActivity(),
         fabPlusBuilder.setPositiveButton(R.string.ok, DialogInterface.OnClickListener { dialog, which ->
 
             // timestamp requested ?
-            var timestampType = ds!!.timeSection[ds!!.selectedSection]
+            var timestampType = ds.timeSection[ds.selectedSection]
 
             // get input data from AlertDialog
             var newText = trimEndAll(fabPlus.inputAlertView!!.text.toString())
@@ -2360,7 +2360,7 @@ class MainActivity : AppCompatActivity(),
             }
 
             // get original data from DataStore
-            val oriText = ds!!.dataSection[ds!!.selectedSection]
+            val oriText = ds.dataSection[ds.selectedSection]
             var oriParts: Array<String?> = oriText.split("\\n+".toRegex()).toTypedArray()
             if (oriParts.size == 0) {
                 oriParts = arrayOf("")
@@ -2413,23 +2413,23 @@ class MainActivity : AppCompatActivity(),
                 }
                 // save undo data: if a line was inserted, we already have undo data and don't want to override them, just extend undoAction
                 if (fabPlus.editInsertLine) {
-                    ds!!.undoText += ":\n'$newText'"
-                    ds!!.undoAction = ACTION.REVERTINSERT
+                    ds.undoText += ":\n'$newText'"
+                    ds.undoAction = ACTION.REVERTINSERT
                 } else {
-                    ds!!.undoSection = ds!!.dataSection[ds!!.selectedSection]
-                    ds!!.undoText = getString(R.string.EditRow) + ":\n'$newText'"
-                    ds!!.undoAction = ACTION.REVERTEDIT
+                    ds.undoSection = ds.dataSection[ds.selectedSection]
+                    ds.undoText = getString(R.string.EditRow) + ":\n'$newText'"
+                    ds.undoAction = ACTION.REVERTEDIT
                 }
                 showMenuItemUndo()
             } else {
                 // normal "+ button" input
                 plusButtonInput = true
                 // sake of mind
-                lvMain.selectedRow = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList!!.size - 1
+                lvMain.selectedRow = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList.size - 1
                 // allow undo
-                ds!!.undoSection = ds!!.dataSection[ds!!.selectedSection]
-                ds!!.undoText = getString(R.string.EditRow) + ":\n'$newText'"
-                ds!!.undoAction = ACTION.REVERTADD
+                ds.undoSection = ds.dataSection[ds.selectedSection]
+                ds.undoText = getString(R.string.EditRow) + ":\n'$newText'"
+                ds.undoAction = ACTION.REVERTADD
                 showMenuItemUndo()
                 // input might contain multiple lines or \n (from shareBody): don't add a timestamp
                 if (newText.contains("\n")) {
@@ -2596,7 +2596,7 @@ class MainActivity : AppCompatActivity(),
     fun fabPlusOkFinale(finalStr: String, newText: String, addTimeStamp: Boolean, plusButtonInput: Boolean, numAutoFilledDates: Int ) {
 
         // memorize the inserted lines in tagSection
-        ds!!.tagSection.clear()
+        ds.tagSection.clear()
         var numOfNewlines = newText.split("\n").size
         var markRange = false
         if (numOfNewlines > 1) {
@@ -2611,12 +2611,12 @@ class MainActivity : AppCompatActivity(),
             // insert line before a Header / Date section, needs to take the Spacer above into account
             if (!plusButtonInput) {
                 if (lvMain.showOrder == SHOW_ORDER.TOP) {
-                    if ((lvMain.selectedRow > 0) && lvMain.arrayList!![lvMain.selectedRow].isSection) {
+                    if ((lvMain.selectedRow > 0) && lvMain.arrayList[lvMain.selectedRow].isSection) {
                         corrector = -1
                     }
                 }
                 if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                    if ((lvMain.selectedRow < lvMain.arrayList!!.size - 1) && lvMain.arrayList!![lvMain.selectedRow + 1].isSection) {
+                    if ((lvMain.selectedRow < lvMain.arrayList.size - 1) && lvMain.arrayList[lvMain.selectedRow + 1].isSection) {
                         corrector = -1
                     }
                 }
@@ -2636,7 +2636,7 @@ class MainActivity : AppCompatActivity(),
             }
             // now highlight
             for (i in 0 until numOfNewlines) {
-                ds!!.tagSection.add(lvMain.selectedRow + i + corrector)
+                ds.tagSection.add(lvMain.selectedRow + i + corrector)
             }
         }
 
@@ -2648,14 +2648,14 @@ class MainActivity : AppCompatActivity(),
         fabPlus.attachmentUri = ""
         fabPlus.inputAlertText = ""
         fabPlus.attachmentName = ""
-        fabPlus.button!!.show()
+        fabPlus.button?.show()
         // save and re-read saved data
-        ds!!.dataSection[ds!!.selectedSection] = finalStr                      // update DataStore dataSection
+        ds.dataSection[ds.selectedSection] = finalStr                          // update DataStore dataSection
         writeAppData(appStoragePath, ds, appName)                              // serialize DataStore to GrzLog.ser
-        ds!!.clear()                                                           // clear DataStore
+        ds.clear()                                                             // clear DataStore
         ds = readAppData(appStoragePath)                                       // un serialize DataStore from GrzLog.ser
-        val dsText = ds!!.dataSection[ds!!.selectedSection]                    // get raw data text from DataStore section/folder
-        title = ds!!.namesSection[ds!!.selectedSection]                        // set app title to folder Name
+        val dsText = ds.dataSection[ds.selectedSection]                        // get raw data text from DataStore section/folder
+        title = ds.namesSection[ds.selectedSection]                            // set app title to folder Name
         lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)      // convert & format raw text to array
         lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList) // set adapter and populate main listview
         lvMain.listView!!.adapter = lvMain.adapter
@@ -2666,12 +2666,12 @@ class MainActivity : AppCompatActivity(),
                 lvMain.selectedRow = 1
                 jumpToPos = 0
             } else {
-                lvMain.selectedRow = lvMain.arrayList!!.size - 1
+                lvMain.selectedRow = lvMain.arrayList.size - 1
                 jumpToPos = lvMain.selectedRow
             }
         } else {
             // adjust ListView jump to position for 'insert line' input
-            if (ds!!.undoAction == ACTION.REVERTINSERT) {
+            if (ds.undoAction == ACTION.REVERTINSERT) {
                 if (lvMain.selectedRow >= lvMain.lstVisPos) {
                     jumpToPos = lvMain.selectedRow
                 }
@@ -2683,11 +2683,11 @@ class MainActivity : AppCompatActivity(),
 
         // temporarily select edited item
         if (markRange) {
-            for (i in 0 until ds!!.tagSection.size) {
-                lvMain.arrayList!![ds!!.tagSection[i]].setHighLighted(true)
+            for (i in 0 until ds.tagSection.size) {
+                lvMain.arrayList[ds.tagSection[i]].setHighLighted(true)
             }
         } else {
-            lvMain.arrayList!![lvMain.selectedRow].setHighLighted(true)
+            lvMain.arrayList[lvMain.selectedRow].setHighLighted(true)
         }
         // ListView shall jump to last known 1st visible  position
         lvMain.listView!!.setSelection(jumpToPos)
@@ -2696,13 +2696,13 @@ class MainActivity : AppCompatActivity(),
         lvMain.listView!!.postDelayed({
             // un mark items
             if (markRange) {
-                for (i in 0 until ds!!.tagSection.size) {
-                    lvMain.arrayList!![ds!!.tagSection[i]].setHighLighted(false)
+                for (i in 0 until ds.tagSection.size) {
+                    lvMain.arrayList[ds.tagSection[i]].setHighLighted(false)
                 }
             } else {
-                lvMain.arrayList!![lvMain.selectedRow].setHighLighted(false)
+                lvMain.arrayList[lvMain.selectedRow].setHighLighted(false)
             }
-            ds!!.tagSection.clear()
+            ds.tagSection.clear()
             // ListView jump
             lvMain.listView!!.setSelection(jumpToPos)
             // inform listview adapter about the changes
@@ -2722,13 +2722,13 @@ class MainActivity : AppCompatActivity(),
         // after 'insert line' + cancel, we need to restore the status 'before insert line'
         if (fabPlus.editInsertLine) {
             // restore DataStore from undo data
-            if (!ds!!.undoSection.isEmpty()) {
-                ds!!.dataSection[ds!!.selectedSection] = ds!!.undoSection // update DataStore dataSection
+            if (!ds.undoSection.isEmpty()) {
+                ds.dataSection[ds.selectedSection] = ds.undoSection // update DataStore dataSection
                 writeAppData(appStoragePath, ds, appName)
-                ds!!.clear()
+                ds.clear()
                 ds = readAppData(appStoragePath)
-                val dsText = ds!!.dataSection[ds!!.selectedSection]       // raw data from DataStore
-                title = ds!!.namesSection[ds!!.selectedSection]           // set app title to folder Name
+                val dsText = ds.dataSection[ds.selectedSection]       // raw data from DataStore
+                title = ds.namesSection[ds.selectedSection]           // set app title to folder Name
                 lvMain.arrayList = lvMain.makeArrayList(
                     dsText,
                     lvMain.showOrder
@@ -2740,9 +2740,9 @@ class MainActivity : AppCompatActivity(),
                 lvMain.listView!!.adapter = lvMain.adapter
             }
             // clear undo section
-            ds!!.undoSection = ""
-            ds!!.undoText = ""
-            ds!!.undoAction = ACTION.UNDEFINED
+            ds.undoSection = ""
+            ds.undoText = ""
+            ds.undoAction = ACTION.UNDEFINED
         }
         showMenuItemUndo()
         // cancel shall delete a captured image
@@ -2750,7 +2750,7 @@ class MainActivity : AppCompatActivity(),
             deleteCapturedImage(fabPlus.attachmentUri)
         }
         // was hidden during input
-        fabPlus.button!!.show()
+        fabPlus.button?.show()
         // reset attachment uri & clean up
         fabPlus.pickAttachment = false
         lvMain.editLongPress = false
@@ -2788,7 +2788,7 @@ class MainActivity : AppCompatActivity(),
         optionsDialog?.show()
     }
 
-    // DataStore serialization read
+    // DataStore serialization read: return value is under no circumstances null
     private fun readAppData(storagePath: String): DataStore {
         var dataStore: DataStore? = null
         val appName = applicationInfo.loadLabel(packageManager).toString()
@@ -2974,9 +2974,9 @@ class MainActivity : AppCompatActivity(),
                 )
             }
             // show normal app title
-            title = ds!!.namesSection[ds!!.selectedSection]
+            title = ds.namesSection[ds.selectedSection]
             // show fabPlus
-            fabPlus.button!!.show()
+            fabPlus.button?.show()
             // hide keyboard
             hideKeyboard()
             // hide search view icon
@@ -3022,10 +3022,10 @@ class MainActivity : AppCompatActivity(),
             lvMain.searchHitListFolder.clear()
         }
         // loop array just once for search hits
-        for (pos in lvMain.arrayList!!.indices) {
-            val itemText = lvMain.arrayList!![pos].title
+        for (pos in lvMain.arrayList.indices) {
+            val itemText = lvMain.arrayList[pos].title
             if (itemText!!.lowercase(Locale.getDefault()).contains(query.lowercase(Locale.getDefault()))) {
-                lvMain.arrayList!![pos].setSearchHit(true)
+                lvMain.arrayList[pos].setSearchHit(true)
                 lvMain.searchHitListFolder.add(pos)
             }
         }
@@ -3103,9 +3103,9 @@ class MainActivity : AppCompatActivity(),
         // HAMBURGER / GEAR: show settings activity
         if (id == R.id.action_Hamburger || id == R.id.action_Settings) {
             // Hamburger always cancels undo
-            ds!!.undoSection = ""
-            ds!!.undoText = ""
-            ds!!.undoAction = ACTION.UNDEFINED
+            ds.undoSection = ""
+            ds.undoText = ""
+            ds.undoAction = ACTION.UNDEFINED
             showMenuItemUndo()
             // it looks awkward, if search stays open
             if (searchView != null) {
@@ -3143,15 +3143,15 @@ class MainActivity : AppCompatActivity(),
             twoChoicesDialog(this,
                 "Option",
                 getString(R.string.where_to_search),
-                "'" + ds!!.namesSection[ds!!.selectedSection] + "'",
+                "'" + ds.namesSection[ds.selectedSection] + "'",
                 "GrzLog",
                 { // runner CANCEL
                     // simply return to main activity
                     showMenuItems(false)
                     searchView!!.setQuery(searchViewQuery, false)
                     searchViewQuery = ""
-                    title = ds!!.namesSection[ds!!.selectedSection]
-                    fabPlus.button!!.show()
+                    title = ds.namesSection[ds.selectedSection]
+                    fabPlus.button?.show()
                 },
                 { // runner current folder search
                     // show the 'current folder' search view
@@ -3221,7 +3221,7 @@ class MainActivity : AppCompatActivity(),
             // finally jump/scroll to selected item
             lvMain.listView!!.setSelection(ndx)
             // modify app title
-            var string = ds!!.namesSection[ds!!.selectedSection] + "  " +
+            var string = ds.namesSection[ds.selectedSection] + "  " +
                     (lvMain.searchNdx + 1).toString() +
                     "(" + lvMain.searchHitListFolder.size.toString() + ") " +
                     searchViewQuery
@@ -3269,7 +3269,7 @@ class MainActivity : AppCompatActivity(),
             // finally jump/scroll to selected item
             lvMain.listView!!.setSelection(ndx)
             // modify app title
-            var string = ds!!.namesSection[ds!!.selectedSection] + "  " +
+            var string = ds.namesSection[ds.selectedSection] + "  " +
                     (lvMain.searchNdx + 1).toString() +
                     "(" + lvMain.searchHitListFolder.size.toString() + ") " +
                     searchViewQuery
@@ -3292,7 +3292,7 @@ class MainActivity : AppCompatActivity(),
                 this@MainActivity,
                 DECISION.YESNO,
                 getString(R.string.continueQuestion),
-                getString(R.string.undo) + " " + ds!!.undoText,
+                getString(R.string.undo) + " " + ds.undoText,
                 { execUndo() },
                 null
             )
@@ -3330,8 +3330,8 @@ class MainActivity : AppCompatActivity(),
                     // share current items selection
                     if (selected == 0) {
                         var itemsSelected = false
-                        for (i in lvMain.arrayList!!.indices) {
-                            if (lvMain.arrayList!![i].isSelected()) {
+                        for (i in lvMain.arrayList.indices) {
+                            if (lvMain.arrayList[i].isSelected()) {
                                 itemsSelected = true
                                 break
                             }
@@ -3364,13 +3364,13 @@ class MainActivity : AppCompatActivity(),
                     }
                     // share folder as PDF
                     if (selected == 2) {
-                        val folderName = ds!!.namesSection[ds!!.selectedSection]
-                        generatePdf(folderName, ds!!.dataSection[ds!!.selectedSection], true, null)
+                        val folderName = ds.namesSection[ds.selectedSection]
+                        generatePdf(folderName, ds.dataSection[ds.selectedSection], true, null)
                     }
                     // share folder as RTF
                     if (selected == 3) {
-                        val folderName = ds!!.namesSection[ds!!.selectedSection]
-                        generateRtf(folderName, ds!!.dataSection[ds!!.selectedSection], true, null)
+                        val folderName = ds.namesSection[ds.selectedSection]
+                        generateRtf(folderName, ds.dataSection[ds.selectedSection], true, null)
                     }
                 })
             shareBuilder.setNegativeButton(R.string.back, null)
@@ -3404,9 +3404,9 @@ class MainActivity : AppCompatActivity(),
             fabBack!!.tag = fbt
         }
         // change folder always cancels undo
-        ds!!.undoSection = ""
-        ds!!.undoText = ""
-        ds!!.undoAction = ACTION.UNDEFINED
+        ds.undoSection = ""
+        ds.undoText = ""
+        ds.undoAction = ACTION.UNDEFINED
         showMenuItemUndo()
         // CHANGE FOLDER
         var changeFolderBuilder: AlertDialog.Builder? = null
@@ -3417,14 +3417,14 @@ class MainActivity : AppCompatActivity(),
                 AlertDialog.Builder(this@MainActivity)
             }
         changeFolderBuilder.setTitle(R.string.selectFolder)
-        var selectedSectionTemp = ds!!.selectedSection
+        var selectedSectionTemp = ds.selectedSection
         var lastClickTime = System.currentTimeMillis()
-        var lastSelectedSection = ds!!.selectedSection
+        var lastSelectedSection = ds.selectedSection
         // add a radio button list containing all the folder names from DataStore
-        val array = ds!!.namesSection.toTypedArray()
+        val array = ds.namesSection.toTypedArray()
         changeFolderBuilder.setSingleChoiceItems(
             array,
-            ds!!.selectedSection,
+            ds.selectedSection,
             DialogInterface.OnClickListener { dialog, which ->
                 // the current file selection is temporary, unless we confirm with OK
                 selectedSectionTemp = which
@@ -3474,7 +3474,7 @@ class MainActivity : AppCompatActivity(),
 
     // follow up dialog to "Change Folder Dialog" with options for one folder
     fun folderMoreDialog(changeFileBuilderContext: Context, selectedSectionTemp: Int, item: MenuItem) {
-        val itemText = ds!!.namesSection[selectedSectionTemp]
+        val itemText = ds.namesSection[selectedSectionTemp]
         // MORE FOLDER OPTIONS
         val items = arrayOf<CharSequence>(     // x = FOLDER options
             getString(R.string.export),                          // 0 Export
@@ -3530,33 +3530,33 @@ class MainActivity : AppCompatActivity(),
                         DialogInterface.OnClickListener { dialog, which ->
                             //  EXPORT OPTIONS: PDF
                             if (tmpExportSelection == 0) {
-                                val folderName = ds!!.namesSection[selectedSectionTemp]
-                                val rawText = ds!!.dataSection[selectedSectionTemp]
+                                val folderName = ds.namesSection[selectedSectionTemp]
+                                val rawText = ds.dataSection[selectedSectionTemp]
                                 generatePdf(folderName, rawText, false, folderMoreBuilder)
                             }
                             //  EXPORT OPTIONS: RTF
                             if (tmpExportSelection == 1) {
-                                val folderName = ds!!.namesSection[selectedSectionTemp]
-                                val rawText = ds!!.dataSection[selectedSectionTemp]
+                                val folderName = ds.namesSection[selectedSectionTemp]
+                                val rawText = ds.dataSection[selectedSectionTemp]
                                 generateRtf(folderName, rawText, false, folderMoreBuilder)
                             }
                             // EXPORT OPTIONS: copy folder to clipboard
                             if (tmpExportSelection == 2) {
-                                shareBody = ds!!.dataSection[selectedSectionTemp]
+                                shareBody = ds.dataSection[selectedSectionTemp]
                                 clipboard = shareBody
                             }
                         })
                     // EXPORT OPTIONS back
                     exportBuilder.setNegativeButton(
                         R.string.back,
-                        DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
+                        DialogInterface.OnClickListener { dialog, which -> folderMoreDialog?.show() })
                     // EXPORT OPTIONS show
                     exportBuilder.create().show()
                 }
                 //  MORE FILE OPTIONS: New
                 if (which == 1) {
                     // reject add item
-                    if (ds!!.namesSection.size >= DataStore.SECTIONS_COUNT) {
+                    if (ds.namesSection.size >= DataStore.SECTIONS_COUNT) {
                         var builder: AlertDialog.Builder? = null
                         builder =
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -3572,7 +3572,7 @@ class MainActivity : AppCompatActivity(),
                         builder.setIcon(android.R.drawable.ic_dialog_alert)
                         builder.setPositiveButton(
                             R.string.ok,
-                            DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
+                            DialogInterface.OnClickListener { dialog, which -> folderMoreDialog?.show() })
                         builder.show()
                         return@OnClickListener
                     }
@@ -3600,23 +3600,23 @@ class MainActivity : AppCompatActivity(),
                             if (text.isEmpty()) {
                                 centeredToast(this, getString(R.string.emptyInput), 3000)
                                 Handler().postDelayed({
-                                    folderMoreDialog!!.show()
+                                    folderMoreDialog?.show()
                                 }, 100)
                                 return@OnClickListener
                             }
                             if (isDupeFolder(text)) {
                                 centeredToast(this, getString(R.string.duplicateName), 3000)
                                 Handler().postDelayed({
-                                    folderMoreDialog!!.show()
+                                    folderMoreDialog?.show()
                                 }, 100)
                                 return@OnClickListener
                             }
                             changeFolderDialogIsDirty = true
-                            ds!!.dataSection.add("")
-                            ds!!.namesSection.add(text)
-                            ds!!.selectedSection = ds!!.namesSection.size - 1
-                            ds!!.timeSection.add(ds!!.selectedSection, TIMESTAMP.OFF)
-                            ds!!.tagSection = mutableListOf(-1, -1)
+                            ds.dataSection.add("")
+                            ds.namesSection.add(text)
+                            ds.selectedSection = ds.namesSection.size - 1
+                            ds.timeSection.add(ds.selectedSection, TIMESTAMP.OFF)
+                            ds.tagSection = mutableListOf(-1, -1)
                             writeAppData(appStoragePath, ds, appName)
                             reReadAppFileData = true
                             onResume()
@@ -3627,7 +3627,7 @@ class MainActivity : AppCompatActivity(),
                             val imm =
                                 getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                             imm.hideSoftInputFromWindow(input.windowToken, 0)
-                            folderMoreDialog!!.show()
+                            folderMoreDialog?.show()
                         })
                     addBuilder.show()
                     // tricky way to let the keyboard popup
@@ -3642,7 +3642,7 @@ class MainActivity : AppCompatActivity(),
                     val input = EditText(folderMoreBuilderContext)
                     input.inputType = InputType.TYPE_CLASS_TEXT
                     input.setText(
-                        ds!!.namesSection[selectedSectionTemp],
+                        ds.namesSection[selectedSectionTemp],
                         TextView.BufferType.SPANNABLE
                     )
                     showEditTextContextMenu(input, false) // suppress edit context menu
@@ -3666,14 +3666,14 @@ class MainActivity : AppCompatActivity(),
                             if (text.isEmpty()) {
                                 centeredToast(this, getString(R.string.emptyInput), 3000)
                                 Handler().postDelayed({
-                                    folderMoreDialog!!.show()
+                                    folderMoreDialog?.show()
                                 }, 100)
                                 return@OnClickListener
                             }
                             if (isDupeFolder(text)) {
                                 centeredToast(this, getString(R.string.duplicateName), 3000)
                                 Handler().postDelayed({
-                                    folderMoreDialog!!.show()
+                                    folderMoreDialog?.show()
                                 }, 100)
                                 return@OnClickListener
                             }
@@ -3685,16 +3685,16 @@ class MainActivity : AppCompatActivity(),
                                 val fbt = FabBackTag("", ArrayList(), -1, "")
                                 fabBack!!.tag = fbt
                             }
-                            ds!!.namesSection[selectedSectionTemp] = text.toString()
-                            ds!!.selectedSection = selectedSectionTemp
+                            ds.namesSection[selectedSectionTemp] = text.toString()
+                            ds.selectedSection = selectedSectionTemp
                             writeAppData(appStoragePath, ds, appName)
                             // update app title bar
-                            title = ds!!.namesSection[ds!!.selectedSection]
+                            title = ds.namesSection[ds.selectedSection]
                             // close parent dialog
                             changeFolderDialog!!.cancel()
                             // but show more dialog
-                            folderMoreDialog!!.setTitle(getString(R.string.whatTodoWithFolder) + ds!!.namesSection[selectedSectionTemp] + "'")
-                            folderMoreDialog!!.show()
+                            folderMoreDialog?.setTitle(getString(R.string.whatTodoWithFolder) + ds.namesSection[selectedSectionTemp] + "'")
+                            folderMoreDialog?.show()
                         })
                     // folder name rename cancel
                     renameBuilder.setNegativeButton(
@@ -3702,7 +3702,7 @@ class MainActivity : AppCompatActivity(),
                         DialogInterface.OnClickListener { dialogRename, which ->
                             val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
                             imm.hideSoftInputFromWindow(input.windowToken, 0)
-                            folderMoreDialog!!.show()
+                            folderMoreDialog?.show()
                         })
                     // folder name rename show
                     renameBuilder.show()
@@ -3737,8 +3737,8 @@ class MainActivity : AppCompatActivity(),
                             // no back button in change folder dialog
                             changeFolderDialogIsDirty = true
                             // cleanup
-                            ds!!.dataSection[selectedSectionTemp] = ""
-                            ds!!.selectedSection = selectedSectionTemp
+                            ds.dataSection[selectedSectionTemp] = ""
+                            ds.selectedSection = selectedSectionTemp
                             writeAppData(appStoragePath, ds, appName)
                             // close parent dialog
                             changeFolderDialog!!.cancel()
@@ -3748,7 +3748,7 @@ class MainActivity : AppCompatActivity(),
                         })
                     builder.setNegativeButton(
                         R.string.cancel,
-                        DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog!!.show() })
+                        DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog?.show() })
                     builder.show()
                 }
                 //  MORE FOLDER OPTIONS: Remove folder
@@ -3782,16 +3782,16 @@ class MainActivity : AppCompatActivity(),
                                         fabBack!!.tag = fbt
                                     }
                                     // remove folder
-                                    if (ds!!.namesSection.size > 1) {
-                                        ds!!.namesSection.removeAt(
+                                    if (ds.namesSection.size > 1) {
+                                        ds.namesSection.removeAt(
                                             selectedSectionTemp
                                         )
-                                        ds!!.selectedSection = Math.max(selectedSectionTemp - 1, 0)
-                                        ds!!.dataSection.removeAt(selectedSectionTemp)
+                                        ds.selectedSection = Math.max(selectedSectionTemp - 1, 0)
+                                        ds.dataSection.removeAt(selectedSectionTemp)
                                     } else {
-                                        ds!!.namesSection[selectedSectionTemp] = getString(R.string.folder)
-                                        ds!!.selectedSection = selectedSectionTemp
-                                        ds!!.dataSection[selectedSectionTemp] = ""
+                                        ds.namesSection[selectedSectionTemp] = getString(R.string.folder)
+                                        ds.selectedSection = selectedSectionTemp
+                                        ds.dataSection[selectedSectionTemp] = ""
                                     }
                                     // save data
                                     writeAppData(appStoragePath, ds, appName)
@@ -3801,17 +3801,17 @@ class MainActivity : AppCompatActivity(),
                                     reReadAppFileData = true
                                     onResume()
                                 }
-                            ) { folderMoreDialog!!.show() }
+                            ) { folderMoreDialog?.show() }
                         })
                     builder.setNegativeButton(
                         R.string.cancel,
-                        DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog!!.show() })
+                        DialogInterface.OnClickListener { dialogRename, which -> folderMoreDialog?.show() })
                     builder.show()
                 }
                 //  MORE FOLDER OPTIONS: Move folder up in list
                 if (which == 5) {
-                    if (ds!!.namesSection.size < 2 || selectedSectionTemp == 0) {
-                        val folderName = ds!!.namesSection[selectedSectionTemp]
+                    if (ds.namesSection.size < 2 || selectedSectionTemp == 0) {
+                        val folderName = ds.namesSection[selectedSectionTemp]
                         centeredToast(
                             this,
                             "'" + folderName + "' " + getString(R.string.folderAlreadyAtTop),
@@ -3823,18 +3823,18 @@ class MainActivity : AppCompatActivity(),
                     // no back button in change folder dialog
                     changeFolderDialogIsDirty = true
                     // tmp save current folder -1
-                    val nameTmp = ds!!.namesSection[selectedSectionTemp - 1]
-                    ds!!.selectedSection = selectedSectionTemp - 1
-                    val selectionTmp = ds!!.selectedSection
-                    val dataTmp = ds!!.dataSection[selectedSectionTemp - 1]
+                    val nameTmp = ds.namesSection[selectedSectionTemp - 1]
+                    ds.selectedSection = selectedSectionTemp - 1
+                    val selectionTmp = ds.selectedSection
+                    val dataTmp = ds.dataSection[selectedSectionTemp - 1]
                     // copy current folder one level up
-                    ds!!.namesSection[selectedSectionTemp - 1] = ds!!.namesSection[selectedSectionTemp]
-                    ds!!.selectedSection = selectedSectionTemp - 1
-                    ds!!.dataSection[selectedSectionTemp - 1] = ds!!.dataSection[selectedSectionTemp]
+                    ds.namesSection[selectedSectionTemp - 1] = ds.namesSection[selectedSectionTemp]
+                    ds.selectedSection = selectedSectionTemp - 1
+                    ds.dataSection[selectedSectionTemp - 1] = ds.dataSection[selectedSectionTemp]
                     // copy tmp to current
-                    ds!!.namesSection[selectedSectionTemp] = nameTmp
-                    ds!!.selectedSection = selectionTmp
-                    ds!!.dataSection[selectedSectionTemp] = dataTmp
+                    ds.namesSection[selectedSectionTemp] = nameTmp
+                    ds.selectedSection = selectionTmp
+                    ds.dataSection[selectedSectionTemp] = dataTmp
                     // make change permanent
                     writeAppData(appStoragePath, ds, appName)
                     reReadAppFileData = true
@@ -3847,7 +3847,7 @@ class MainActivity : AppCompatActivity(),
                         "hh:mm",
                         "hh:mm:ss"
                     )
-                    var selection = ds!!.timeSection[selectedSectionTemp]
+                    var selection = ds.timeSection[selectedSectionTemp]
                     var dialog: AlertDialog?
                     var builder: AlertDialog.Builder?
                     builder =
@@ -3872,13 +3872,13 @@ class MainActivity : AppCompatActivity(),
                         DialogInterface.OnClickListener { dialog, which ->
                             // no back button in change folder dialog
                             changeFolderDialogIsDirty = true
-                            ds!!.timeSection[selectedSectionTemp] = selection
+                            ds.timeSection[selectedSectionTemp] = selection
                             writeAppData(appStoragePath, ds, appName) // save data
-                            folderMoreDialog!!.show()                 // show more dlg again
+                            folderMoreDialog?.show()                 // show more dlg again
                         })
                     builder.setNegativeButton(
                         R.string.cancel,
-                        DialogInterface.OnClickListener { dialog, which -> folderMoreDialog!!.show() })
+                        DialogInterface.OnClickListener { dialog, which -> folderMoreDialog?.show() })
                     dialog = builder.create()
                     val listView = dialog.listView
                     listView.divider = ColorDrawable(Color.GRAY)
@@ -3945,7 +3945,7 @@ class MainActivity : AppCompatActivity(),
                 // no input --> get out
                 if (searchText.isEmpty()) {
                     inputBuilderDialog!!.dismiss()
-                    folderMoreDialog!!.show()
+                    folderMoreDialog?.show()
                     return@setPositiveButton
                 }
                 // find all search hits in DataStore
@@ -3955,7 +3955,7 @@ class MainActivity : AppCompatActivity(),
                     centeredToast(this, getString(R.string.nothingFound), 3000)
                     inputBuilderDialog!!.dismiss()
                     Handler().postDelayed({
-                        folderMoreDialog!!.show()
+                        folderMoreDialog?.show()
                     }, 100)
                     return@setPositiveButton
                 }
@@ -3982,7 +3982,7 @@ class MainActivity : AppCompatActivity(),
     // check for duplicate folder names
     fun isDupeFolder(newName: String): Boolean {
         var dupe = false
-        for (name in ds!!.namesSection) {
+        for (name in ds.namesSection) {
             if (name.equals(newName)) {
                 dupe = true
                 break
@@ -4378,12 +4378,12 @@ class MainActivity : AppCompatActivity(),
                         AlertDialog.Builder(this@MainActivity)
                     }
                     getFolderBuilder.setTitle(R.string.selectFolder)
-                    var selectedSectionTemp = ds!!.selectedSection
+                    var selectedSectionTemp = ds.selectedSection
                     // add a radio button list containing all the folder names from DataStore
-                    val folderList = ds!!.namesSection.toTypedArray()
+                    val folderList = ds.namesSection.toTypedArray()
                     getFolderBuilder.setSingleChoiceItems(
                         folderList,
-                        ds!!.selectedSection,
+                        ds.selectedSection,
                         DialogInterface.OnClickListener { dialog, which ->
                             // the current file selection is temporary, unless we confirm with OK
                             selectedSectionTemp = which
@@ -5212,69 +5212,69 @@ class MainActivity : AppCompatActivity(),
         fabPlus.inputAlertText = ""
         fabPlus.attachmentName = ""
         // return if empty undo data
-        if (ds!!.undoSection.isEmpty() && ds!!.undoAction == ACTION.UNDEFINED) {
-            ds!!.undoText = ""
+        if (ds.undoSection.isEmpty() && ds.undoAction == ACTION.UNDEFINED) {
+            ds.undoText = ""
             showMenuItemUndo()
             return
         }
         // execute undo, save and re-read saved data
         val lvCurrFstVisPos = lvMain.listView!!.firstVisiblePosition
 
-        ds!!.dataSection[ds!!.selectedSection] = ds!!.undoSection              // update DataStore dataSection
-        ds!!.undoSection = ""                                                  // reset is time critical: make change + highlight + undo --> postDelay 'no highlight' might screw up
+        ds.dataSection[ds.selectedSection] = ds.undoSection                    // update DataStore dataSection
+        ds.undoSection = ""                                                    // reset is time critical: make change + highlight + undo --> postDelay 'no highlight' might screw up
         writeAppData(appStoragePath, ds, appName)
-        ds!!.clear()
+        ds.clear()
         ds = readAppData(appStoragePath)
-        val dsText = ds!!.dataSection[ds!!.selectedSection]                    // raw data from DataStore
-        title = ds!!.namesSection[ds!!.selectedSection]                        // set app title to folder Name
+        val dsText = ds.dataSection[ds.selectedSection]                        // raw data from DataStore
+        title = ds.namesSection[ds.selectedSection]                            // set app title to folder Name
         lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)      // convert & format raw text to array
         lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList) // set adapter and populate main listview
         lvMain.listView!!.adapter = lvMain.adapter
 
-        if (lvMain.arrayList!!.size == 0) {                                    // get out here, if list is empty
-            fabPlus.button!!.show()
-            ds!!.undoSection = ""
-            ds!!.undoText = ""
-            ds!!.undoAction = ACTION.UNDEFINED
+        if (lvMain.arrayList.size == 0) {                                      // get out here, if list is empty
+            fabPlus.button?.show()
+            ds.undoSection = ""
+            ds.undoText = ""
+            ds.undoAction = ACTION.UNDEFINED
             showMenuItemUndo()
             return
         }
 
         // calc highlight positions
-        var posAbove = Math.max(0, Math.min(lvMain.selectedRow, lvMain.arrayList!!.size - 1))
-        val posBelow = Math.max(0, Math.min(lvMain.selectedRow - 1, lvMain.arrayList!!.size - 1))
+        var posAbove = Math.max(0, Math.min(lvMain.selectedRow, lvMain.arrayList.size - 1))
+        val posBelow = Math.max(0, Math.min(lvMain.selectedRow - 1, lvMain.arrayList.size - 1))
         // ListView scroll position
         var posScrol = if (lvCurrFstVisPos == lvMain.fstVisPos) lvCurrFstVisPos else posAbove
         // an added item has special rules
-        if (ds!!.undoAction == ACTION.REVERTADD) {
-            ds!!.undoAction = ACTION.UNDEFINED
+        if (ds.undoAction == ACTION.REVERTADD) {
+            ds.undoAction = ACTION.UNDEFINED
             if (lvMain.showOrder == SHOW_ORDER.TOP) {
                 posAbove = 0
             } else {
-                posAbove = lvMain.arrayList!!.size - 1
+                posAbove = lvMain.arrayList.size - 1
             }
             posScrol = posAbove
         }
         // revert insert: highlight neighbour too
-        if (ds!!.undoAction == ACTION.REVERTINSERT) {
-            ds!!.undoAction = ACTION.UNDEFINED
+        if (ds.undoAction == ACTION.REVERTINSERT) {
+            ds.undoAction = ACTION.UNDEFINED
             posScrol = posBelow
-            lvMain.arrayList!![posBelow].setHighLighted(true)
+            lvMain.arrayList[posBelow].setHighLighted(true)
         }
         // if tag section has useful data, aka delete a range
         var markRange = false
-        if ((ds!!.tagSection.size > 0) and (ds!!.undoAction == ACTION.REVERTDELETE)) {
-            posScrol = ds!!.tagSection[0]
+        if ((ds.tagSection.size > 0) and (ds.undoAction == ACTION.REVERTDELETE)) {
+            posScrol = ds.tagSection[0]
             markRange = true
         }
         // highlight all previously deleted items stored in tag section
         try {
             if (markRange) {
-                for (i in 1 until ds!!.tagSection.size) {
-                    lvMain.arrayList!![ds!!.tagSection[i]].setHighLighted(true)
+                for (i in 1 until ds.tagSection.size) {
+                    lvMain.arrayList[ds.tagSection[i]].setHighLighted(true)
                 }
             } else {
-                lvMain.arrayList!![posAbove].setHighLighted(true)
+                lvMain.arrayList[posAbove].setHighLighted(true)
             }
         } catch (e: Exception) {
             centeredToast(this, e.message, 3000)
@@ -5287,20 +5287,20 @@ class MainActivity : AppCompatActivity(),
             try {
                 // de select
                 if (markRange) {
-                    for (i in 1 until ds!!.tagSection.size) {
-                        lvMain.arrayList!![ds!!.tagSection[i]].setHighLighted(false)
+                    for (i in 1 until ds.tagSection.size) {
+                        lvMain.arrayList[ds.tagSection[i]].setHighLighted(false)
                     }
                 } else {
-                    lvMain.arrayList!![posAbove].setHighLighted(false)
-                    lvMain.arrayList!![posBelow].setHighLighted(false)
+                    lvMain.arrayList[posAbove].setHighLighted(false)
+                    lvMain.arrayList[posBelow].setHighLighted(false)
                 }
-                ds!!.tagSection.clear()
+                ds.tagSection.clear()
                 // jump
                 lvMain.listView!!.setSelection(posScrol)
                 // inform listview adapter about the changes
                 lvMain.adapter!!.notifyDataSetChanged()
                 // finally reset undo action
-                ds!!.undoAction = ACTION.UNDEFINED
+                ds.undoAction = ACTION.UNDEFINED
             } catch (e: Exception) {
                 centeredToast(this, e.message, 3000)
             }
@@ -5312,12 +5312,12 @@ class MainActivity : AppCompatActivity(),
             lvMain.restoreFolderSearchHitStatus(searchViewQuery.lowercase(Locale.getDefault()))
         } else {
             // was hidden during input
-            fabPlus.button!!.show()
+            fabPlus.button?.show()
         }
 
         // delete undo data but not undo action
-        ds!!.undoSection = ""
-        ds!!.undoText = ""
+        ds.undoSection = ""
+        ds.undoText = ""
         showMenuItemUndo()
     }
 
@@ -6569,9 +6569,9 @@ class MainActivity : AppCompatActivity(),
         var fabBack: FloatingActionButton? = null
         // intennt controls whether to jump back to Settings
         var intentSettings: Intent? = null
-        // DataStore holds all data "new at top"
+        // DataStore holds all data "new at top"; after onCreate() it is under no circumstances null
         @JvmField
-        var ds: DataStore? = null
+        var ds: DataStore = DataStore()
         // this flag controls, whether onResume continues with onCreate()
         @JvmField
         var reReadAppFileData = false
@@ -6680,7 +6680,7 @@ class MainActivity : AppCompatActivity(),
                 contextMainActivity.startActivity(mainIntent)
                 // allow to jump back to search hit list dialog
                 if (fabBack != null) {
-                    val dsFolder = ds!!.namesSection[ds!!.selectedSection]
+                    val dsFolder = ds.namesSection[ds.selectedSection]
                     fabBack!!.tag = FabBackTag(dsFolder, searchHitListGlobal, hitsNdx, searchText)
                     fabBack!!.visibility = VISIBLE
                 }
@@ -6691,12 +6691,12 @@ class MainActivity : AppCompatActivity(),
             jumpFolderBuilder.setNegativeButton(R.string.close) { dialog, which ->
                 // allow to jump back to search hit list dialog
                 if (fabBack != null) {
-                    val dsFolder = ds!!.namesSection[ds!!.selectedSection]
+                    val dsFolder = ds.namesSection[ds.selectedSection]
                     fabBack!!.tag = FabBackTag(dsFolder, searchHitListGlobal, hitsNdx, searchText)
                     fabBack!!.visibility = INVISIBLE
                 }
                 if (folderMoreDialog != null) {
-                    folderMoreDialog!!.show()
+                    folderMoreDialog?.show()
                 }
                 if (intentSettings != null) {
                     contextMainActivity.startActivity(intentSettings)
@@ -6710,9 +6710,9 @@ class MainActivity : AppCompatActivity(),
         fun findTextInDataStore(context: Context, searchText: String, lvMain: GrzListView): MutableList<GlobalSearchHit> {
             var hitList: MutableList<GlobalSearchHit> = ArrayList()
             // iterate all data sections of DataStore
-            for (dsNdx in ds!!.dataSection.indices) {
+            for (dsNdx in ds.dataSection.indices) {
                 // text from DataStore folder
-                var sectionText = ds!!.dataSection[dsNdx]
+                var sectionText = ds.dataSection[dsNdx]
                 // take show order into account
                 var arrayList: ArrayList<ListViewItem> = lvMain.makeArrayList(sectionText, lvMain.showOrder)
                 // loop arrayList
@@ -6729,7 +6729,7 @@ class MainActivity : AppCompatActivity(),
                     }
                     // save search hits data: the text where the search phrase occurs, its line index, its section name, its folder index
                     if (inspectStr.contains(searchText, ignoreCase = true)) {
-                        val folderName = ds!!.namesSection[dsNdx]
+                        val folderName = ds.namesSection[dsNdx]
                         val textCombined = inspectStr + "\n(" + sectionName + " / " + folderName + ")"
                         val spanCombined = SpannableString(textCombined)
                         val searchTextStart = inspectStr.indexOf(searchText, ignoreCase = true)
@@ -6745,7 +6745,7 @@ class MainActivity : AppCompatActivity(),
 
         // show / hide menu item Undo; ds.undoAction == DataStore.ACTION.REVERTADD is special case, if DataStore is empty --> Add --> Cancel
         fun showMenuItemUndo() {
-            val show = ds!!.undoSection.length > 0 || ds!!.undoAction == ACTION.REVERTADD || ds!!.undoAction == ACTION.REVERTINSERT
+            val show = ds.undoSection.length > 0 || ds.undoAction == ACTION.REVERTADD || ds.undoAction == ACTION.REVERTINSERT
             if (appMenu != null) {
                 val item = appMenu!!.findItem(R.id.action_Undo)
                 item.isVisible = show
@@ -6755,7 +6755,7 @@ class MainActivity : AppCompatActivity(),
         // switch to a folder helpers
         fun switchToFolderByNumber(number: Int, highLightPos: Int = -1) {
             // sanity check
-            if (number < 0 || number >= ds!!.dataSection.size) {
+            if (number < 0 || number >= ds.dataSection.size) {
                 if (fabBack != null) {
                     fabBack!!.visibility = INVISIBLE
                     val fbt = FabBackTag("", ArrayList(), -1, "")
@@ -6765,19 +6765,19 @@ class MainActivity : AppCompatActivity(),
                 return
             }
             // switch folder always cancels undo
-            ds!!.undoSection = ""
-            ds!!.undoText = ""
-            ds!!.undoAction = ACTION.UNDEFINED
+            ds.undoSection = ""
+            ds.undoText = ""
+            ds.undoAction = ACTION.UNDEFINED
             showMenuItemUndo()
             // full infra to switch to a DataStore folder
-            ds!!.selectedSection = number
+            ds.selectedSection = number
             writeAppData(appStoragePath, ds, appName)
-            val dsText = ds!!.dataSection[ds!!.selectedSection]
+            val dsText = ds.dataSection[ds.selectedSection]
             lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)
             lvMain.adapter = LvAdapter(contextMainActivity, lvMain. arrayList)
             lvMain.listView!!.adapter = lvMain.adapter
-            contextMainActivity.title = ds!!.namesSection[ds!!.selectedSection]
-            var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList!!.size - 1
+            contextMainActivity.title = ds.namesSection[ds.selectedSection]
+            var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList.size - 1
             // if presenting a global search hit, place it somehow vertically centered
             if (highLightPos != -1) {
                 scrollPos = Math.max(0, highLightPos - 8)
@@ -6786,17 +6786,17 @@ class MainActivity : AppCompatActivity(),
             lvMain.scrollToItemPos(scrollPos)
             // temporary highlight item
             if (highLightPos != -1) {
-                lvMain.arrayList!![highLightPos].setHighLighted(true)
+                lvMain.arrayList[highLightPos].setHighLighted(true)
                 // revoke temp. highlighting after timeout
                 Handler().postDelayed({
-                    lvMain.arrayList!![highLightPos].setHighLighted(false)
+                    lvMain.arrayList[highLightPos].setHighLighted(false)
                     lvMain.adapter!!.notifyDataSetChanged()
                 }, 3000)
             }
         }
         fun switchToFolderByName(name: String, scrollPos: Int = -1) {
             var folderNumber = -1
-            val folderList = ds!!.namesSection.toTypedArray()
+            val folderList = ds.namesSection.toTypedArray()
             for (i in folderList.indices) {
                 if (folderList[i].equals(name)) {
                     folderNumber = i
@@ -6819,10 +6819,10 @@ class MainActivity : AppCompatActivity(),
             var oriText: String
             var newText: String
             // iterate all data section of DataStore
-            for (dsNdx in ds!!.dataSection.indices) {
+            for (dsNdx in ds.dataSection.indices) {
 
                 // get one data section as string
-                oriText = ds!!.dataSection[dsNdx]
+                oriText = ds.dataSection[dsNdx]
                 newText = ""
 
                 // loop the split text line
@@ -6872,7 +6872,7 @@ class MainActivity : AppCompatActivity(),
                     // all data in a single line
                     newText += trimEndAll(textLine) + "\n"
                     // write line back to DataStore
-                    ds!!.dataSection[dsNdx] = newText
+                    ds.dataSection[dsNdx] = newText
                 }
             }
 
@@ -7073,9 +7073,7 @@ class MainActivity : AppCompatActivity(),
                 centeredToast(context, context.getString(R.string.waitForFinish), Toast.LENGTH_SHORT)
                 var pw = ProgressWindow(context, context.getString(R.string.waitForFinish))
                 pw.dialog?.setOnDismissListener {
-                    if (folderMoreDialog != null ) {
-                        folderMoreDialog?.let { it.show() }
-                    }
+                    folderMoreDialog?.show()
                 }
                 pw.show()
                 pw.absCount = appScanTotal.toFloat()
@@ -7116,7 +7114,7 @@ class MainActivity : AppCompatActivity(),
 //
 class GrzListView {
 
-    internal var arrayList : ArrayList<ListViewItem>? = null // ListView array
+    internal var arrayList = ArrayList<ListViewItem>()       // ListView array
     internal var adapter : LvAdapter? = null                 // ListView adapter
     internal var showOrder = SHOW_ORDER.TOP                  // ListView show order: new on top -- vs. -- new at bottom
 
@@ -7233,9 +7231,9 @@ class GrzListView {
     fun restoreFolderSearchHitStatus(searchText: String?) {
         try {
             val hitList: MutableList<Int> = ArrayList()
-            for (i in arrayList!!.indices) {
-                if (arrayList!![i].fullTitle!!.lowercase(Locale.getDefault()).contains(searchText!!, ignoreCase = true)) {
-                    arrayList!![i].setSearchHit(true)
+            for (i in arrayList.indices) {
+                if (arrayList[i].fullTitle!!.lowercase(Locale.getDefault()).contains(searchText!!, ignoreCase = true)) {
+                    arrayList[i].setSearchHit(true)
                     hitList.add(i)
                 }
             }
@@ -7248,8 +7246,8 @@ class GrzListView {
     fun unselectSearchHits() {
         // remove search hits status
         try {
-            for (pos in arrayList!!.indices) {
-                arrayList!![pos].setSearchHit(false)
+            for (pos in arrayList.indices) {
+                arrayList[pos].setSearchHit(false)
             }
             // refresh ListView
             adapter!!.notifyDataSetChanged()
@@ -7260,8 +7258,8 @@ class GrzListView {
     fun unselectSelections() {
         // remove search hits status
         try {
-            for (pos in arrayList!!.indices) {
-                arrayList!![pos].setSelected(false)
+            for (pos in arrayList.indices) {
+                arrayList[pos].setSelected(false)
             }
             // refresh ListView
             adapter!!.notifyDataSetChanged()
@@ -7273,8 +7271,8 @@ class GrzListView {
         try {
             // get index of the so far last selected item
             var lastSelectedItemPos = -1
-            for (i in 0 until arrayList!!.size) {
-                if (arrayList!![i].isSelected()) {
+            for (i in 0 until arrayList.size) {
+                if (arrayList[i].isSelected()) {
                     lastSelectedItemPos = i
                 }
             }
@@ -7282,25 +7280,25 @@ class GrzListView {
             var startPos = -1
             if (lastSelectedItemPos != -1) {
                 // if position is not already selected. take it as start
-                if (!arrayList!![position].isSelected()) {
-                    startPos = Math.min(arrayList!!.size - 1, position)
+                if (!arrayList[position].isSelected()) {
+                    startPos = Math.min(arrayList.size - 1, position)
                 } else {
-                    startPos = Math.min(arrayList!!.size - 1, lastSelectedItemPos + 1)
+                    startPos = Math.min(arrayList.size - 1, lastSelectedItemPos + 1)
                 }
             } else {
-                if (!arrayList!![position].isSelected()) {
-                    startPos = Math.min(arrayList!!.size - 1, position)
+                if (!arrayList[position].isSelected()) {
+                    startPos = Math.min(arrayList.size - 1, position)
                 } else {
-                    startPos = Math.min(arrayList!!.size - 1, position + 1)
+                    startPos = Math.min(arrayList.size - 1, position + 1)
                 }
             }
 
             // select next 10 items after given position
-            var endPos = Math.min(arrayList!!.size - 1, startPos + 11)
+            var endPos = Math.min(arrayList.size - 1, startPos + 11)
             var i = startPos
             while (i < endPos) {
-                arrayList!![i].setSelected(true)
-                if (arrayList!![i].isSpacer) {
+                arrayList[i].setSelected(true)
+                if (arrayList[i].isSpacer) {
                     endPos++
                 }
                 i++
@@ -7312,27 +7310,27 @@ class GrzListView {
     fun toggleSelectGivenDay(position: Int) {
         try {
             // get select toggle status
-            var selectStatus = !arrayList!![position].isSelected()
+            var selectStatus = !arrayList[position].isSelected()
 
             var dayStart = 0
             var dayEnd = -1
             // climb ListView up until a valid date is found
             for (i in position downTo 0) {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR header via 9.toChar()
-                val curText = arrayList!![i].title
+                val curText = arrayList[i].title
                 if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(9.toChar())) {
                     dayStart = i
                     break
                 }
             }
             // climb ListView down until a valid date is found
-            for (i in position until arrayList!!.size) {
+            for (i in position until arrayList.size) {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
-                val curText = arrayList!![i].title
+                val curText = arrayList[i].title
                 if (i > position) {
                     dayEnd = i
                     // stop climbing at Spacer
-                    if (arrayList!![i].isSpacer) {
+                    if (arrayList[i].isSpacer) {
                         dayEnd = if (i > position) i - 1 else i
                         break
                     } else {
@@ -7347,11 +7345,11 @@ class GrzListView {
                 }
             }
             if (dayEnd == -1) {
-                dayEnd = arrayList!!.size - 1
+                dayEnd = arrayList.size - 1
             }
             // select items according to the given range
             for (i in dayStart..dayEnd) {
-                arrayList!![i].setSelected(selectStatus)
+                arrayList[i].setSelected(selectStatus)
             }
         } catch(e: Exception) {
             Log.d("selectGivenDay", e.message!!)
@@ -7362,7 +7360,7 @@ class GrzListView {
     fun toggleSelectGivenWeek(position: Int) {
         try {
             // get select toggle status
-            var selectStatus = !arrayList!![position].isSelected()
+            var selectStatus = !arrayList[position].isSelected()
 
             var dayChanges = 0
             var dayStart = 0
@@ -7370,9 +7368,9 @@ class GrzListView {
             // climb ListView up until a Sunday is found
             for (i in position downTo 0) {
                 // check '2020-03-03 Thu' pattern
-                if ( arrayList!![i].isSection ) {
+                if ( arrayList[i].isSection ) {
                     // a regex pattern for "yyyy-mm-dd
-                    val curText = arrayList!![i].title
+                    val curText = arrayList[i].title
                     var m = PATTERN.Date.matcher(curText.toString())
                     if (m.find()) {
                         // care about skipped days
@@ -7393,13 +7391,13 @@ class GrzListView {
             }
             // climb ListView down until a valid date is found
             dayChanges = 0
-            for (i in position until arrayList!!.size) {
+            for (i in position until arrayList.size) {
                 // check '2020-03-03 Thu' pattern and extract name of day
-                if ( arrayList!![i].isSection ) {
-                    var splitArr = arrayList!![i].title?.split(" ")
+                if ( arrayList[i].isSection ) {
+                    var splitArr = arrayList[i].title?.split(" ")
                     if (splitArr?.size == 2) {
                         // a regex pattern for "yyyy-mm-dd
-                        val curText = arrayList!![i].title
+                        val curText = arrayList[i].title
                         var m = PATTERN.Date.matcher(curText.toString())
                         if (m.find()) {
                             // care about skipped days
@@ -7420,11 +7418,11 @@ class GrzListView {
                 }
             }
             if (dayEnd == -1) {
-                dayEnd = arrayList!!.size - 1
+                dayEnd = arrayList.size - 1
             }
             // select items according to the given range
             for (i in dayStart..dayEnd) {
-                arrayList!![i].setSelected(selectStatus)
+                arrayList[i].setSelected(selectStatus)
             }
         } catch(e: Exception) {
             Log.d("selectGivenWeek", e.message!!)
@@ -7435,7 +7433,7 @@ class GrzListView {
     fun toggleSelectGivenMonth(position: Int) {
         try {
             // get select toggle status
-            var selectStatus = !arrayList!![position].isSelected()
+            var selectStatus = !arrayList[position].isSelected()
 
             var monthStartPos = 0
             var monthEndPos = -1
@@ -7443,7 +7441,7 @@ class GrzListView {
             // climb ListView up until a date pattern is found, which is set to "today"
             for (i in position downTo 0) {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
-                val curText = arrayList!![i].title
+                val curText = arrayList[i].title
                 if (PATTERN.DateDay.matcher(curText.toString()).find()) {
                     var m = PATTERN.DateMonth.matcher(curText.toString())
                     if (m.find()) {
@@ -7459,9 +7457,9 @@ class GrzListView {
             // climb ListView up until the today's year-month pattern is NOT found
             for (i in position downTo 0) {
                 // a regex pattern for "yyyy-mm-", sample 2020-03- OR header via 9.toChar()
-                val curText = arrayList!![i].title
+                val curText = arrayList[i].title
                 // only check headers for a valid date pattern
-                if (arrayList!![i].isSection && PATTERN.DateDay.matcher(curText.toString()).find()) {
+                if (arrayList[i].isSection && PATTERN.DateDay.matcher(curText.toString()).find()) {
                     // if the current year-month pattern differs from today's year-month patter, there is a match
                     var m = PATTERN.DateMonth.matcher(curText.toString())
                     if (m.find()) {
@@ -7475,11 +7473,11 @@ class GrzListView {
             }
 
             // climb ListView down until the today year-month pattern is NOT found
-            for (i in position until arrayList!!.size) {
+            for (i in position until arrayList.size) {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
-                val curText = arrayList!![i].title
+                val curText = arrayList[i].title
                 // only check headers for a valid date pattern
-                if (arrayList!![i].isSection && PATTERN.DateDay.matcher(curText.toString()).find()) {
+                if (arrayList[i].isSection && PATTERN.DateDay.matcher(curText.toString()).find()) {
                     // if the current year-month pattern differs from today's year-month patter, there is a match
                     var m = PATTERN.DateMonth.matcher(curText.toString())
                     if (m.find()) {
@@ -7493,12 +7491,12 @@ class GrzListView {
             }
             // if no other year-month pattern below today was found, select the list down zo its end
             if (monthEndPos == -1) {
-                monthEndPos = arrayList!!.size - 1
+                monthEndPos = arrayList.size - 1
             }
 
             // select items according to the above calculated range
             for (i in monthStartPos..monthEndPos) {
-                arrayList!![i].setSelected(selectStatus)
+                arrayList[i].setSelected(selectStatus)
             }
 
         } catch(e: Exception) {
@@ -7515,28 +7513,28 @@ class GrzListView {
             // climb ListView up until a valid date or the header sign 9.toChar() is found
             for (i in position downTo 0) {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
-                val curText = arrayList!![i].title
+                val curText = arrayList[i].title
                 if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(9.toChar())) {
                     dayStart = i
                     break
                 }
             }
             // climb ListView down until a valid date/header is found
-            for (i in position until arrayList!!.size) {
+            for (i in position until arrayList.size) {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
-                val curText = arrayList!![i].title
+                val curText = arrayList[i].title
                 // stop climbing at Date or Header or Spacer
-                if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(8.toChar()) || arrayList!![i].isSpacer) {
+                if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(8.toChar()) || arrayList[i].isSpacer) {
                     dayEnd = if (i > position) i - 1 else i
                     break
                 }
             }
             if (dayEnd == -1) {
-                dayEnd = arrayList!!.size - 1
+                dayEnd = arrayList.size - 1
             }
             // collect items according to the given range as String
             for (i in dayStart..dayEnd) {
-                retVal += arrayList!![i].fullTitle + if (i < dayEnd) "\n" else ""
+                retVal += arrayList[i].fullTitle + if (i < dayEnd) "\n" else ""
             }
         } catch(e: Exception) {}
         retVal = retVal.trimEnd('\n')
@@ -7546,14 +7544,14 @@ class GrzListView {
     // return a list of selected indexes including the enclosed spacers
     fun getSelectedIndexList() : MutableList<Int> {
         var listSelPos: MutableList<Int> = ArrayList()
-        for (i in 0 until arrayList!!.size) {
-            if (arrayList!![i].isSelected()) {
+        for (i in 0 until arrayList.size) {
+            if (arrayList[i].isSelected()) {
                 listSelPos.add(i)
             }
-            if (arrayList!![i].isSpacer) {
+            if (arrayList[i].isSpacer) {
                 var posBefore = Math.max(0, i - 1)
-                var posAfter = Math.min(arrayList!!.size - 1, i + 1)
-                if (arrayList!![posBefore].isSelected() && arrayList!![posAfter].isSelected()) {
+                var posAfter = Math.min(arrayList.size - 1, i + 1)
+                if (arrayList[posBefore].isSelected() && arrayList[posAfter].isSelected()) {
                     listSelPos.add(i)
                 }
             }
@@ -7567,10 +7565,10 @@ class GrzListView {
         get() {
             // collect data with file links
             var retVal = ""
-            for (i in arrayList!!.indices) {
+            for (i in arrayList.indices) {
                 // collect everything but spacer
-                if (!arrayList!![i].isSpacer) {
-                    retVal += arrayList!![i].fullTitle + "\n"
+                if (!arrayList[i].isSpacer) {
+                    retVal += arrayList[i].fullTitle + "\n"
                 }
             }
             retVal = retVal.trimEnd('\n')
@@ -7584,9 +7582,9 @@ class GrzListView {
             // collect selected items
             var retVal = ""
             try {
-                for (i in arrayList!!.indices) {
-                    if (arrayList!![i].isSelected()) {
-                        retVal += arrayList!![i].fullTitle + "\n"
+                for (i in arrayList.indices) {
+                    if (arrayList[i].isSelected()) {
+                        retVal += arrayList[i].fullTitle + "\n"
                     }
                 }
             } catch(e: Exception) {}
@@ -7601,9 +7599,9 @@ class GrzListView {
             // collect search hit items
             var retVal = ""
             try {
-                for (i in arrayList!!.indices) {
-                    if (arrayList!![i].isSearchHit()) {
-                        retVal += arrayList!![i].fullTitle + "\n"
+                for (i in arrayList.indices) {
+                    if (arrayList[i].isSearchHit()) {
+                        retVal += arrayList[i].fullTitle + "\n"
                     }
                 }
             } catch(e: Exception) {}

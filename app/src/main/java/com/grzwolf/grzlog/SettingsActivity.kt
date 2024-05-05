@@ -372,8 +372,8 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             backup!!.onPreferenceClickListener =
                 Preference.OnPreferenceClickListener { // does it make sense
                     var dataAvailable = false
-                    for (i in MainActivity.ds!!.dataSection.indices) {
-                        if (MainActivity.ds!!.dataSection[i].length > 0) {
+                    for (i in MainActivity.ds.dataSection.indices) {
+                        if (MainActivity.ds.dataSection[i].length > 0) {
                             dataAvailable = true
                         }
                     }

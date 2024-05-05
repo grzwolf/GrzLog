@@ -754,17 +754,17 @@ internal object CenteredCloseableToast {
         tv.setBackgroundColor(Color.DKGRAY)
         tv.setTextColor(Color.YELLOW)
         toast = Toast(context)
-        toast!!.setGravity(Gravity.CENTER, 0, 0)
-        toast!!.duration = duration
-        toast!!.view = layout
-        toast!!.show()
+        toast?.setGravity(Gravity.CENTER, 0, 0)
+        toast?.duration = duration
+        toast?.view = layout
+        toast?.show()
     }
 
     @JvmStatic
     fun cancel() {
         suppressToast = true
         if (toast != null) {
-            toast!!.cancel()
+            toast?.cancel()
         }
         Handler().postDelayed({
             toast = null
@@ -1140,11 +1140,11 @@ class ProgressWindow(context: Context, message: String) {
     init {
         // dialog
         dialog = Dialog(context)
-        dialog!!.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog!!.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog!!.setContentView(R.layout.layout_progress_dialog)
-        dialog!!.setCancelable(false)
-        dialog!!.setCanceledOnTouchOutside(false)
+        dialog?.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog?.setContentView(R.layout.layout_progress_dialog)
+        dialog?.setCancelable(false)
+        dialog?.setCanceledOnTouchOutside(false)
         // progress bar
         progressBar = dialog!!.findViewById(R.id.progress_bar) as ProgressBar
         progressBar?.setVisibility(View.VISIBLE)
@@ -1160,12 +1160,12 @@ class ProgressWindow(context: Context, message: String) {
     }
 
     fun show() {
-        dialog!!.show()
+        dialog?.show()
     }
 
     fun close() {
         if (dialog != null) {
-            dialog!!.dismiss()
+            dialog?.dismiss()
             dialog = null
         }
     }
