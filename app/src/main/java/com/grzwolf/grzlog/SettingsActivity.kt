@@ -211,7 +211,7 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             var file = getBackupFile(appContext!!)
             if (file != null) {
                 val lastModDate = Date(file.lastModified())
-                backupInfo!!.summary = file.toString() + getString(R.string.lastBackup) + lastModDate.toString()
+                backupInfo!!.summary = file.toString() + getString(R.string.lastBackup) + lastModDate.toString() + "\""
             } else {
                 backupInfo!!.summary = getString(R.string.noBackupExisting)
             }

@@ -68,7 +68,7 @@
     <string name="imageFailure">[Bidfehler]</string>
 
     <!-- Settings Strings-->
-    <string name="lastBackup">\"\nletztes Sicherung: \"</string>
+    <string name="lastBackup">\nletztes Sicherung: \"</string>
     <string name="noBackup">-- Sicherung existiert nicht --</string>
     <string name="itemsEmpty">Keine Datensicherung ausgeführt.</string>
     <string name="backupData">Datensicherung</string>

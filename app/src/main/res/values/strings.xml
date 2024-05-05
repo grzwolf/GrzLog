@@ -68,7 +68,7 @@
     <string name="imageFailure">[Image failure]</string>
 
     <!-- Settings Strings-->
-    <string name="lastBackup">\"\nlast backup: \"</string>
+    <string name="lastBackup">\nlast backup: \"</string>
     <string name="noBackup">-- no backup existing --</string>
     <string name="itemsEmpty">All items are empty, no backup executed.</string>
     <string name="backupData">Backup data</string>
