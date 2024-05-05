@@ -3955,7 +3955,7 @@ class MainActivity : AppCompatActivity(),
                     centeredToast(this, getString(R.string.nothingFound), 3000)
                     inputBuilderDialog!!.dismiss()
                     Handler().postDelayed({
-                        folderMoreDialog?.show()
+                        prepareGlobalSearch(searchHitListGlobal, searchPhrase)
                     }, 100)
                     return@setPositiveButton
                 }
