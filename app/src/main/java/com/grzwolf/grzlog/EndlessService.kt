@@ -150,8 +150,8 @@ class EndlessService : Service() {
     }
 
     companion object {
-        private const val name = "SPYSERVICE_KEY"
-        private const val key = "SPYSERVICE_STATE"
+        private const val name = "SERVICE_KEY"
+        private const val key = "SERVICE_STATE"
 
         enum class Actions {
             START,

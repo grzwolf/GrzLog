@@ -176,7 +176,7 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
         fun checkDownloadUrls(context: Context, updateLinkPref: Preference, tagVersion: String) {
             // check urls must happen outside of UI thread
             Thread {
-                // buld update file link
+                // build update file link
                 var apkLink = "https://github.com/grzwolf/GrzLog/releases/download/" + "v" + tagVersion + "/com.grzwolf.grzlog.v" + tagVersion
                 var apkLinkDeb = apkLink + "-debug.apk"
                 var apkLinkRel = apkLink + "-release.apk"
@@ -712,7 +712,7 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                 context.startForegroundService(it)
             }
         }
-        // lame parametr transfer to helper for EndlessService
+        // lame parameter transfer to helper for EndlessService
         lateinit var gBScontext: Context
         lateinit var gBSsrcFolder: String
         lateinit var gBSoutFolder: String

@@ -646,7 +646,7 @@ class MainActivity : AppCompatActivity(),
         handleSharedIntent(getIntent())
     }
 
-    // life cycle observer knows, if app is in forgeground or not
+    // life cycle observer knows, if app is in foreground or not
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onAppInForeground () {
         appIsInForeground = true
@@ -1075,7 +1075,7 @@ class MainActivity : AppCompatActivity(),
                                 } else {
                                     tmp = word.trim()
                                 }
-                                // fragmented link: expand downwards with lower warppedLines, until a ' ' appears
+                                // fragmented link: expand downwards with lower wrappedLines, until a ' ' appears
                                 var posLastSpace = wrappedLines[wrappedLineIndex].lastIndexOf(" ")
                                 if (posLastSpace < posLink) {
                                     for (ndx in wrappedLineIndex + 1 until wrappedLines.size) {
@@ -6064,7 +6064,7 @@ class MainActivity : AppCompatActivity(),
             pw.absCount = (lines.size - 1).toFloat()
         })
 
-        // OUTER LOOP: text lines fwith image links
+        // OUTER LOOP: text lines with image links
         for (i in lines.indices) {
 
             // set progress
@@ -6567,7 +6567,7 @@ class MainActivity : AppCompatActivity(),
         var lvMain = GrzListView()
         // global search: show a 'return to origin' button
         var fabBack: FloatingActionButton? = null
-        // intennt controls whether to jump back to Settings
+        // intent controls whether to jump back to Settings
         var intentSettings: Intent? = null
         // DataStore holds all data "new at top"; after onCreate() it is under no circumstances null
         @JvmField
