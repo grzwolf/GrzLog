@@ -739,6 +739,9 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                 // GrzLog.zip might not be writable, if it is a backup from another phone
                 val dst = File("$outFolder/$zipName")
                 if (dst.exists() && !dst.canWrite()) {
+                    // stop endless service
+                    actionOnService(context, EndlessService.Companion.Actions.STOP)
+                    // info
                     okBox(
                         context,
                         context.getString(R.string.ZIPcreated) + " = " + context.getString(R.string.Failure),
