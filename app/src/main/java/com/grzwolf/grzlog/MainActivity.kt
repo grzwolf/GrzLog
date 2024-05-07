@@ -3916,43 +3916,44 @@ class MainActivity : AppCompatActivity(),
         folderMoreDialog?.show( )
     }
 
-    // provide global search results
-    fun prepareGlobalSearch(searchHitListGlobal: MutableList<GlobalSearchHit>, searchPhrase: String) {
+    // provide global search results;
+    // note: use of contextMainActivity instead of this to allow to call it from companion object
+    public fun prepareGlobalSearch(searchHitListGlobal: MutableList<GlobalSearchHit>, searchPhrase: String) {
         if (searchHitListGlobal.size > 0) {
             // re use global search hit list
-            jumpToSearchHitInFolderDialog(this, searchHitListGlobal, -1, searchPhrase)
+            jumpToSearchHitInFolderDialog(contextMainActivity, searchHitListGlobal, -1, searchPhrase)
         } else {
             // input dialog for global search phrase
-            val inputSearch = EditText(this)
+            val inputSearch = EditText(contextMainActivity)
             inputSearch.inputType = InputType.TYPE_CLASS_TEXT
             inputSearch.setText("")
             showEditTextContextMenu(inputSearch, false)
             var inputBuilderDialog: AlertDialog? = null
-            var inputBuilder: AlertDialog.Builder = AlertDialog.Builder(this)
+            var inputBuilder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity)
             inputBuilder =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     AlertDialog.Builder(
-                        this,
+                        contextMainActivity,
                         android.R.style.Theme_Material_Dialog
                     )
                 } else {
-                    AlertDialog.Builder(this)
+                    AlertDialog.Builder(contextMainActivity)
                 }
-            inputBuilder.setTitle(getString(R.string.searchPhrase))
+            inputBuilder.setTitle(contextMainActivity.getString(R.string.searchPhrase))
             inputBuilder.setView(inputSearch)
             inputBuilder.setPositiveButton(R.string.ok) { dialog, which ->
                 val searchText = inputSearch.text.toString()
                 // no input --> get out
                 if (searchText.isEmpty()) {
                     inputBuilderDialog!!.dismiss()
-                    folderMoreDialog?.show()
+                    prepareGlobalSearch(searchHitListGlobal, searchPhrase)
                     return@setPositiveButton
                 }
                 // find all search hits in DataStore
-                var searchHitList: MutableList<GlobalSearchHit> = findTextInDataStore(this, searchText, lvMain)
+                var searchHitList: MutableList<GlobalSearchHit> = findTextInDataStore(contextMainActivity, searchText, lvMain)
                 // nothing found --> get out
                 if (searchHitList.size == 0) {
-                    centeredToast(this, getString(R.string.nothingFound), 3000)
+                    centeredToast(contextMainActivity, contextMainActivity.getString(R.string.nothingFound), 3000)
                     inputBuilderDialog!!.dismiss()
                     Handler().postDelayed({
                         prepareGlobalSearch(searchHitListGlobal, searchPhrase)
@@ -3963,7 +3964,7 @@ class MainActivity : AppCompatActivity(),
                 hideKeyboard(inputSearch)
                 // render search hits and let user pick one to jump to
                 Handler().postDelayed({
-                    jumpToSearchHitInFolderDialog(this, searchHitList, -1, searchText)
+                    jumpToSearchHitInFolderDialog(contextMainActivity, searchHitList, -1, searchText)
                 }, 50)
             }
             inputBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
@@ -5101,7 +5102,7 @@ class MainActivity : AppCompatActivity(),
 
     //
     // tricky way to show soft keyboard: https://stackoverflow.com/questions/4597690/how-to-set-timer-in-android
-    //
+    // uses contextMainActivity instead of this to allow to call it from companion object
     private fun showKeyboard(et: EditText?, selectStart: Int, selectStop: Int, msDelay: Int) {
         // show soft keyboard
         Handler().postDelayed({
@@ -5133,7 +5134,7 @@ class MainActivity : AppCompatActivity(),
             lvMain.listView!!.getWindowVisibleDisplayFrame(windowRect)
             // check display height
             val displayMetrics = DisplayMetrics()
-            windowManager.defaultDisplay.getMetrics(displayMetrics)
+            contextMainActivity.windowManager.defaultDisplay.getMetrics(displayMetrics)
             // the lame 70% height comparison works well in portrait mode
             if (windowRect.height().toFloat() > displayMetrics.heightPixels * 0.7f) {
                 et!!.dispatchTouchEvent(
@@ -5164,14 +5165,14 @@ class MainActivity : AppCompatActivity(),
     }
     private fun hideKeyboard(view: View) {
         if (view != null) {
-            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            val imm = contextMainActivity.getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
     }
     private fun hideKeyboard() {
         val view = this.currentFocus
         if (view != null) {
-            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            val imm = contextMainActivity.getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
     }
@@ -6695,11 +6696,13 @@ class MainActivity : AppCompatActivity(),
                     fabBack!!.tag = FabBackTag(dsFolder, searchHitListGlobal, hitsNdx, searchText)
                     fabBack!!.visibility = INVISIBLE
                 }
-                if (folderMoreDialog != null) {
-                    folderMoreDialog?.show()
-                }
                 if (intentSettings != null) {
+                    // return to settings, if call came from 'show GrzLog gallery'
                     contextMainActivity.startActivity(intentSettings)
+                } else {
+                    // otherwise return to calling search dialog
+                    // call a class method from companion object: https://stackoverflow.com/questions/43179402/access-methods-outside-companion-object-kotlin
+                    MainActivity().prepareGlobalSearch(ArrayList(), "")
                 }
             }
             jumpFolderDialog = jumpFolderBuilder.create()
