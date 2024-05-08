@@ -11,7 +11,6 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Environment
 import android.provider.OpenableColumns
-import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.Exception
@@ -34,7 +33,6 @@ class FileUtils(var context: Context) {
                 try {
                     path = getPath(context, uri).toString()
                 } catch (e: Exception) {
-                    Log.d(TAG, e.message.toString())
                     path = null
                 }
                 if (path != null) {
@@ -59,7 +57,6 @@ class FileUtils(var context: Context) {
                     val split = docId.split(":".toRegex()).toTypedArray()
                     var fullPath = getPathFromExtSD(split)
                     if (fullPath == null || !fileExists(fullPath)) {
-                        Log.d(TAG, "Copy files as a fallback")
                         fullPath = copyFileToInternalStorage(context, uri, FALLBACK_COPY_FOLDER)
                     }
                     return if (fullPath !== "") {
@@ -143,7 +140,6 @@ class FileUtils(var context: Context) {
                     val docId = DocumentsContract.getDocumentId(uri)
                     val split = docId.split(":".toRegex()).toTypedArray()
                     val type = split[0]
-                    Log.d(TAG, "MEDIA DOCUMENT TYPE: $type")
                     var contentUri: Uri? = null
                     if ("image" == type) {
                         contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
@@ -217,12 +213,6 @@ class FileUtils(var context: Context) {
             val type = pathData[0]
             val relativePath = File.separator + pathData[1]
             var fullPath : String?
-            Log.d(TAG, "MEDIA EXTSD TYPE: $type")
-            Log.d(TAG, "Relative path: $relativePath")
-            // on my Sony devices (4.4.4 & 5.1.1), `type` is a dynamic string
-            // something like "71F8-2C0A", some kind of unique id per storage
-            // don't know any API that can get the root path of that storage based on its id.
-            //
             // so no "primary" type, but let the check here for other devices
             if ("primary".equals(type, ignoreCase = true)) {
                 fullPath = Environment.getExternalStorageDirectory().toString() + relativePath
@@ -276,13 +266,9 @@ class FileUtils(var context: Context) {
                 while (inputStream.read(buffers).also { read = it } != -1) {
                     outputStream.write(buffers, 0, read)
                 }
-                Log.d(TAG, "Size " + file.length())
                 inputStream.close()
                 outputStream.close()
-                Log.d(TAG, "Path " + file.path)
-                Log.d(TAG, "Size " + file.length())
             } catch (e: Exception) {
-                Log.d(TAG, e.message!!)
             }
             return file.path
         }
@@ -334,7 +320,6 @@ class FileUtils(var context: Context) {
                     inputStream.close()
                     outputStream.close()
                 } catch (e: Exception) {
-                    Log.d(TAG, e.message!!)
                 }
                 return output.path
             } catch(e:NullPointerException) {

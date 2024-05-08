@@ -29,7 +29,6 @@ import android.provider.Settings
 import android.text.*
 import android.text.style.*
 import android.util.DisplayMetrics
-import android.util.Log
 import android.view.*
 import android.view.View.*
 import android.view.inputmethod.InputMethodManager
@@ -3092,7 +3091,6 @@ class MainActivity : AppCompatActivity(),
             item.isVisible = false
             showMenuItemUndo()
         } catch (npe: NullPointerException) {
-            Log.d("showMenuItems: ", npe.message ?: "empty")
         }
     }
 
@@ -7060,7 +7058,6 @@ class MainActivity : AppCompatActivity(),
                 outputStream.close()
                 success = true
             } catch (e: Exception) {
-                Log.d("copyUriToAppImages", e.message!!)
                 success = false
             }
             return success
@@ -7355,7 +7352,6 @@ class GrzListView {
                 arrayList[i].setSelected(selectStatus)
             }
         } catch(e: Exception) {
-            Log.d("selectGivenDay", e.message!!)
         }
     }
 
@@ -7428,7 +7424,6 @@ class GrzListView {
                 arrayList[i].setSelected(selectStatus)
             }
         } catch(e: Exception) {
-            Log.d("selectGivenWeek", e.message!!)
         }
     }
 
@@ -7503,7 +7498,6 @@ class GrzListView {
             }
 
         } catch(e: Exception) {
-            Log.d("selectGivenMonth", e.message!!)
         }
     }
 

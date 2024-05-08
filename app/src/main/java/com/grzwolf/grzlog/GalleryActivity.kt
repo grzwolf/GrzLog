@@ -8,7 +8,6 @@ import android.graphics.drawable.Drawable
 import android.media.ThumbnailUtils
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.util.Size
 import android.util.TypedValue
 import android.view.*
@@ -420,7 +419,6 @@ class GalleryActivity : AppCompatActivity() {
                                         thumbsList.add(GalleryActivity.GrzThumbNail(item.fileName, item.fileDate, this.getDrawable(android.R.drawable.gallery_thumb)!!))
                                     }
                                 } catch (e: Exception) {
-                                    Log.d("GrzLog thumbs", e.message.toString())
                                     thumbsList.add(GrzThumbNail(item.fileName, item.fileDate, this.getDrawable(android.R.drawable.gallery_thumb)!!))
                                 }
                             } else {
@@ -434,16 +432,13 @@ class GalleryActivity : AppCompatActivity() {
                     }
                     success = true
                 } catch (ex: Exception) {
-                    Log.d("GrzLog thumbs", ex.message.toString())
                 } catch (ex: OutOfMemoryError) {
-                    Log.d("GrzLog thumbs", ex.message.toString())
                 }
                 runOnUiThread {
                     pw.close()
                 }
             }.start()
         } catch (e: Exception) {
-            Log.d("GrzLog thumbs", e.message.toString())
         }
     }
 

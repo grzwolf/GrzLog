@@ -18,7 +18,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
-import android.util.Log
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -544,7 +543,6 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                                 spe.clear()
                                 spe.apply()
                             } catch (e: Exception) {
-                                Log.d("GrzLog Settings reset: ", e.message!!)
                             }
                             // definitely need to re read all data from scratch
                             MainActivity.reReadAppFileData = true
@@ -984,7 +982,6 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     outputStream.close()
                     success = true
                 } catch (e: Exception) {
-                    Log.e("Exception", e.message!!)
                     success = false
                 }
                 // jump back to UI

@@ -11,7 +11,6 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.util.Log
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.core.content.FileProvider
@@ -129,7 +128,6 @@ class DownloadController(private val context: Context, private val url: String, 
                     }
                 } catch (e: Exception) {
                     val data = e.message.toString()
-                    Log.e("Exception: ", data)
                     Toast.makeText(context, "download failed", Toast.LENGTH_LONG)
                         .show()
                 }

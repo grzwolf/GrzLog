@@ -9,7 +9,6 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
-import android.util.Log
 import android.widget.Toast
 import java.text.SimpleDateFormat
 import java.util.*
@@ -26,23 +25,17 @@ class EndlessService : Service() {
     private var isServiceStarted = false
 
     override fun onBind(intent: Intent): IBinder? {
-        Log.d(tag, "Some component want to bind with the service")
         // We don't provide binding, so return null
         return null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(tag, "onStartCommand executed with startId: $startId")
         if (intent != null) {
             val action = intent.action
-            Log.d(tag, "using an intent with action $action")
             when (action) {
                 Actions.START.name -> startService()
                 Actions.STOP.name -> stopService()
-                else -> Log.d(tag, "This should never happen. No action in the received intent")
             }
-        } else {
-            Log.d(tag,"with a null intent. It has been probably restarted by the system.")
         }
         // by returning this we make sure the service is restarted if the system kills the service
         return START_STICKY
@@ -50,7 +43,6 @@ class EndlessService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(tag, "The service has been created".toUpperCase())
         var notification = createNotification()
         // https://stackoverflow.com/questions/77520968/why-am-i-encountering-the-error-starting-fgs-without-a-type-when-executing-the
         if (Build.VERSION.SDK_INT >= 34) {
@@ -67,7 +59,6 @@ class EndlessService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(tag, "The service has been destroyed")
         Toast.makeText(this, "Service destroyed", Toast.LENGTH_SHORT).show()
     }
 
@@ -76,7 +67,6 @@ class EndlessService : Service() {
             return
         }
 
-        Log.d(tag, "Starting the foreground service task")
         Toast.makeText(this, "Service starting its task", Toast.LENGTH_SHORT).show()
         isServiceStarted = true
         setServiceState(this, ServiceState.STARTED)
@@ -91,12 +81,9 @@ class EndlessService : Service() {
 
         // run GrzLog backup silently
         SettingsActivity.generateBackupSilent()
-
-        Log.d(tag, "start endless service done")
     }
 
     private fun stopService() {
-        Log.d(tag, "Stopping the foreground service")
         Toast.makeText(this, "Service stopping", Toast.LENGTH_SHORT).show()
         try {
             wakeLock?.let {
@@ -107,7 +94,6 @@ class EndlessService : Service() {
             stopForeground(true)
             stopSelf()
         } catch (e: Exception) {
-            Log.d(tag, "Service stopped without being started: ${e.message}")
         }
         isServiceStarted = false
         setServiceState(this, ServiceState.STOPPED)
