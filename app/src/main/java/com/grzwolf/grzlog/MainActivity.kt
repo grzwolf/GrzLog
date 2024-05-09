@@ -1187,25 +1187,30 @@ class MainActivity : AppCompatActivity(),
 
     // extract the word around the character offset position in a given text
     fun getWordAtOffset(text: String, offset: Int) : String {
-        // sake of mind
-        var ofs = Math.max(0, Math.min(offset, text.length-1))
-        // 1st char
-        var word = text[ofs].toString()
-        // don't expand word to the right, if ' ' is already in place
-        var expandToRight = if (text[ofs] == ' ') false else true
-        // expand word to the left, stop at ' '
-        var left = ofs - 1
-        while ((left >= 0) && (text[left] != ' ')) {
-            word = text[left] + word
-            left--
-        }
-        // expand word to the right
-        if (expandToRight) {
-            var right = ofs + 1
-            while ((right < text.length) && (text[right] != ' ')) {
-                word = word + text[right]
-                right++
+        var word = ""
+        try {
+            // sake of mind
+            var ofs = Math.max(0, Math.min(offset, text.length - 1))
+            // 1st char
+            word = text[ofs].toString()
+            // don't expand word to the right, if ' ' is already in place
+            var expandToRight = if (text[ofs] == ' ') false else true
+            // expand word to the left, stop at ' '
+            var left = ofs - 1
+            while ((left >= 0) && (text[left] != ' ')) {
+                word = text[left] + word
+                left--
             }
+            // expand word to the right
+            if (expandToRight) {
+                var right = ofs + 1
+                while ((right < text.length) && (text[right] != ' ')) {
+                    word = word + text[right]
+                    right++
+                }
+            }
+        } catch (ioobe: IndexOutOfBoundsException) {
+            word = ""
         }
         return word
     }
@@ -7861,18 +7866,22 @@ internal class LvAdapter : BaseAdapter {
             val start = text?.indexOf('[')?.plus(1)
             val stop = text?.indexOf(']')?.plus(1)
             var mime = ""
-            if ( stop != -1 ) {
-                // insert a " " as icon placeholder
-                text = text?.substring(0, start!!) + " " + text?.substring(start!!)
-                spanStr = SpannableString(text)
-                // set icon via spannable
-                res = android.R.drawable.ic_dialog_alert
-                // title could contain a mime, so exec mime detection on the last part of fullTitle
-                mime = getFileExtension(
-                    items!![position].fullTitle!!.substring(
-                        items!![position].fullTitle!!.indexOf("::::"),
-                        items!![position].fullTitle!!.lastIndexOf("]")
-                    ))
+            try {
+                if (stop != -1) {
+                    // insert a " " as icon placeholder
+                    text = text?.substring(0, start!!) + " " + text?.substring(start!!)
+                    spanStr = SpannableString(text)
+                    // set icon via spannable
+                    res = android.R.drawable.ic_dialog_alert
+                    // title could contain a mime, so exec mime detection on the last part of fullTitle
+                    mime = getFileExtension(
+                        items!![position].fullTitle!!.substring(
+                            items!![position].fullTitle!!.indexOf("::::"),
+                            items!![position].fullTitle!!.lastIndexOf("]")
+                        ))
+                }
+            } catch (ioobe: IndexOutOfBoundsException ) {
+                mime = ""
             }
             if (mime.length > 0) {
                 if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
