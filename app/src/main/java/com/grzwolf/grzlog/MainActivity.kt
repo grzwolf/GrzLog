@@ -2041,14 +2041,16 @@ class MainActivity : AppCompatActivity(),
             lvMain.listView!!.adapter = lvMain.adapter                               // populate main listview via adapter
 
             var above = ds.tagSection[ds.tagSection.size - 1] - 1 - corrAbove        // 'neighbour' above highlight position: tagSection[last] == 1st del pos
+            above = Math.max(0, Math.min(above, lvMain.arrayList.size-1))
             var below = ds.tagSection[1] - (ds.tagSection.size - 1) + 1 - cntSpc     // 'neighbour' below highlight position: tagSection[1] == last del pos
+            below = Math.max(0, Math.min(below, lvMain.arrayList.size-1))
             if (lvMain.arrayList[above].isSpacer) above -= 1
             if (lvMain.arrayList[below].isSpacer) below += 1
 
-            lvMain.listView!!.setSelection(ds.tagSection[0])                         // ListView scroll to last known scroll position: tagSection[0] == scroll pos
-
             lvMain.arrayList[above].setHighLighted(true)                             // temp. highlighting
             lvMain.arrayList[below].setHighLighted(true)
+            lvMain.listView!!.setSelection(ds.tagSection[0])                         // ListView scroll to last known scroll position: tagSection[0] == scroll pos
+
             lvMain.adapter!!.notifyDataSetChanged()
             lvMain.listView!!.postDelayed({                                          // revoke temp. highlighting after timeout
                 lvMain.arrayList[above].setHighLighted(false)
