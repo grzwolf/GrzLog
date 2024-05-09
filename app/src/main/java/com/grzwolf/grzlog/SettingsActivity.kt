@@ -238,132 +238,148 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
 
             // show last update check date
             val startCheckPref = findPreference("AppAtStartCheckUpdateFlag") as SwitchPreferenceCompat?
-            var lastCheck = sharedPref.getString("AppAtStartCheckUpdateDate", "1900-01-01")
-            if ( lastCheck == "1900-01-01" ) {
-                lastCheck = "?"
-            }
-            // resetting last check date allows a fresh startup check after status change
-            startCheckPref!!.setSummary(getString(R.string.checked) + " " + lastCheck)
-            startCheckPref!!.onPreferenceClickListener =
-                Preference.OnPreferenceClickListener {
-                    // reset the last check date
-                    val spe = sharedPref.edit()
-                    spe.putString("AppAtStartCheckUpdateDate", "1900-01-01")
-                    spe.apply()
-                    var lastCheck = sharedPref.getString("AppAtStartCheckUpdateDate", "1900-01-01")
-                    if ( lastCheck == "1900-01-01" ) {
-                        lastCheck = "?"
-                    }
-                    startCheckPref!!.setSummary(getString(R.string.checked) + " " + lastCheck)
-                    true
+            if (BuildConfig.DEBUG) {
+                var lastCheck = sharedPref.getString("AppAtStartCheckUpdateDate", "1900-01-01")
+                if (lastCheck == "1900-01-01") {
+                    lastCheck = "?"
                 }
+                // resetting last check date allows a fresh startup check after status change
+                startCheckPref?.setSummary(getString(R.string.checked) + " " + lastCheck)
+                startCheckPref?.onPreferenceClickListener =
+                    Preference.OnPreferenceClickListener {
+                        // reset the last check date
+                        val spe = sharedPref.edit()
+                        spe.putString("AppAtStartCheckUpdateDate", "1900-01-01")
+                        spe.apply()
+                        var lastCheck = sharedPref.getString("AppAtStartCheckUpdateDate", "1900-01-01")
+                        if (lastCheck == "1900-01-01") {
+                            lastCheck = "?"
+                        }
+                        startCheckPref?.setSummary(getString(R.string.checked) + " " + lastCheck)
+                        true
+                    }
+            } else {
+                startCheckPref?.isVisible = false
+            }
 
             // action check app update available
             val updateLinkPref = findPreference("UpdateLink") as Preference?
             val checkUpdatePref = findPreference("AppCheckUpdate") as Preference?
-            checkUpdatePref!!.setSummary(R.string.clickHere)
-            checkUpdatePref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                // internet connection state
-                if (!isNetworkAvailable(MainActivity.contextMainActivity)){
-                   Toast.makeText(requireContext(), "Internet error", Toast.LENGTH_LONG).show()
+            if (BuildConfig.DEBUG) {
+                checkUpdatePref?.setSummary(R.string.clickHere)
+                checkUpdatePref?.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                    // internet connection state
+                    if (!isNetworkAvailable(MainActivity.contextMainActivity)) {
+                        Toast.makeText(requireContext(), "Internet error", Toast.LENGTH_LONG).show()
+                    }
+                    try {
+                        updateLinkPref?.setTitle("")
+                        var appVer = getString(R.string.tag_version).substring(1)
+                        httpCheckForUpdate(
+                            MainActivity.contextMainActivity,
+                            getString(R.string.githubGrzLog),
+                            checkUpdatePref!!,
+                            getString(R.string.appCheckUpdate),
+                            appVer,
+                            updateLinkPref!!)
+                    } catch (e: Exception) {
+                        checkUpdatePref?.setTitle(getString(R.string.appCheckUpdate) + " - " + getString(R.string.error))
+                    }
+                    true
                 }
-                try {
-                    updateLinkPref!!.setTitle("")
-                    var appVer = getString(R.string.tag_version).substring(1)
-                    httpCheckForUpdate(
-                        MainActivity.contextMainActivity,
-                        getString(R.string.githubGrzLog),
-                        checkUpdatePref, getString(R.string.appCheckUpdate),
-                        appVer,
-                        updateLinkPref!!)
-                } catch (e: Exception) {
-                    checkUpdatePref.setTitle(getString(R.string.appCheckUpdate) + " - " + getString(R.string.error))
-                }
-                true
+            } else {
+                updateLinkPref?.isVisible = false
+                checkUpdatePref?.isVisible = false
             }
 
             // action execute app update
             val execUpdatePref = findPreference("ExecUpdate") as Preference?
-            execUpdatePref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                // if an update was found, use the real update file
-                var autoUpdateLink = updateLinkPref!!.summary.toString()
-                var autoUpdateFile = autoUpdateLink.substringAfterLast("/")
-                var title = getString(R.string.grzlog_update)
-                var choiceNegative = getString(R.string.check_for_update)
-                if (autoUpdateLink!!.length > 0) {
-                    title = getString(R.string.grzlog_update_available)
-                    choiceNegative = getString(R.string.automatic_update_recommended)
-                }
-                // two choices + cancel
-                twoChoicesDialog(
-                    requireContext(),
-                    title,
-                    getString(R.string.what_to_do),
-                    getString(R.string.manual_update),
-                    choiceNegative,
-                    { // runner CANCEL
-                        null
-                    },
-                    { // runner MANUAL
-                        // ask for using browser to check the GH website containing GrzLog releases
-                        decisionBox(
-                            requireContext(),
-                            DECISION.YESNO,
-                            getString(R.string.note),
-                            getString(R.string.openBrowserForUpdate),
-                            {
-                                // provide 'how to update this app'
-                                decisionBox(
-                                    requireContext(),
-                                    DECISION.YESNO,
-                                    getString(R.string.InstalledAPK) + " " + getString(R.string.tag_version),
-                                    getString(R.string.howToUpdate),
-                                    {
-                                        var uri = Uri.parse(getString(R.string.githubGrzLog))
-                                        val builder = CustomTabsIntent.Builder()
-                                        val customTabsIntent = builder.build()
-                                        customTabsIntent.launchUrl(requireContext(), uri)
-                                    },
-                                    null
-                                )
-                            },
+            if (BuildConfig.DEBUG) {
+                execUpdatePref?.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                    // if an update was found, use the real update file
+                    var autoUpdateLink = updateLinkPref!!.summary.toString()
+                    var autoUpdateFile = autoUpdateLink.substringAfterLast("/")
+                    var title = getString(R.string.grzlog_update)
+                    var choiceNegative = getString(R.string.check_for_update)
+                    if (autoUpdateLink!!.length > 0) {
+                        title = getString(R.string.grzlog_update_available)
+                        choiceNegative = getString(R.string.automatic_update_recommended)
+                    }
+                    // two choices + cancel
+                    twoChoicesDialog(
+                        requireContext(),
+                        title,
+                        getString(R.string.what_to_do),
+                        getString(R.string.manual_update),
+                        choiceNegative,
+                        { // runner CANCEL
                             null
-                        )
-                    },
-                    { // runner AUTOMATIC / CHECK AGAIN
-                        if (autoUpdateLink!!.length > 0) {
-                            // an APK file for download is available
-                            var granted = context?.getPackageManager()?.canRequestPackageInstalls()
-                            if (granted != null) {
-                                if (!granted) {
-                                    // ask for permission
-                                    startActivityForResult(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).setData(Uri.parse(String.format("package:%s", context?.getPackageName()))), 1234)
-                                } else {
-                                    // ask for exec update
+                        },
+                        { // runner MANUAL
+                            // ask for using browser to check the GH website containing GrzLog releases
+                            decisionBox(
+                                requireContext(),
+                                DECISION.YESNO,
+                                getString(R.string.note),
+                                getString(R.string.openBrowserForUpdate),
+                                {
+                                    // provide 'how to update this app'
                                     decisionBox(
                                         requireContext(),
-                                        DECISION.OKCANCEL,
-                                        getString(R.string.note),
-                                        getString(R.string.continue_with_app_update),
+                                        DECISION.YESNO,
+                                        getString(R.string.InstalledAPK) + " " + getString(R.string.tag_version),
+                                        getString(R.string.howToUpdate),
                                         {
-                                            var downloadController = com.grzwolf.grzlog.DownloadController(requireContext(), autoUpdateLink, autoUpdateFile)
-                                            downloadController.enqueueDownload()
+                                            var uri = Uri.parse(getString(R.string.githubGrzLog))
+                                            val builder = CustomTabsIntent.Builder()
+                                            val customTabsIntent = builder.build()
+                                            customTabsIntent.launchUrl(requireContext(), uri)
                                         },
                                         null
                                     )
+                                },
+                                null
+                            )
+                        },
+                        { // runner AUTOMATIC / CHECK AGAIN
+                            if (autoUpdateLink!!.length > 0) {
+                                // an APK file for download is available
+                                var granted = context?.getPackageManager()?.canRequestPackageInstalls()
+                                if (granted != null) {
+                                    if (!granted) {
+                                        // ask for permission
+                                        startActivityForResult(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).setData(Uri.parse(String.format("package:%s", context?.getPackageName()))), 1234)
+                                    } else {
+                                        // ask for exec update
+                                        decisionBox(
+                                            requireContext(),
+                                            DECISION.OKCANCEL,
+                                            getString(R.string.note),
+                                            getString(R.string.continue_with_app_update),
+                                            {
+                                                var downloadController = com.grzwolf.grzlog.DownloadController(requireContext(), autoUpdateLink, autoUpdateFile)
+                                                downloadController.enqueueDownload()
+                                            },
+                                            null
+                                        )
+                                    }
                                 }
+                            } else {
+                                // check again for update
+                                checkUpdatePref?.performClick()
                             }
-                        } else {
-                            // check again for update
-                            checkUpdatePref!!.performClick()
                         }
-                    }
-                )
-                true
+                    )
+                    true
+                }
+            } else {
+                execUpdatePref?.isVisible = false
             }
 
             //
-            checkUpdatePref!!.performClick()
+            if (BuildConfig.DEBUG) {
+                checkUpdatePref?.performClick()
+            }
 
             // tricky fake buttons in preferences: https://stackoverflow.com/questions/2697233/how-to-add-a-button-to-preferencescreen
             // action after backup
