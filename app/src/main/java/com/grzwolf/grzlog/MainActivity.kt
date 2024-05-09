@@ -2683,7 +2683,10 @@ class MainActivity : AppCompatActivity(),
         // temporarily select edited item
         if (markRange) {
             for (i in 0 until ds.tagSection.size) {
-                lvMain.arrayList[ds.tagSection[i]].setHighLighted(true)
+                var index = ds.tagSection[i]
+                if (index < lvMain.arrayList.size && index >= 0) {
+                    lvMain.arrayList[ds.tagSection[i]].setHighLighted(true)
+                }
             }
         } else {
             lvMain.arrayList[lvMain.selectedRow].setHighLighted(true)
@@ -2696,7 +2699,10 @@ class MainActivity : AppCompatActivity(),
             // un mark items
             if (markRange) {
                 for (i in 0 until ds.tagSection.size) {
-                    lvMain.arrayList[ds.tagSection[i]].setHighLighted(false)
+                    var index = ds.tagSection[i]
+                    if (index < lvMain.arrayList.size && index >= 0) {
+                        lvMain.arrayList[index].setHighLighted(false)
+                    }
                 }
             } else {
                 lvMain.arrayList[lvMain.selectedRow].setHighLighted(false)
@@ -5270,7 +5276,10 @@ class MainActivity : AppCompatActivity(),
         try {
             if (markRange) {
                 for (i in 1 until ds.tagSection.size) {
-                    lvMain.arrayList[ds.tagSection[i]].setHighLighted(true)
+                    var index = ds.tagSection[i]
+                    if (index < lvMain.arrayList.size && index >= 0) {
+                        lvMain.arrayList[index].setHighLighted(true)
+                    }
                 }
             } else {
                 lvMain.arrayList[posAbove].setHighLighted(true)
@@ -5287,7 +5296,10 @@ class MainActivity : AppCompatActivity(),
                 // de select
                 if (markRange) {
                     for (i in 1 until ds.tagSection.size) {
-                        lvMain.arrayList[ds.tagSection[i]].setHighLighted(false)
+                        var index = ds.tagSection[i]
+                        if (index < lvMain.arrayList.size && index >= 0) {
+                            lvMain.arrayList[index].setHighLighted(false)
+                        }
                     }
                 } else {
                     lvMain.arrayList[posAbove].setHighLighted(false)
