@@ -71,6 +71,7 @@ import com.grzwolf.grzlog.FileUtils.Companion.getFile
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
 import com.grzwolf.grzlog.MainActivity.GrzEditText
 import java.io.*
+import java.lang.IllegalArgumentException
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -5905,10 +5906,14 @@ class MainActivity : AppCompatActivity(),
                         if (tn.bmp == null) {
                             // if no bmp, try video
                             if (VIDEO_EXT.contains(getFileExtension(uriString), ignoreCase = true)) {
-                                val retriever = MediaMetadataRetriever()
-                                retriever.setDataSource(uriString)
-                                val bitmap = retriever.getFrameAtTime(0)
-                                tn.bmp = getDpiBitmap(bitmap, dpi)
+                                try {
+                                    val retriever = MediaMetadataRetriever()
+                                    retriever.setDataSource(uriString)
+                                    val bitmap = retriever.getFrameAtTime(0)
+                                    tn.bmp = getDpiBitmap(bitmap, dpi)
+                                } catch(e: IllegalArgumentException) {
+                                    tn.bmp = null
+                                }
                             }
                         } else {
                             // normal image
