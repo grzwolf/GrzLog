@@ -30,6 +30,7 @@ tools:context="com.grzwolf.grzlog.MainActivity">
     android:layout_height="wrap_content"
     android:layout_gravity="bottom|end"
     android:layout_margin="@dimen/fab_margin"
+    android:alpha="0.5"
     app:srcCompat="@android:drawable/ic_input_add"
     android:tint="@android:color/white"/>
 
