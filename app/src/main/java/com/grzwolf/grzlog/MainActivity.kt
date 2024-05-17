@@ -5704,7 +5704,11 @@ class MainActivity : AppCompatActivity(),
                 okBox(
                     this@MainActivity,
                     getString(R.string.PDFcreated) + " = " + getString(R.string.Failure),
-                    "'" + folderName + ".pdf'\n" + getString(R.string.manualDeletePDF)
+                    "'" + folderName + ".pdf'\n" + getString(R.string.manualDeletePDF),
+                    {
+                        val intent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)
+                        this@MainActivity.startActivity(intent)
+                    }
                 )
             }
         }

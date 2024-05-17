@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
+import android.app.DownloadManager
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.getActivity
@@ -668,7 +669,11 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     okBox(
                         context,
                         context.getString(R.string.ZIPcreated) + " = " + context.getString(R.string.Failure),
-                        context.getString(R.string.manualDelete)
+                        context.getString(R.string.manualDelete),
+                        {
+                            val intent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)
+                            context.startActivity(intent)
+                        }
                     )
                 }
             }
@@ -680,7 +685,11 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     okBox(
                         context,
                         context.getString(R.string.ZIPcreated) + " = " + context.getString(R.string.Failure),
-                        context.getString(R.string.manualDelete)
+                        context.getString(R.string.manualDelete),
+                        {
+                            val intent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)
+                            context.startActivity(intent)
+                        }
                     )
                     return;
                 }
@@ -759,7 +768,11 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     okBox(
                         context,
                         context.getString(R.string.ZIPcreated) + " = " + context.getString(R.string.Failure),
-                        context.getString(R.string.manualDelete)
+                        context.getString(R.string.manualDelete),
+                        {
+                            val intent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS)
+                            context.startActivity(intent)
+                        }
                     )
                     return;
                 }

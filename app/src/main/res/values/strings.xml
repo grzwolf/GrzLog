@@ -181,8 +181,8 @@
     <string name="noValidFilename">Not an acceptable filename.</string>
     <string name="resetSharedPrefs">Reset app\'s preferences to default values</string>
     <string name="settingsHint">Tap Hamburger again for settings</string>
-    <string name="manualDelete">The files \'GrzLog.zip\' and \'GrzLog.txt\' in /Download cannot be overwritten. Please manually delete them with a file manager.</string>
-    <string name="manualDeletePDF">This PDF file in /Download cannot be overwritten. Please manually delete it with a file manager and re try.</string>
+    <string name="manualDelete">The two files:\n\n\'GrzLog.zip\' and \'GrzLog.txt\'\n\nin /Download cannot be overwritten.\n\nPlease manually delete them with the file manager.</string>
+    <string name="manualDeletePDF">This PDF file in /Download cannot be overwritten. Please manually delete it with the file manager and re try.</string>
     <string name="noSelection">no items selected</string>
     <string name="selectDay">Toggle selection of day</string>
     <string name="title_activity_gallery">GrzLog Gallery</string>
