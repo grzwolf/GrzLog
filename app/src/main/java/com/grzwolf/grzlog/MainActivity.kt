@@ -6748,7 +6748,7 @@ class MainActivity : AppCompatActivity(),
                 var sectionName = ""
                 for (i in arrayList.indices) {
                     // save most current section name: it will be used, if there is a search hit
-                    if (PATTERN.DateDay.matcher(arrayList[i].title.toString()).find() || arrayList[i].title.toString().startsWith(8.toChar())) {
+                    if (PATTERN.DateDay.matcher(arrayList[i].title.toString()).find() || arrayList[i].title.toString().startsWith(9.toChar())) {
                         sectionName = arrayList[i].title.toString()
                     }
                     //
@@ -7549,7 +7549,7 @@ class GrzListView {
                 // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
                 val curText = arrayList[i].title
                 // stop climbing at Date or Header or Spacer
-                if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(8.toChar()) || arrayList[i].isSpacer) {
+                if (PATTERN.DateDay.matcher(curText.toString()).find() || curText.toString().startsWith(9.toChar()) || arrayList[i].isSpacer) {
                     dayEnd = if (i > position) i - 1 else i
                     break
                 }
