@@ -1325,7 +1325,7 @@ class MainActivity : AppCompatActivity(),
                     // build finalStr from ListView array
                     var finalStr = lvMain.selectedFolder
                     if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                        finalStr = toggleTextShowOrder(finalStr)
+                        finalStr = lvMain.toggleTextShowOrder(null, finalStr).str
                     }
                     // save undo data (status before line insert)
                     ds.undoSection = ds.dataSection[ds.selectedSection]
@@ -1355,7 +1355,7 @@ class MainActivity : AppCompatActivity(),
                     // build finalStr from ListView array
                     var finalStr = lvMain.selectedFolder
                     if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                        finalStr = toggleTextShowOrder(finalStr)
+                        finalStr = lvMain.toggleTextShowOrder(null, finalStr).str
                     }
                     // fabPlus needs to work with the inserted index
                     lvMain.selectedRow = itemPosition + 1
@@ -1474,7 +1474,7 @@ class MainActivity : AppCompatActivity(),
                             // build finalStr from modified ListView array via getter selectedFolder
                             var finalStr = lvMain.selectedFolder
                             if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                                finalStr = toggleTextShowOrder(finalStr)
+                                finalStr = lvMain.toggleTextShowOrder(null, finalStr).str
                             }
                             // save finalStr to DataStore, to GrzLog.ser and re-read saved data
                             ds.dataSection[ds.selectedSection] = finalStr                            // update DataStore dataSection
@@ -2028,7 +2028,7 @@ class MainActivity : AppCompatActivity(),
             // build finalStr from modified ListView
             var finalStr = lvMain.selectedFolder
             if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                finalStr = toggleTextShowOrder(finalStr)
+                finalStr = lvMain.toggleTextShowOrder(null, finalStr).str
             }
             // save finalStr to DataStore, to GrzLog.ser and re-read saved data
             ds.dataSection[ds.selectedSection] = finalStr                            // update DataStore dataSection
@@ -2390,7 +2390,7 @@ class MainActivity : AppCompatActivity(),
                 plusButtonInput = false
                 // oriText text is showOrder dependent
                 if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                    val botText = toggleTextShowOrder(oriText)
+                    val botText = lvMain.toggleTextShowOrder(null, oriText).str
                     oriParts = botText.split("\\n+".toRegex()).toTypedArray()
                     if (oriParts.size == 0) {
                         oriParts = arrayOf("")
@@ -2414,7 +2414,7 @@ class MainActivity : AppCompatActivity(),
                 // build a full final text
                 val tmpStr = TextUtils.join("\n", oriParts)
                 finalStr = if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                    toggleTextShowOrder(tmpStr)
+                    lvMain.toggleTextShowOrder(null, tmpStr).str
                 } else {
                     tmpStr
                 }
@@ -2443,7 +2443,7 @@ class MainActivity : AppCompatActivity(),
                     timestampType = TIMESTAMP.OFF
                     // if input contains multiple lines, take care about their showOrder
                     if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                        newText = toggleTextShowOrder(newText)
+                        newText = lvMain.toggleTextShowOrder(null, newText).str
                     }
                 }
                 // a common date format string
@@ -2868,49 +2868,6 @@ class MainActivity : AppCompatActivity(),
             writeAppData(appStoragePath, dataStore, appName)
         }
         return dataStore
-    }
-
-    // method returns a reversed SHOW_ORDER, it toggles from TOP to BOTTOM or from BOTTOM to TOP
-    fun toggleTextShowOrder(toReverse: String): String {
-        // input data array contains split by "\n" lines
-        var parts: Array<String> = toReverse.split("\\n+".toRegex()).toTypedArray()
-        // arrange data array according to show order in a temp list
-        val tmpList: ArrayList<String> = ArrayList()
-        // loop input
-        for (i in parts.indices) {
-            val m = parts[i].let { PATTERN.DateDay.matcher(it) }
-            if (m != null) {
-                if (m.find() && parts[i].startsWith(m.group())) {
-                    // as soon as a date timestamp appears, add it to the TOP of the temp list
-                    tmpList.add(0, parts[i])
-                } else {
-                    // ascii '\t = 9 as almost invisible marker for header item (it acts like a single space)
-                    if (parts[i].startsWith(9.toChar())) {
-                        // as soon as a header line appears, add it to the TOP of the temp list
-                        tmpList.add(0, parts[i])
-                    } else {
-                        if (tmpList.size > 0) {
-                            tmpList.add(1, parts[i])
-                        } else {
-                            // this should be an exceptional case: a non date item before a date / Header / Section item
-                            tmpList.add(0, parts[i])
-                        }
-                    }
-                }
-            }
-        }
-        // transfer temp list to parts
-        parts = tmpList.toTypedArray();
-        // build the output string by concatenating parts
-        var reversedStr = ""
-        for (i in parts.indices) {
-            var tmpStr = trimEndAll(parts[i])
-            if (tmpStr.isNotEmpty()) {
-                reversedStr += tmpStr + "\n"
-            }
-        }
-        reversedStr = reversedStr.removeSuffix("\n")
-        return reversedStr
     }
 
     // region action bar
@@ -5447,40 +5404,18 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    private fun formatRtfText(text: String): Array<String?> {
+    private fun formatRtfText(text: String): Array<String> {
         // split input to lines
-        var parts: Array<String?> = text.split("\\n+".toRegex()).toTypedArray()
+        var parts: Array<String> = text.split("\\n+".toRegex()).toTypedArray()
         // arrange data array according to show order
-        val tmpList: ArrayList<String?> = ArrayList()
         if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-            for (i in parts.indices) {
-                if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i].toString())) {
-                    tmpList.add(0, parts[i])
-                } else {
-                    // ascii '\t = 9 as almost invisible marker for header item (it acts like a single space)
-                    if (parts[i].toString().startsWith(9.toChar())) {
-                        // as soon as a header line appears, add it to the TOP of the temp list
-                        tmpList.add(0, parts[i])
-                    } else {
-                        if (parts[i]!!.length == 0) {
-                            tmpList.add(0, parts[i])
-                        } else {
-                            if (tmpList.size > 0) {
-                                tmpList.add(1, parts[i])
-                            } else {
-                                tmpList.add(0, parts[i])
-                            }
-                        }
-                    }
-                }
-            }
-            parts = tmpList.toTypedArray()
+            parts = lvMain.toggleTextShowOrder(parts, text).arr
         }
         return parts
     }
 
     fun buildRTF(
-        textLines: Array<String?>,
+        textLines: Array<String>,
         folderName: String?,
         fileName: String,
         pw: ProgressWindow,
@@ -5742,37 +5677,15 @@ class MainActivity : AppCompatActivity(),
         windowManager.defaultDisplay.getMetrics(displayMetrics)
         val width = displayMetrics.widthPixels * 0.9f
         // data array with links based on key
-        var parts: Array<String?> = text.split("\\n+".toRegex()).toTypedArray()
+        var parts: Array<String> = text.split("\\n+".toRegex()).toTypedArray()
         // arrange data array according to show order
-        val tmpList: ArrayList<String?> = ArrayList()
         if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-            for (i in parts.indices) {
-                if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i].toString())) {
-                    tmpList.add(0, parts[i])
-                } else {
-                    // ascii '\t = 9 as almost invisible marker for header item (it acts like a single space)
-                    if (parts[i].toString().startsWith(9.toChar())) {
-                        // as soon as a header line appears, add it to the TOP of the temp list
-                        tmpList.add(0, parts[i])
-                    } else {
-                        if (parts[i]!!.length == 0) {
-                            tmpList.add(0, parts[i])
-                        } else {
-                            if (tmpList.size > 0) {
-                                tmpList.add(1, parts[i])
-                            } else {
-                                tmpList.add(0, parts[i])
-                            }
-                        }
-                    }
-                }
-            }
-            parts = tmpList.toTypedArray();
+            parts = lvMain.toggleTextShowOrder(parts, text).arr
         }
         // loop
         val len = parts.size
         for (i in 0 until len) {
-            // a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
+            // heeader: a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR 9.toChar()
             if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i].toString()) || parts[i].toString().startsWith(9.toChar())) {
                 // no spaces at end of the row - ONLY in timestamp part, NOT in any other part
                 parts[i] = trimEndAll(parts[i]!!)
@@ -6142,7 +6055,7 @@ class MainActivity : AppCompatActivity(),
                 yPos = header
             }
 
-            // EITHER line with day header OR simple line: a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
+            // EITHER line with header OR simple line
             if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", line) || line.startsWith(9.toChar()) ) {
                 var bgColor = Color.LTGRAY
                 if (line.startsWith(9.toChar())) {
@@ -7165,8 +7078,11 @@ class GrzListView {
     internal fun makeArrayList(rawText: String, lvShowOrder: SHOW_ORDER): ArrayList<ListViewItem> {
         // retval
         val arrayList = ArrayList<ListViewItem>()
-        // split by \n and ignore empty lines and arrange data array according to show order
-        val parts = splitDataStoreStringWithShowOrder(rawText, lvShowOrder)
+        // split rawText by \n and ignore empty lines and arrange data array according to show order
+        var parts: Array<String> = rawText.split("\\n+".toRegex()).toTypedArray()
+        if (lvShowOrder == SHOW_ORDER.BOTTOM) {
+            parts = toggleTextShowOrder(parts, rawText).arr
+        }
         // loop parts and format items and headers accordingly
         for (i in parts.indices) {
             if (parts[i].length == 0) {
@@ -7223,36 +7139,58 @@ class GrzListView {
         return arrayList
     }
 
-    // split a DataStore data string by \n, ignore empty lines, adjust to listview show order
-    internal fun splitDataStoreStringWithShowOrder(dsText: String, lvShowOrder: SHOW_ORDER): Array<String> {
-        var parts: Array<String> = dsText.split("\\n+".toRegex()).toTypedArray()
-        if (lvShowOrder == SHOW_ORDER.BOTTOM) {
-            var tmpList: ArrayList<String> = ArrayList()
-            for (i in parts.indices) {
-                val m = PATTERN.DateDay.matcher(parts[i])
-                if (m.find() && parts[i].startsWith(m.group())) {
-                    // header bc of date
-                    tmpList.add(0, parts[i])
+    // class is used as return value for toggleTextShowOrder(...)
+    class RevData(arr: Array<String>, str: String) {
+        var arr: Array<String>
+        var str: String
+        init {
+            this.arr = arr
+            this.str = str
+        }
+    }
+    // method returns a reversed SHOW_ORDER, it toggles from TOP to BOTTOM or from BOTTOM to TOP
+    fun toggleTextShowOrder(arrToReverse: Array<String>? = null, strToReverse: String): RevData {
+        // if input data array != null, then it contains lines split by "\n"
+        var parts: Array<String>? = arrToReverse
+        // if input data array == null, then build it now from input string
+        if (parts == null) {
+            parts = strToReverse.split("\\n+".toRegex()).toTypedArray()
+        }
+        // arrange data array according to show order in a temp list
+        val tmpList: ArrayList<String> = ArrayList()
+        // loop input
+        var headerExists = false
+        for (i in parts.indices) {
+            val m = parts[i].let { PATTERN.DateDay.matcher(it) }
+            if (((m != null) && m.find() && parts[i].startsWith(m.group())) || parts[i].startsWith(9.toChar())) {
+                // as soon as a header appears, add it to the TOP of the temp list
+                tmpList.add(0, parts[i])
+                headerExists = true
+            } else {
+                if (headerExists) {
+                    // supposed to be the usual case
+                    tmpList.add(1, parts[i])
                 } else {
-                    // ascii '\t = 9 as almost invisible marker for header item (it acts like a single space)
-                    if (parts[i].startsWith(9.toChar())) {
-                        // as soon as a header line appears, add it to the TOP of the temp list
-                        tmpList.add(0, parts[i])
-                    } else {
-                        var tmpStr = trimEndAll(parts[i])
-                        if (tmpStr.isNotEmpty()) {
-                            if (tmpList.size > 0) {
-                                tmpList.add(1, tmpStr)
-                            } else {
-                                tmpList.add(0, tmpStr)
-                            }
-                        }
-                    }
+                    // a sequence of items with no header is allowed to insert
+                    tmpList.add(0, parts[i])
                 }
             }
-            parts = tmpList.toTypedArray();
         }
-        return parts
+        // transfer temp list to parts
+        parts = tmpList.toTypedArray();
+        // only build output string by concatenating parts, if input array == null
+        var reversedStr = ""
+        if (arrToReverse == null) {
+            for (i in parts.indices) {
+                var tmpStr = trimEndAll(parts[i])
+                if (tmpStr.isNotEmpty()) {
+                    reversedStr += tmpStr + "\n"
+                }
+            }
+            reversedStr = reversedStr.removeSuffix("\n")
+        }
+        // return data both as reversed array and as reversed string
+        return RevData(parts, reversedStr)
     }
 
     // refresh/rebuild search hit list
