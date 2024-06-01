@@ -7260,7 +7260,7 @@ class GrzListView {
             }
 
             // select next 10 items after given position
-            var endPos = Math.min(arrayList.size - 1, startPos + 11)
+            var endPos = Math.min(arrayList.size, startPos + 11)
             var i = startPos
             while (i < endPos) {
                 arrayList[i].setSelected(true)
