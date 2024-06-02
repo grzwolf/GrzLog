@@ -1297,6 +1297,7 @@ class MainActivity : AppCompatActivity(),
                             getString(R.string.InsertNotAllowed),
                             null
                         )
+                        fabPlus.button?.background?.setAlpha(130)
                         fabPlus.button?.show()
                         return@OnClickListener
                     }
@@ -1541,6 +1542,7 @@ class MainActivity : AppCompatActivity(),
                             lvMain.arrayList[itemPosition].setSelected(true)
                             deleteMarkedItems(0)  // type: 0 == delete selected item, type: 1 == delete highlighted search item
                             // was hidden during input
+                            fabPlus.button?.background?.setAlpha(130)
                             fabPlus.button?.show()
                         })
                     // 'you sure' dlg CANCEL
@@ -1579,6 +1581,7 @@ class MainActivity : AppCompatActivity(),
                             lvMain.arrayList[itemPosition].setSelected(true)
                             deleteMarkedItems(0)  // type: 0 == delete selected item, type: 1 == delete highlighted search item
                             // was hidden during input
+                            fabPlus.button?.background?.setAlpha(130)
                             fabPlus.button?.show()
                         })
                     // 'you sure' dlg CANCEL
@@ -1847,6 +1850,7 @@ class MainActivity : AppCompatActivity(),
             if (function != null) {
                 function(adapterView, itemView, itemPosition, itemId)
             } else {
+                fabPlus.button?.background?.setAlpha(130)
                 fabPlus.button?.show()
             }
         })
@@ -2308,6 +2312,7 @@ class MainActivity : AppCompatActivity(),
             // empty input is only allowed, if timestamp is not empty
             if (newText.isEmpty() and (timestampType == TIMESTAMP.OFF)) {
                 centeredToast(this, getString(R.string.inputOneSpace), 3000)
+                fabPlus.button?.background?.setAlpha(130)
                 fabPlus.button?.show()
                 dialog.dismiss()
                 // return to calling function
@@ -2591,7 +2596,7 @@ class MainActivity : AppCompatActivity(),
             localCancel(dialog, this)
         }
         // button shall be hidden when AlertDialog.Builder is shown
-        fabPlus.button!!.hide()
+        fabPlus.button?.hide()
         // tricky way to let the keyboard popup
         fabPlus.inputAlertView!!.requestFocus()
         val startSel = fabPlus.inputAlertView!!.selectionStart
@@ -2655,6 +2660,7 @@ class MainActivity : AppCompatActivity(),
         fabPlus.attachmentUri = ""
         fabPlus.inputAlertText = ""
         fabPlus.attachmentName = ""
+        fabPlus.button?.background?.setAlpha(130)
         fabPlus.button?.show()
         // save and re-read saved data
         ds.dataSection[ds.selectedSection] = finalStr                          // update DataStore dataSection
@@ -2763,6 +2769,7 @@ class MainActivity : AppCompatActivity(),
             deleteCapturedImage(fabPlus.attachmentUri)
         }
         // was hidden during input
+        fabPlus.button?.background?.setAlpha(130)
         fabPlus.button?.show()
         // reset attachment uri & clean up
         fabPlus.pickAttachment = false
@@ -2946,6 +2953,7 @@ class MainActivity : AppCompatActivity(),
             // show normal app title
             title = ds.namesSection[ds.selectedSection]
             // show fabPlus
+            fabPlus.button?.background?.setAlpha(130)
             fabPlus.button?.show()
             // hide keyboard
             hideKeyboard()
@@ -3120,6 +3128,7 @@ class MainActivity : AppCompatActivity(),
                     searchView!!.setQuery(searchViewQuery, false)
                     searchViewQuery = ""
                     title = ds.namesSection[ds.selectedSection]
+                    fabPlus.button?.background?.setAlpha(130)
                     fabPlus.button?.show()
                 },
                 { // runner current folder search
@@ -5202,6 +5211,7 @@ class MainActivity : AppCompatActivity(),
         lvMain.listView!!.adapter = lvMain.adapter
 
         if (lvMain.arrayList.size == 0) {                                      // get out here, if list is empty
+            fabPlus.button?.background?.setAlpha(130)
             fabPlus.button?.show()
             ds.undoSection = ""
             ds.undoText = ""
@@ -5288,6 +5298,7 @@ class MainActivity : AppCompatActivity(),
             lvMain.restoreFolderSearchHitStatus(searchViewQuery.lowercase(Locale.getDefault()))
         } else {
             // was hidden during input
+            fabPlus.button?.background?.setAlpha(130)
             fabPlus.button?.show()
         }
 
