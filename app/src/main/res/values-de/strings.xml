@@ -180,7 +180,7 @@
     <string name="noValidFilename">Kein erlaubter Dateiname.</string>
     <string name="resetSharedPrefs">Reset der App Einstellungen auf Standardwerte</string>
     <string name="settingsHint">Hamburger noch einmal für Settings</string>
-    <string name="manualDelete">Die 2 Dateien:\n\n\'GrzLog.zip\' und \'GrzLog.txt\'\n\nin /Download können nicht überschrieben werden.\n\nBitte diese händisch mit dem Datei Manager löschen.</string>
+    <string name="manualDelete">Die 2 Dateien:\n\n\'GrzLog.zip\' und \'GrzLog.txt\'\n\nin /Download können nicht überschrieben werden.\n\nBitte zuerst diese händisch mit dem Datei Manager löschen.</string>
     <string name="manualDeletePDF">Diese PDF Datei in /Download konnte nicht überschrieben werden. Bitte diese händisch mit dem Datei Manager löschen und neu versuchen.</string>
     <string name="noSelection">keine Items ausgewählt</string>
     <string name="selectDay">Toggle Auswahl Tag</string>
