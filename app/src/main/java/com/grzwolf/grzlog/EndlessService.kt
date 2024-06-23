@@ -130,7 +130,7 @@ class EndlessService : Service() {
             .setContentTitle("Endless Service")
             .setContentText("endless service working")
             .setContentIntent(pendingIntent)
-            .setSmallIcon(R.mipmap.grz_launcher)
+            .setSmallIcon(R.mipmap.ic_grzlog)
             .setTicker("Ticker text")
             .build()
     }

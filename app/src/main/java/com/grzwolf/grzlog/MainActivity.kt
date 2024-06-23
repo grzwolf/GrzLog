@@ -626,8 +626,16 @@ class MainActivity : AppCompatActivity(),
 
         // if widget calls input, simulate remote click on fabPlus button
         if (sharedPref.getBoolean("widgetJumpInput", false)) {
+            if (sharedPref.getBoolean("doubleClickWidget", false)) {
+                // clear previously set shared pref in widget: otherwise ANY onResume would fire
+                val spe = sharedPref.edit()
+                spe.putBoolean("doubleClickWidget", false)
+                spe.apply()
+                // double click action just opens GrzLog
+//                Toast.makeText(baseContext, "app widget double click action", Toast.LENGTH_LONG).show()
+            }
             if (sharedPref.getBoolean("clickFabPlus", false)) {
-                // clear previously set shared pref in widget: otherwise ANY onResume would fire jump to input
+                // clear previously set shared pref in widget: otherwise ANY onResume would fire
                 val spe = sharedPref.edit()
                 spe.putBoolean("clickFabPlus", false)
                 spe.apply()
@@ -6417,7 +6425,7 @@ class MainActivity : AppCompatActivity(),
         )
         // render lock screen info
         val builder = NotificationCompat.Builder(applicationContext, "grzlog")
-            .setSmallIcon(R.mipmap.grz_launcher)
+            .setSmallIcon(R.mipmap.ic_grzlog)
             .setContentTitle(getString(R.string.Reminder))
             .setContentText(message)
             .setContentIntent(pendingIntent)
@@ -6480,7 +6488,7 @@ class MainActivity : AppCompatActivity(),
         val pendingIntent = PendingIntent.getActivity(context, reqCode, intent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
         val CHANNEL_ID = "GrzLog-Update-Check"
         val notificationBuilder: NotificationCompat.Builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.grz_launcher)
+            .setSmallIcon(R.mipmap.ic_grzlog)
             .setContentTitle(title)
             .setContentText(message)
             .setAutoCancel(true)
