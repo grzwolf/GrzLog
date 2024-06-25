@@ -102,10 +102,8 @@ class GrzLogAppWidget : AppWidgetProvider() {
             context: Context, appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            val widgetText: CharSequence = ""
             // RemoteViews object
             val view = RemoteViews(context.packageName, R.layout.grzlog_app_widget)
-            view.setTextViewText(R.id.appwidget_text, widgetText)
 
             // step 2 click on widget: connect user defined action with receiver; API31 needs PendingIntent.FLAG_IMMUTABLE
             val intent = Intent(context, GrzLogAppWidget::class.java)

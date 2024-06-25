@@ -53,9 +53,9 @@
         android:requestLegacyExternalStorage="true"
         android:screenOrientation="portrait"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_grzlog"
+        android:icon="@mipmap/ic_grzlog_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_grzlog_round"
+        android:roundIcon="@mipmap/ic_grzlog_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
