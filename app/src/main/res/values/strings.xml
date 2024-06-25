@@ -223,7 +223,7 @@
     <string name="wwwLink">Insert www link below</string>
     <string name="openLinksInBrowser">Open text links with browser</string>
     <string name="editExistingLink">Edit existing attachment</string>
-    <string name="location">My Location</string>
+    <string name="location">My location</string>
     <string name="linkDestroyed">Cancel, due to destroyed attachment link</string>
     <string name="noChange">nothing was changed</string>
     <string name="appFolder">GrzLog folder</string>
@@ -279,4 +279,8 @@
     <string name="automatic_update_recommended">In-app update (recommended)</string>
     <string name="what_to_do">What to do?</string>
     <string name="manual_update">Manual update (via web browser)</string>
+    <string name="navi_or_show">\'navigate to\' or \'just show\' ?</string>
+    <string name="geo_location">Geo location</string>
+    <string name="navigate">navigate</string>
+    <string name="show">show</string>
 </resources>

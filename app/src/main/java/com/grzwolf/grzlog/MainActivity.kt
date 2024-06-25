@@ -996,10 +996,34 @@ class MainActivity : AppCompatActivity(),
             // 1. handle geo location coordinates
             //
             if (matchFullResult.contains("::::geo:") ) {
-                var uri = matchFullResult.substring(matchFullResult.indexOf("::::geo:") + 4, matchFullResult.lastIndexOf("]"))
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
-                startActivity(intent)
-                return;
+                // two choices: navigate to, show + cancel
+                twoChoicesDialog(this,
+                    getString(R.string.geo_location),
+                    getString(R.string.navi_or_show),
+                    getString(R.string.navigate),
+                    getString(R.string.show),
+                    { // runner CANCEL
+                    },
+                    { // runner 'navigate to with Goggle Maps'
+                        var uriString = "google.navigation:q=" +
+                                matchFullResult.substring(
+                                    matchFullResult.indexOf("::::geo:") + 8,
+                                    matchFullResult.lastIndexOf("]")) +
+                                "&mode=w"
+                        var uriIntent = Uri.parse(uriString)
+                        val intent = Intent(Intent.ACTION_VIEW, uriIntent)
+                        intent.setPackage("com.google.android.apps.maps")
+                        startActivity(intent)
+                    },
+                    { // runner 'show location with app of choice'
+                        var uri = matchFullResult.substring(
+                            matchFullResult.indexOf("::::geo:") + 4,
+                            matchFullResult.lastIndexOf("]"))
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+                        startActivity(intent)
+                    }
+                )
+                return
             }
 
             //

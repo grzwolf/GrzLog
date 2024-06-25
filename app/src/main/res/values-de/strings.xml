@@ -278,5 +278,9 @@
     <string name="automatic_update_recommended">In-App Update (empfohlen)</string>
     <string name="what_to_do">Was als nächstes?</string>
     <string name="manual_update">Manuelles Update (Web-Browser)</string>
+    <string name="navi_or_show">Navigieren oder Zeigen?</string>
+    <string name="geo_location">Geo Koordinate</string>
+    <string name="navigate">navigieren</string>
+    <string name="show">anzeigen</string>
 </resources>
 
