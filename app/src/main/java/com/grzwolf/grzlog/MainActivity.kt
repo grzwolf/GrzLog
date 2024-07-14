@@ -49,6 +49,7 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.BlendModeColorFilterCompat
 import androidx.core.graphics.BlendModeCompat
 import androidx.core.view.isVisible
+import androidx.core.view.size
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -1260,8 +1261,21 @@ class MainActivity : AppCompatActivity(),
         return lead + mid + tail
     }
 
+    // after list reload, calc jump to position: correction needed, if item is at bottom position
+    fun calcJumpToPosition(itemPos: Int) : Int {
+        var jumpToPos = itemPos
+        if (itemPos != lvMain.listView!!.adapter.count - 1) {
+            jumpToPos = lvMain.listView!!.firstVisiblePosition
+        }
+        return jumpToPos
+    }
+
     // ListView long click handler: show options dialog, how to edit the current item/line
-    fun whatToDoWithLongClickItem(adapterView: AdapterView<*>, itemView: View?, itemPosition: Int, itemId: Long, returnToSearchHits: Boolean = false) {
+    fun whatToDoWithLongClickItem(adapterView: AdapterView<*>,
+                                  itemView: View?,
+                                  itemPosition: Int,
+                                  itemId: Long,
+                                  returnToSearchHits: Boolean = false) {
         // this is what the user can click in UI
         val item = adapterView.getItemAtPosition(itemPosition) as ListViewItem
         // do not do anything, if spacer
@@ -1275,6 +1289,19 @@ class MainActivity : AppCompatActivity(),
             } else {
                 AlertDialog.Builder(this@MainActivity)
             }
+        // since we want to deal with an item, scroll there (normally we are there, but not after return from selection dialog)
+        if (itemPosition < lvMain.listView!!.firstVisiblePosition || itemPosition > lvMain.listView!!.lastVisiblePosition) {
+            var ofs = (lvMain.listView!!.lastVisiblePosition - lvMain.listView!!.firstVisiblePosition) / 2
+            if (lvMain.listView!!.lastVisiblePosition == -1) {
+                ofs = 10
+            }
+            var scrollPos = itemPosition - ofs
+            lvMain.listView!!.setSelection(Math.max(0, scrollPos))
+        }
+        Handler().postDelayed({
+            lvMain.arrayList[itemPosition].setHighLighted(true)
+            lvMain.adapter!!.notifyDataSetChanged()
+        }, 10)
         // set custom multiline title: https://stackoverflow.com/questions/9107054/how-to-build-alert-dialog-with-a-multi-line-title
         val headPart = getString(R.string.Options)
         val headLine = SpannableString(headPart + "\n\n" + shortenedText(item.title!!, 200))
@@ -1482,6 +1509,8 @@ class MainActivity : AppCompatActivity(),
                         getString(R.string.ToggleLineAsHeader),
                         getString(R.string.LineOrHeader),
                         {
+                            // store position to later jump to
+                            val jumpToPos = calcJumpToPosition(itemPosition)
                             // save undo data
                             lvMain.selectedRow = itemPosition
                             ds.undoSection = ds.dataSection[ds.selectedSection]
@@ -1520,7 +1549,8 @@ class MainActivity : AppCompatActivity(),
                             lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList)   // build adapter and populate main listview
                             lvMain.listView!!.adapter = lvMain.adapter                               // populate main listview via adapter
                             lvMain.adapter!!.notifyDataSetChanged()
-                            // temporary highlight affected item and revert it to normal 3s later
+                            // jump to, temporary highlight affected item and revert it to normal 3s later
+                            lvMain.listView!!.setSelection(jumpToPos)
                             var posHighLight: Int
                             if (isNowSection) {
                                 posHighLight = Math.min(itemPosition + 1, lvMain.arrayList.size-1)
@@ -1631,6 +1661,10 @@ class MainActivity : AppCompatActivity(),
         builderItemMore?.setPositiveButton(
             R.string.close,
             DialogInterface.OnClickListener { dialog, which ->
+                Handler().postDelayed({
+                    lvMain.arrayList[itemPosition].setHighLighted(false)
+                    lvMain.adapter!!.notifyDataSetChanged()
+                }, 1000)
                 dialog.dismiss()
                 // return to search hits dialog
                 if (returnToSearchHits) {
@@ -1665,7 +1699,12 @@ class MainActivity : AppCompatActivity(),
     }
 
     // execute the long click as edit ListView item
-    fun onLongClickEditItem(adapterView: AdapterView<*>, itemView: View?, itemPosition: Int, itemId: Long, returnToSearchHits: Boolean, function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)?) {
+    fun onLongClickEditItem(adapterView: AdapterView<*>,
+                            itemView: View?,
+                            itemPosition: Int,
+                            itemId: Long,
+                            returnToSearchHits: Boolean,
+                            function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)?) {
         // flag indicates the usage of fabPlus input as an editor for a 'long press line' input
         lvMain.editLongPress = true
         // delete previous undo data
@@ -1714,7 +1753,12 @@ class MainActivity : AppCompatActivity(),
 
     // items from ListView are selected OR a so far unselected item was 'long clicked' --> what to do now
     // function as param https://stackoverflow.com/questions/62935022/pass-function-with-parameters-in-extension-functionkotlin
-    private fun whatToDoWithItemsSelection(adapterView: AdapterView<*>, itemView: View?, itemPosition: Int, itemId: Long, returnToSearchHits: Boolean, function: ((AdapterView<*>, View?, Int, Long) -> Unit?)?) {
+    private fun whatToDoWithItemsSelection(adapterView: AdapterView<*>,
+                                           itemView: View?,
+                                           itemPosition: Int,
+                                           itemId: Long,
+                                           returnToSearchHits: Boolean,
+                                           function: ((AdapterView<*>, View?, Int, Long) -> Unit?)?) {
         // build a dialog
         var builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
@@ -1728,6 +1772,13 @@ class MainActivity : AppCompatActivity(),
         if (listSelPos.size == 1) {
             rangeStr = "Item: " + shortenedText(lvMain.arrayList[listSelPos[0]].title!!, 200)
         }
+        // since we want to deal with a selection, scroll there, try to keep selection centered
+        var ofs = (lvMain.listView!!.lastVisiblePosition - lvMain.listView!!.firstVisiblePosition) / 2
+        var minRange = listSelPos.minOrNull() ?: 0
+        var maxRange = listSelPos.maxOrNull() ?: 0
+        var range = (maxRange - minRange) / 2
+        var scrollPos = listSelPos.minOrNull() ?: itemPosition
+        lvMain.listView!!.setSelection(Math.max(0, scrollPos - ofs + if (range < ofs) range else ofs))
         // set custom multiline title: https://stackoverflow.com/questions/9107054/how-to-build-alert-dialog-with-a-multi-line-title
         val headPart = getString(R.string.whatToDoWithItems)
         val headLine = SpannableString(headPart + "\n\n" + rangeStr)
@@ -2028,6 +2079,8 @@ class MainActivity : AppCompatActivity(),
             ds.tagSection.add(lvMain.listView!!.firstVisiblePosition)
             // count spacers above deleted Headers
             var cntSpc = 0
+            // memorize largest deleted item index
+            var largestItemNdx = 0
             // memorize last deleted item's type
             var lstDelItemIsHeader = false
             // delete marked items from ListView / arrayList in DataStore tagSection
@@ -2054,6 +2107,7 @@ class MainActivity : AppCompatActivity(),
                     lvMain.arrayList.removeAt(i)
                     // memorize deleted item positions
                     ds.tagSection.add(i)
+                    largestItemNdx = Math.max(i, largestItemNdx)
                 }
             }
             // if topmost deleted item at pos > 0 is Header, correct 'above neighbour' position by 1 BEFORE reloading data
@@ -2084,10 +2138,12 @@ class MainActivity : AppCompatActivity(),
             if (lvMain.arrayList[above].isSpacer) above -= 1
             if (lvMain.arrayList[below].isSpacer) below += 1
 
+            // scroll
+            lvMain.listView!!.setSelection(largestItemNdx - 10)                      // ListView scroll to largest selected item
+
+            // highlight and revoke 3s later
             lvMain.arrayList[above].setHighLighted(true)                             // temp. highlighting
             lvMain.arrayList[below].setHighLighted(true)
-            lvMain.listView!!.setSelection(ds.tagSection[0])                         // ListView scroll to last known scroll position: tagSection[0] == scroll pos
-
             lvMain.adapter!!.notifyDataSetChanged()
             lvMain.listView!!.postDelayed({                                          // revoke temp. highlighting after timeout
                 lvMain.arrayList[above].setHighLighted(false)
@@ -2254,6 +2310,11 @@ class MainActivity : AppCompatActivity(),
             }
         }
 
+        // highlight edited item
+        if (itemPosition != -1) {
+            lvMain.arrayList[itemPosition].setHighLighted(true)
+        }
+
         // show a customized standard dialog to obtain a text input: https://stackoverflow.com/questions/10903754/input-text-dialog-android
         var fabPlusBuilder: AlertDialog.Builder?
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -2416,8 +2477,8 @@ class MainActivity : AppCompatActivity(),
             var newTextWithSkippedDates: String = ""
             var numAutoFilledDates = 0
             var fillWithSkippedDates = sharedPref.getBoolean("askAutoFillSkippedDates", true)
-            // will a date / time stamp be added
-            var addTimeStamp = false
+            // will a date header be added
+            var addDateHeader = false
             // marker to indicate a valid last date before the current input date
             var dateLastIsValid = true
             // need to distinguish between 'edit line' (aka long press) AND 'new input' (aka + button)
@@ -2520,7 +2581,7 @@ class MainActivity : AppCompatActivity(),
                 if (dateLast.compareTo(dateToday) != 0) {
                     dateStr = SimpleDateFormat("yyyy-MM-dd EEE", Locale.getDefault()).format(dateToday!!) + "\n"
                     combineNdx = 0
-                    addTimeStamp = true
+                    addDateHeader = true
                 }
                 // add time at the beginning of the newText
                 var timeStr = ""
@@ -2587,11 +2648,11 @@ class MainActivity : AppCompatActivity(),
                     DECISION.YESNO,
                     getString(R.string.autoFillSkippedDates),
                     getString(R.string.continueQuestion),
-                    { fabPlusOkFinale(finalStrWithSkippedDates, newTextWithSkippedDates, addTimeStamp, plusButtonInput, numAutoFilledDates) },
-                    { fabPlusOkFinale(finalStr, newText, addTimeStamp, plusButtonInput, 0) }
+                    { fabPlusOkFinale(finalStrWithSkippedDates, newTextWithSkippedDates, addDateHeader, plusButtonInput, numAutoFilledDates) },
+                    { fabPlusOkFinale(finalStr, newText, addDateHeader, plusButtonInput, 0) }
                 )
             } else {
-                fabPlusOkFinale(finalStr, newText, addTimeStamp, plusButtonInput, 0)
+                fabPlusOkFinale(finalStr, newText, addDateHeader, plusButtonInput, 0)
             }
 
         })
@@ -2600,6 +2661,16 @@ class MainActivity : AppCompatActivity(),
         fabPlusBuilder.setNegativeButton(
             R.string.cancel,
             DialogInterface.OnClickListener { dialog, which ->
+                // un highlight edited item
+                if (itemPosition != -1) {
+                    if (function == null) {
+                        // only un highlight item, if call did not come from another calling dlg
+                        lvMain.listView!!.postDelayed({
+                            lvMain.arrayList[itemPosition].setHighLighted(false)
+                            lvMain.adapter!!.notifyDataSetChanged()
+                        }, 1000)
+                    }
+                }
                 // standard cancel handling
                 localCancel(dialog, this)
                 // return to calling function
@@ -2637,13 +2708,13 @@ class MainActivity : AppCompatActivity(),
     }
 
     // final handling of fabPlusOk as a separate fun to allow option to auto fill skipped dates
-    fun fabPlusOkFinale(finalStr: String, newText: String, addTimeStamp: Boolean, plusButtonInput: Boolean, numAutoFilledDates: Int ) {
+    fun fabPlusOkFinale(finalStr: String, newText: String, addDateHeader: Boolean, plusButtonInput: Boolean, numAutoFilledDates: Int ) {
 
         // memorize the inserted lines in tagSection
         ds.tagSection.clear()
         var numOfNewlines = newText.split("\n").size
         var markRange = false
-        if (numOfNewlines > 1) {
+        if (numOfNewlines > 0) {
             // there is a range
             markRange = true
             // the magic newline
@@ -2667,9 +2738,17 @@ class MainActivity : AppCompatActivity(),
             }
             // plus button specific
             if (plusButtonInput) {
+                // adjust positions to highlight
                 if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                    if (addTimeStamp) {
+                    if (addDateHeader) {
                         corrector = 2
+                        numOfNewlines++
+                    } else {
+                        corrector = 1
+                    }
+                } else {
+                    if (addDateHeader) {
+                        corrector = 0
                         numOfNewlines++
                     } else {
                         corrector = 1
@@ -2678,10 +2757,17 @@ class MainActivity : AppCompatActivity(),
                 // each auto filled date is a header
                 numOfNewlines += numAutoFilledDates
             }
-            // now highlight
+            // now add the indexes to highlight
             for (i in 0 until numOfNewlines) {
                 ds.tagSection.add(lvMain.selectedRow + i + corrector)
             }
+        }
+
+        // make sure, selected item is visible
+        var jumpToPos = lvMain.selectedRow
+        if (!plusButtonInput) {
+            // applies to edit an arbitrary item and place it somehow centered
+            jumpToPos = calcJumpToPosition(lvMain.selectedRow)
         }
 
         // clean up
@@ -2704,29 +2790,8 @@ class MainActivity : AppCompatActivity(),
         lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)      // convert & format raw text to array
         lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList) // set adapter and populate main listview
         lvMain.listView!!.adapter = lvMain.adapter
-        var jumpToPos = lvMain.fstVisPos                                       // prepare scroll & highlight ListView
-        if (plusButtonInput) {
-            // adjust ListView jump to position for normal PlusButton input
-            if (lvMain.showOrder == SHOW_ORDER.TOP) {
-                lvMain.selectedRow = 1
-                jumpToPos = 0
-            } else {
-                lvMain.selectedRow = lvMain.arrayList.size - 1
-                jumpToPos = lvMain.selectedRow
-            }
-        } else {
-            // adjust ListView jump to position for 'insert line' input
-            if (ds.undoAction == ACTION.REVERTINSERT) {
-                if (lvMain.selectedRow >= lvMain.lstVisPos) {
-                    jumpToPos = lvMain.selectedRow
-                }
-                if (lvMain.selectedRow <= lvMain.fstVisPos) {
-                    jumpToPos = lvMain.selectedRow
-                }
-            }
-        }
 
-        // temporarily select edited item
+        // temporarily highlight edited items
         if (markRange) {
             for (i in 0 until ds.tagSection.size) {
                 var index = ds.tagSection[i]
@@ -2734,13 +2799,12 @@ class MainActivity : AppCompatActivity(),
                     lvMain.arrayList[ds.tagSection[i]].setHighLighted(true)
                 }
             }
-        } else {
-            lvMain.arrayList[lvMain.selectedRow].setHighLighted(true)
         }
-        // ListView shall jump to last known 1st visible  position
+
+        // ListView shall jump to last known 1st visible position to keep edited item steady
         lvMain.listView!!.setSelection(jumpToPos)
 
-        // revoke temporary selection of edited item
+        // revoke temporary highlighting of edited items
         lvMain.listView!!.postDelayed({
             // un mark items
             if (markRange) {
@@ -2750,8 +2814,6 @@ class MainActivity : AppCompatActivity(),
                         lvMain.arrayList[index].setHighLighted(false)
                     }
                 }
-            } else {
-                lvMain.arrayList[lvMain.selectedRow].setHighLighted(false)
             }
             ds.tagSection.clear()
             // ListView jump
@@ -5253,17 +5315,21 @@ class MainActivity : AppCompatActivity(),
         }
 
         // calc highlight positions
-        var posAbove = Math.max(0, Math.min(lvMain.selectedRow, lvMain.arrayList.size - 1))
-        val posBelow = Math.max(0, Math.min(lvMain.selectedRow - 1, lvMain.arrayList.size - 1))
+        var listSize = lvMain.arrayList.size
+        var posAbove = Math.max(0, Math.min(lvMain.selectedRow, listSize - 1))
+        var posBelow = Math.max(0, Math.min(lvMain.selectedRow - 1, listSize - 1))
         // ListView scroll position
         var posScrol = if (lvCurrFstVisPos == lvMain.fstVisPos) lvCurrFstVisPos else posAbove
         // an added item has special rules
         if (ds.undoAction == ACTION.REVERTADD) {
             ds.undoAction = ACTION.UNDEFINED
             if (lvMain.showOrder == SHOW_ORDER.TOP) {
+                // revert add in SHOW_ORDER.TOP, always leaves a header and the item below the reverted item
                 posAbove = 0
+                posBelow = if (lvMain.arrayList[1].isSpacer) 2 else 1
             } else {
-                posAbove = lvMain.arrayList.size - 1
+                // revert add in SHOW_ORDER.BOTTOM, always removes last item
+                posBelow = posAbove
             }
             posScrol = posAbove
         }
@@ -5276,7 +5342,16 @@ class MainActivity : AppCompatActivity(),
         // if tag section has useful data, aka delete a range
         var markRange = false
         if ((ds.tagSection.size > 0) and (ds.undoAction == ACTION.REVERTDELETE)) {
+            // try to keep restored items centered on screen
             posScrol = ds.tagSection[0]
+            var maxPos = 0
+            var minPos = Int.MAX_VALUE
+            for (i in 1 until ds.tagSection.size) {
+                minPos = Math.min(minPos, ds.tagSection[i])
+                maxPos = Math.max(maxPos, ds.tagSection[i])
+            }
+            var deltaPos = (maxPos - minPos) / 2
+            posScrol = minPos + if (deltaPos < 10) deltaPos else 10
             markRange = true
         }
         // highlight all previously deleted items stored in tag section
@@ -5290,12 +5365,13 @@ class MainActivity : AppCompatActivity(),
                 }
             } else {
                 lvMain.arrayList[posAbove].setHighLighted(true)
+                lvMain.arrayList[posBelow].setHighLighted(true)
             }
         } catch (e: Exception) {
             centeredToast(this, e.message, 3000)
         }
         // scroll listview
-        lvMain.listView!!.setSelection(posScrol)
+        lvMain.listView!!.setSelection(posScrol - 10)
 
         // revoke temp. highlighting after timeout
         lvMain.listView!!.postDelayed({
@@ -5314,7 +5390,7 @@ class MainActivity : AppCompatActivity(),
                 }
                 ds.tagSection.clear()
                 // jump
-                lvMain.listView!!.setSelection(posScrol)
+                lvMain.listView!!.setSelection(posScrol - 10)
                 // inform listview adapter about the changes
                 lvMain.adapter!!.notifyDataSetChanged()
                 // finally reset undo action
