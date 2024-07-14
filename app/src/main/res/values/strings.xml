@@ -283,4 +283,7 @@
     <string name="geo_location">Geo location</string>
     <string name="navigate">navigate</string>
     <string name="show">show</string>
+    <string name="upper_quarter">upper quarter</string>
+    <string name="middle">middle</string>
+    <string name="lower_quarter">lower quarter</string>
 </resources>

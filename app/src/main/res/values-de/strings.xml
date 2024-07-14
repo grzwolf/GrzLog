@@ -282,5 +282,8 @@
     <string name="geo_location">Geo Koordinate</string>
     <string name="navigate">navigieren</string>
     <string name="show">anzeigen</string>
+    <string name="upper_quarter">oberes Viertel</string>
+    <string name="middle">Mitte</string>
+    <string name="lower_quarter">unteres Viertel</string>
 </resources>
 

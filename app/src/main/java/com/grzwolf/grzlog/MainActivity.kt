@@ -2880,19 +2880,59 @@ class MainActivity : AppCompatActivity(),
 
     // fabPlus button long click action --> a new menu with options to jump to top / bottom
     private fun fabPlusOnLongClick(view: View, lv: ListView?) {
+        if (lv == null) {
+            return
+        }
+        // estimate current view position
+        var currentViewPct = (100.0 * lv!!.firstVisiblePosition / lv!!.adapter!!.count + 0.5).toInt()
+        // prepare single choice item pre selection
+        var checkItem = -1
+        if (lv!!.firstVisiblePosition == 0) {
+            checkItem = 0
+        }
+        if (lv!!.firstVisiblePosition == lv!!.adapter!!.count / 4) {
+            checkItem = 1
+        }
+        if (lv!!.firstVisiblePosition == lv!!.adapter!!.count / 2) {
+            checkItem = 2
+        }
+        if (lv!!.firstVisiblePosition == lv!!.adapter!!.count * 3 / 4) {
+            checkItem = 3
+        }
+        if (lv!!.lastVisiblePosition == lv!!.adapter!!.count - 1) {
+            checkItem = 4
+            currentViewPct = 100
+        }
+        // single choice dialog
         val optionsBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-        optionsBuilder.setTitle(R.string.JumpTo)
+        var title = getString(R.string.JumpTo) + " ( " + currentViewPct.toString() + " % )"
+        optionsBuilder.setTitle(title)
         var optionsDialog: AlertDialog? = null
         optionsBuilder.setSingleChoiceItems(
             arrayOf(
                 getString(R.string.top),
+                getString(R.string.upper_quarter),
+                getString(R.string.middle),
+                getString(R.string.lower_quarter),
                 getString(R.string.bottom)
-            ), -1
+            ),
+            checkItem
         ) { dialog, which ->
             if (which == 0) {
+                // jump to top
                 lv!!.setSelection(0)
             }
             if (which == 1) {
+                lv!!.setSelection(lv.adapter.count / 4)
+            }
+            if (which == 2) {
+                lv!!.setSelection(lv.adapter.count / 2)
+            }
+            if (which == 3) {
+                lv!!.setSelection(lv.adapter.count * 3 / 4)
+            }
+            if (which == 4) {
+                // jump to bottom
                 lv!!.setSelection(lv.adapter.count - 1)
             }
             optionsDialog!!.dismiss()
