@@ -112,6 +112,7 @@ class MainActivity : AppCompatActivity(),
     var searchView: SearchView? = null                    // search function
     var searchViewQuery = ""                              // search query string
     var menuSearchVisible = false                         // visibility flag of search input
+    var jumpToPhrase = ""                                 // + button long click offers a 'jump to phrase' option
     var capturedPhotoUri: Uri? = null                     // needs to be global, bc there is no way a camara app returns uri in onActivityResult
 
     // fabBack is used to switch back to the previous folder, FabBackTag provides data for such functionality
@@ -2878,7 +2879,7 @@ class MainActivity : AppCompatActivity(),
         dialog.cancel()
     }
 
-    // fabPlus button long click action --> a new menu with options to jump to top / bottom
+    // fabPlus button long click action --> a new menu with options to jump
     private fun fabPlusOnLongClick(view: View, lv: ListView?) {
         if (lv == null) {
             return
@@ -2914,7 +2915,8 @@ class MainActivity : AppCompatActivity(),
                 getString(R.string.upper_quarter),
                 getString(R.string.middle),
                 getString(R.string.lower_quarter),
-                getString(R.string.bottom)
+                getString(R.string.bottom),
+                getString(R.string.search_phrase) + if (jumpToPhrase.length > 0) ": '" + jumpToPhrase + "'" else ""
             ),
             checkItem
         ) { dialog, which ->
@@ -2935,8 +2937,120 @@ class MainActivity : AppCompatActivity(),
                 // jump to bottom
                 lv!!.setSelection(lv.adapter.count - 1)
             }
+            if (which == 5) {
+                // jump to a search phrase: repeating a search phrase on multiple hits, jumps further down
+                val input = EditText(this)
+                input.inputType = InputType.TYPE_CLASS_TEXT
+                input.setText(jumpToPhrase)
+                showEditTextContextMenu(input, false)
+                // input text change listener resets jumpToPhrase string
+                input!!.addTextChangedListener(object : TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
+                    override fun afterTextChanged(s: Editable) { jumpToPhrase = "" }
+                })
+                // AlertBuilder as UI control
+                var inputBuilder: AlertDialog.Builder? = null
+                inputBuilder = AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+                inputBuilder.setTitle(getString(R.string.jump_to_phrase))
+                inputBuilder.setView(input)
+                // input dlg ok
+                inputBuilder.setPositiveButton(
+                    getString(R.string.ok),
+                    DialogInterface.OnClickListener { dialogChange, which ->
+                        var text = input.text.toString()
+                        if (text.isEmpty()) {
+                            // clean up and return
+                            jumpToPhrase = text
+                            lvMain.unselectSearchHits()
+                            lvMain.searchHitListFolder.clear()
+                            return@OnClickListener
+                        }
+                        // the following gets only executed, after the search phrase was altered
+                        if (jumpToPhrase != text) {
+                            // save phrase for later use
+                            jumpToPhrase = text
+                            // reset previous search hits
+                            lvMain.unselectSearchHits()
+                            lvMain.searchHitListFolder.clear()
+                            // loop array for search hits
+                            for (pos in lvMain.arrayList.indices) {
+                                val itemText = lvMain.arrayList[pos].title
+                                if (itemText!!.lowercase(Locale.getDefault()).contains(jumpToPhrase.lowercase(Locale.getDefault()))) {
+                                    lvMain.searchHitListFolder.add(pos)
+                                }
+                            }
+                            // note if nothing was found
+                            if (lvMain.searchHitListFolder.size == 0) {
+                                centeredToast(
+                                    this@MainActivity,
+                                    "'" + jumpToPhrase + "' " + getString(R.string.not_existing),
+                                    Toast.LENGTH_LONG
+                                )
+                                return@OnClickListener
+                            } else {
+                                centeredToast(
+                                    this@MainActivity,
+                                    "'" + jumpToPhrase + "' " + lvMain.searchHitListFolder.size.toString() + getString(R.string.x_found),
+                                    Toast.LENGTH_LONG
+                                )
+                            }
+                            // signal a start position
+                            lvMain.searchNdx = -1
+                        }
+                        // calculate index selected item in hit list
+                        if (lvMain.searchNdx + 1 < lvMain.searchHitListFolder.size) {
+                            lvMain.searchNdx++
+                        } else {
+                            lvMain.searchNdx = 0
+                            centeredToast(
+                                this@MainActivity,
+                                "'" + searchViewQuery + "' " + getString(R.string.WrapAround),
+                                Toast.LENGTH_SHORT
+                            )
+                        }
+                        // scroll did happen, which shall skip the over scrolled search hits
+                        if (lvMain.scrollWhileSearch) {
+                            lvMain.scrollWhileSearch = false
+                            val fstItemNdx = lvMain.listView!!.firstVisiblePosition
+                            // find next larger search hit index
+                            var nxtSearchHit = lvMain.searchHitListFolder.size - 1
+                            for (i in lvMain.searchHitListFolder.indices) {
+                                if (lvMain.searchHitListFolder[i] > fstItemNdx) {
+                                    nxtSearchHit = i
+                                    break
+                                }
+                            }
+                            lvMain.searchNdx = nxtSearchHit
+                        }
+                        // convert hit list index to listview array index
+                        val ndx = lvMain.searchHitListFolder[lvMain.searchNdx]
+                        // finally jump/scroll to selected item
+                        lvMain.listView!!.setSelection(ndx)
+                        lvMain.arrayList[ndx].setHighLighted(true)
+                        // revoke highlighting after timeout
+                        Handler().postDelayed({
+                            lvMain.arrayList[ndx].setHighLighted(false)
+                            lvMain.adapter!!.notifyDataSetChanged()
+                        }, 2000)
+
+                    })
+                // input dlg cancel
+                inputBuilder.setNegativeButton(
+                    R.string.cancel,
+                    DialogInterface.OnClickListener { dialogRename, which ->
+                        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.hideSoftInputFromWindow(input.windowToken, 0)
+                    })
+                // input dlg 'jump to phrase' show
+                inputBuilder.show()
+                // tricky way to let the keyboard popup
+                input.requestFocus()
+                showKeyboard(input, 0, 0, 250)
+            }
             optionsDialog!!.dismiss()
         }
+        // + button long click options dialog
         optionsBuilder.setNegativeButton(R.string.cancel) { dialog, which -> }
         optionsDialog = optionsBuilder.create()
         optionsDialog?.show()
@@ -3069,7 +3183,13 @@ class MainActivity : AppCompatActivity(),
             searchViewQuery = ""
             // control visibility of menu items
             showMenuItems(false)
-            // unselect all search hits in arraylist
+            // remove all previous jump to remains
+            if (jumpToPhrase.length > 0) {
+                jumpToPhrase = ""
+                lvMain.unselectSearchHits()
+                lvMain.searchHitListFolder.clear()
+            }
+            // allow to unselect all search hits in arraylist
             if (lvMain.searchHitListFolder.size > 0) {
                 // ask for decision
                 decisionBox(
@@ -3099,6 +3219,13 @@ class MainActivity : AppCompatActivity(),
         // search action begins
         searchView!!.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
+                // remove all previous jump to remains
+                if (jumpToPhrase.length > 0) {
+                    jumpToPhrase = ""
+                    lvMain.unselectSearchHits()
+                    lvMain.searchHitListFolder.clear()
+                }
+                // handle older search hit remains
                 if (lvMain.searchHitListFolder.size > 0) {
                     if (!query.equals(searchViewQuery, ignoreCase = true)) {
                         // if there is a new query, ask for decision, whether to unselect previous search hits
@@ -3163,7 +3290,7 @@ class MainActivity : AppCompatActivity(),
         itemUp.isVisible = true
         val itemDown = appMenu!!.findItem(R.id.action_searchDown)
         itemDown.isVisible = true
-        // jump to search hits
+        // jump to search hits: to keep it easy, ALWAYS start from top
         if (lvMain.showOrder == SHOW_ORDER.TOP) {
             lvMain.searchNdx = -1
             onOptionsItemSelected(itemDown)

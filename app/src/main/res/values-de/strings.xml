@@ -285,5 +285,8 @@
     <string name="upper_quarter">oberes Viertel</string>
     <string name="middle">Mitte</string>
     <string name="lower_quarter">unteres Viertel</string>
+    <string name="x_found">x Treffer</string>
+    <string name="jump_to_phrase">Springe zu Text</string>
+    <string name="search_phrase">Suchbegriff</string>
 </resources>
 

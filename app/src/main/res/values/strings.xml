@@ -286,4 +286,7 @@
     <string name="upper_quarter">upper quarter</string>
     <string name="middle">middle</string>
     <string name="lower_quarter">lower quarter</string>
+    <string name="x_found">x found</string>
+    <string name="jump_to_phrase">Jump to phrase</string>
+    <string name="search_phrase">search phrase</string>
 </resources>
