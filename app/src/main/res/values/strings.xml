@@ -18,11 +18,14 @@
     <string name="newInputBottom">Show new input at bottom</string>
     <string name="newInputTop">Show new input at top</string>
     <string name="darkMode">Dark Mode</string>
+    <string name="backup_mode">Backup mode</string>
+    <string name="backup_automated_in_background">Backup automated in background</string>
+    <string name="backup_manually">Backup manually</string>
     <string name="BackupRestore">Backup and Restore</string>
     <string name="BackupInfo">Backup File Information</string>
     <string name="notExisting">not existing</string>
     <string name="BackupData">Backup Data</string>
-    <string name="clickToBackup">Click here to backup your data</string>
+    <string name="clickToBackup">Click here to backup your data manually</string>
     <string name="RestoreData">Restore Data</string>
     <string name="clickToRestore">Click here to restore data from Backup</string>
     <string name="useGCam">Use Google camera (if installed)</string>

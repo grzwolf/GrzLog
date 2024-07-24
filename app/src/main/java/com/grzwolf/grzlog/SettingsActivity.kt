@@ -15,7 +15,6 @@ import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
@@ -26,7 +25,10 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
@@ -45,7 +47,10 @@ import java.util.regex.Pattern
 import java.util.zip.ZipFile
 
 
-public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeListener {
+public class SettingsActivity :
+    AppCompatActivity(),
+    OnSharedPreferenceChangeListener,
+    LifecycleObserver {
     // listener for any pref change: https://stackoverflow.com/questions/2542938/sharedpreferences-onsharedpreferencechangelistener-not-being-called-consistently
     public override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, s: String?) {
         // s == null after reset all preferences
@@ -96,6 +101,19 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             .commit()
         val actionBar = supportActionBar
         actionBar?.setDisplayHomeAsUpEnabled(true)
+
+        // life cycle observer
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+    }
+
+    // life cycle observer knows, if app is in foreground or not
+    @OnLifecycleEvent(Lifecycle.Event.ON_START)
+    fun onAppInForeground () {
+        isSettingsActivityInForeground = true
+    }
+    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+    fun onAppInBackground() {
+        isSettingsActivityInForeground = false
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -206,14 +224,23 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
             val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 
-            // show backup data info
-            val backupInfo = findPreference("BackupInfo") as Preference?
-            var file = getBackupFile(appContext!!)
-            if (file != null) {
-                val lastModDate = Date(file.lastModified())
-                backupInfo!!.summary = file.toString() + getString(R.string.lastBackup) + lastModDate.toString() + "\""
-            } else {
-                backupInfo!!.summary = getString(R.string.noBackupExisting)
+            // backup data info
+            try {
+                // tricky way to make the preference usable in static context
+                val tmp: Preference by lazy {
+                    findPreference<Preference>("BackupInfo") ?: error("fail")
+                }
+                backupInfo = tmp
+                // show backup data info
+                var file = getBackupFile(appContext!!)
+                if (file != null) {
+                    val lastModDate = Date(file.lastModified())
+                    backupInfo!!.summary = file.toString() + getString(R.string.lastBackup) + lastModDate.toString() + "\""
+                } else {
+                    backupInfo!!.summary = getString(R.string.noBackupExisting)
+                }
+            } catch (ise: IllegalStateException) {
+                centeredToast(appContext!!, "Info error: " + ise.message.toString(), 3000)
             }
 
             // GCam usage/handling hint
@@ -435,14 +462,14 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                                 )
                             } else {
                                 if (!MainActivity.backupOngoing) {
-                                    // lame parameter transfer to EndlessService
+                                    // lame parameter transfer to BackupService
                                     gBScontext = requireContext()
                                     gBSsrcFolder = appPath
                                     gBSoutFolder = downloadDir
                                     gBSzipName = "$appName.zip"
                                     gBSmaxProgress = maxProgressCount
-                                    // start EndlessService, which prevents interrupting the backup
-                                    actionOnService(requireContext(), EndlessService.Companion.Actions.START)
+                                    // start BackupService, which prevents interrupting the backup
+                                    actionOnService(requireContext(), BackupService.Companion.Actions.START)
                                 } else {
                                     centeredToast(MainActivity.contextMainActivity, "GrzLog silent backup ongoing", 3000)
                                 }
@@ -638,6 +665,13 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             return activity
         }
 
+        // need val in static context
+        lateinit var backupInfo: Preference
+
+        // settings activity visibility status
+        @JvmField
+        var isSettingsActivityInForeground = false
+
         // create backup progress dialog
         fun generateBackupProgress(
             context: Context,
@@ -718,30 +752,33 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
             }
         }
 
-        // start backup in an endless service
-        private fun actionOnService(context: Context, action: EndlessService.Companion.Actions) {
-            var state = EndlessService.Companion.getServiceState(context)
+        // start backup in a service
+        fun actionOnService(context: Context, action: BackupService.Companion.Actions) {
+            var state = BackupService.Companion.getServiceState(context)
             // stop service
-            if (state == EndlessService.Companion.ServiceState.STARTED && action == EndlessService.Companion.Actions.STOP) {
-                Intent(context, EndlessService::class.java).also {
+            if (state == BackupService.Companion.ServiceState.STARTED && action == BackupService.Companion.Actions.STOP) {
+                Intent(context, BackupService::class.java).also {
                     it.action = action.name
                     context.stopService(it)
                 }
                 return
             }
             // start service
-            Intent(context, EndlessService::class.java).also {
-                it.action = action.name
-                context.startForegroundService(it)
+            if (action == BackupService.Companion.Actions.START) {
+                Intent(context, BackupService::class.java).also {
+                    it.action = action.name
+                    context.startForegroundService(it)
+                }
+                return
             }
         }
-        // lame parameter transfer to helper for EndlessService
+        // lame parameter transfer to helper for BackupService
         lateinit var gBScontext: Context
         lateinit var gBSsrcFolder: String
         lateinit var gBSoutFolder: String
         lateinit var gBSzipName: String
         var gBSmaxProgress: Int = 0
-        // helper for EndlessService to run backup silently
+        // helper for BackupService to run backup silently
         fun generateBackupSilent() {
             generateBackupSilent(
                 gBScontext,
@@ -762,8 +799,8 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                 // GrzLog.zip might not be writable, if it is a backup from another phone
                 val dst = File("$outFolder/$zipName")
                 if (dst.exists() && !dst.canWrite()) {
-                    // stop endless service
-                    actionOnService(context, EndlessService.Companion.Actions.STOP)
+                    // stop backup service
+                    actionOnService(context, BackupService.Companion.Actions.STOP)
                     // info
                     okBox(
                         context,
@@ -806,10 +843,11 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                     MainActivity.backupOngoing = false
                     // jump back to UI
                     (context as Activity).runOnUiThread(Runnable {
-                        // stop endless service
-                        actionOnService(context, EndlessService.Companion.Actions.STOP)
-                        // finalize notification
+                        // stop backup service
+                        actionOnService(context, BackupService.Companion.Actions.STOP)
+                        // prepare & show notification
                         if (success) {
+                            // success notification
                             notification.setContentTitle(context.getString(R.string.grzlog_silent_backup_success))
                                         .setContentText("")
                                         .setProgress(maxProgress, maxProgress, false)
@@ -819,7 +857,19 @@ public class SettingsActivity : AppCompatActivity(), OnSharedPreferenceChangeLis
                                 Toast.makeText(context, context.getString(R.string.grzlog_silent_backup_success), Toast.LENGTH_LONG)
                                     .show()
                             }
+                            // update backup file info
+                            if (isSettingsActivityInForeground) {
+                                // show backup data info
+                                var file = getBackupFile(appContext!!)
+                                if (file != null) {
+                                    val lastModDate = Date(file.lastModified())
+                                    backupInfo!!.summary = file.toString() + context.getString(R.string.lastBackup) + lastModDate.toString() + "\""
+                                } else {
+                                    backupInfo!!.summary = context.getString(R.string.noBackupExisting)
+                                }
+                            }
                         } else {
+                            // fail notification
                             notification.setContentTitle(context.getString(R.string.grzlog_backup_error))
                             notification.setContentText(context.getString(R.string.something_went_wrong))
                             if (MainActivity.appIsInForeground) {

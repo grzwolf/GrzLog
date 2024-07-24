@@ -93,9 +93,12 @@ class HelpActivity : AppCompatActivity() {
         "       Ask whether to autofill skipped dates\n" +
         "       Click on selection: copy to clipboard OR show attachment\n" +
         "       Click on search hit: edit line OR show attachment\n" +
+        "       Backup data info\n" +
+        "       Backup mode\n" +
+        "              fully automated in background\n" +
+        "              run backup manually\n" +
         "       Backup outdated reminder\n" +
         "       Backup data in background OR foreground\n" +
-        "       Backup data info\n" +
         "       Backup data to /Download\n" +
         "       Restore data from /Download\n" +
         "       Restore from file explorer: Android 13 limits file access\n" +

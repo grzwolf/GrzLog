@@ -3,23 +3,17 @@ package com.grzwolf.grzlog
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
+import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
-import android.os.SystemClock
-import android.provider.Settings
 import android.widget.Toast
-import java.text.SimpleDateFormat
-import java.util.*
-import kotlinx.coroutines.*
-import android.content.SharedPreferences
-import android.content.pm.ServiceInfo
+import androidx.core.app.NotificationManagerCompat
 
 // based on https://robertohuertas.com/2019/06/29/android_foreground_services/
-class EndlessService : Service() {
-
-    private var tag = "GrzLog_EndlessService"
+class BackupService : Service() {
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var isServiceStarted = false
@@ -58,8 +52,9 @@ class EndlessService : Service() {
     }
 
     override fun onDestroy() {
+        stopService()
         super.onDestroy()
-        Toast.makeText(this, "Service destroyed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "GrzLog Backup Service finished", Toast.LENGTH_SHORT).show()
     }
 
     private fun startService() {
@@ -67,14 +62,14 @@ class EndlessService : Service() {
             return
         }
 
-        Toast.makeText(this, "Service starting its task", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "GrzLog Backup Service starting", Toast.LENGTH_SHORT).show()
         isServiceStarted = true
         setServiceState(this, ServiceState.STARTED)
 
         // we need this lock, so our service gets not affected by Doze Mode
         wakeLock =
             (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-                newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "EndlessService::lock").apply {
+                newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BackupService::lock").apply {
                     acquire()
                 }
             }
@@ -84,7 +79,7 @@ class EndlessService : Service() {
     }
 
     private fun stopService() {
-        Toast.makeText(this, "Service stopping", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "GrzLog Backup Service stopping", Toast.LENGTH_SHORT).show()
         try {
             wakeLock?.let {
                 if (it.isHeld) {
@@ -97,18 +92,20 @@ class EndlessService : Service() {
         }
         isServiceStarted = false
         setServiceState(this, ServiceState.STOPPED)
+        NotificationManagerCompat.from(this).cancelAll()
+        val notificationManager = applicationContext.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     }
 
     private fun createNotification(): Notification {
-        val notificationChannelId = "ENDLESS SERVICE CHANNEL"
+        val notificationChannelId = "BACKUP SERVICE CHANNEL"
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager;
         val channel = NotificationChannel(
             notificationChannelId,
-            "Endless Service notifications channel",
+            "GrzLog Backup Service",
             NotificationManager.IMPORTANCE_HIGH
         ).let {
-            it.description = "Endless Service channel"
+            it.description = "GrzLog Backup Service channel"
             it.enableLights(true)
             it.lightColor = Color.RED
             it.enableVibration(true)
@@ -127,11 +124,11 @@ class EndlessService : Service() {
         ) else Notification.Builder(this)
 
         return builder
-            .setContentTitle("Endless Service")
-            .setContentText("endless service working")
+            .setContentTitle("GrzLog Backup Service")
+            .setContentText("working")
             .setContentIntent(pendingIntent)
             .setSmallIcon(R.mipmap.ic_grzlog)
-            .setTicker("Ticker text")
+            .setTicker("")
             .build()
     }
 

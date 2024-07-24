@@ -414,8 +414,9 @@ fun writeFile(file: File, text: String): Boolean {
         if (!file.exists()) {
             file.createNewFile()
         }
-    } catch (e: IOException) {
-        e.printStackTrace()
+    } catch (ioe: IOException) {
+        retVal = false
+    } catch (see: SecurityException) {
         retVal = false
     }
     var fos: FileOutputStream?

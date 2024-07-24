@@ -49,7 +49,6 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.BlendModeColorFilterCompat
 import androidx.core.graphics.BlendModeCompat
 import androidx.core.view.isVisible
-import androidx.core.view.size
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -72,10 +71,11 @@ import com.grzwolf.grzlog.FileUtils.Companion.getFile
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
 import com.grzwolf.grzlog.MainActivity.GrzEditText
 import java.io.*
-import java.lang.IllegalArgumentException
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.regex.Pattern
@@ -199,15 +199,6 @@ class MainActivity : AppCompatActivity(),
         // application name is needed in many places
         appName = this.applicationInfo.loadLabel(this.packageManager).toString()
 
-        // check for a broken backup: happens, if silent backup was previously aborted by OS or user
-        if (!backupOngoing) {
-            val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            var file = File(downloadDir, "$appName.zip" + "_part")
-            if (file.exists()) {
-                okBox(this, "Note", getString(R.string.partialBackup))
-            }
-        }
-
         // at app start check app update availability just once a day
         if (sharedPref.getBoolean("AppAtStartCheckUpdateFlag", false)) {
             // check if today was already checked
@@ -289,6 +280,48 @@ class MainActivity : AppCompatActivity(),
         ds.undoText = ""
         ds.undoSection = ""
         ds.tagSection.clear()
+
+        // only enter, if no backup is already ongoing
+        if (!backupOngoing) {
+            // check for a broken backup: may happen, if a backup was previously aborted by OS or user
+            val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            var file = File(downloadDir, "$appName.zip" + "_part")
+            if (file.exists()) {
+                try {
+                    file.delete()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                } catch (e:NullPointerException){
+                    e.printStackTrace()
+                }
+                // note to user
+                okBox(this, "Note", getString(R.string.partialBackup))
+            }
+            // only exec backup in 'backup auto mode'
+            if (!sharedPref.getBoolean("BackupModeManually", true)) {
+                // if backup file datestamp is outdated, exec backup only once a day at app start
+                var lastModDate = LocalDate.of(1900, 1, 1)
+                var file = getBackupFile(this)
+                if (file != null) {
+                    lastModDate = Instant.ofEpochMilli(file.lastModified()).atZone(ZoneId.systemDefault()).toLocalDate()
+                }
+                val dateToday = LocalDate.now()
+                if (dateToday.compareTo(lastModDate) != 0) {
+                    // backup DataStore to text file in Downloads as a measure of last resort after a data crash
+                    if (!createTxtBackup(this@MainActivity, downloadDir, ds)) {
+                        okBox(this, "Note", "GrzLog.txt backup failed")
+                    }
+                    // lame parameter transfer to BackupService
+                    SettingsActivity.gBScontext = this
+                    SettingsActivity.gBSsrcFolder = this.getExternalFilesDir(null)!!.absolutePath
+                    SettingsActivity.gBSoutFolder = downloadDir
+                    SettingsActivity.gBSzipName = "$appName.zip"
+                    SettingsActivity.gBSmaxProgress = countFiles(File(SettingsActivity.gBSsrcFolder))
+                    // start BackupService, which prevents interrupting the backup
+                    SettingsActivity.actionOnService(this, BackupService.Companion.Actions.START)
+                }
+            }
+        }
 
         // listview item touch listener determines the screen coordinates of the touch event
         (lvMain.listView)?.setOnTouchListener(OnTouchListener { listView, event ->

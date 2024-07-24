@@ -18,11 +18,14 @@
     <string name="newInputBottom">Zeige neue Eingabe am Ende</string>
     <string name="newInputTop">Zeige neue Eingabe am Anfang</string>
     <string name="darkMode">Dark Modus</string>
+    <string name="backup_mode">Backup Modus</string>
+    <string name="backup_automated_in_background">Backup automatisch im Hintergrund</string>
+    <string name="backup_manually">Backup manuell</string>
     <string name="BackupRestore">Sichern und Wiederherstellen</string>
     <string name="BackupInfo">Sicherungsdatei Information</string>
     <string name="notExisting">existiert nicht</string>
     <string name="BackupData">Datensicherung</string>
-    <string name="clickToBackup">Klicken zum Daten sichern</string>
+    <string name="clickToBackup">Klicken zum manuellen Daten sichern</string>
     <string name="RestoreData">Datenwiederherstellung</string>
     <string name="clickToRestore">Klicken zum Wiederherstellen</string>
     <string name="useGCam">Verwendung Google Kamera</string>

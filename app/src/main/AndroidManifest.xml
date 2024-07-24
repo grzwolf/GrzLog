@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- EndlessService -->
+    <!-- BackupService -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -59,9 +59,9 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <!-- EndlessService -->
+        <!-- BackupService -->
         <service
-            android:name=".EndlessService"
+            android:name=".BackupService"
             android:enabled="true"
             android:foregroundServiceType="specialUse"
             android:exported="false">
