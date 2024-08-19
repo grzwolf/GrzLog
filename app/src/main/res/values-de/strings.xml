@@ -197,7 +197,7 @@
     <string name="cutToClipboard">Ausschneiden in Zwischenablage</string>
     <string name="cutSelectedItems">Ausschneiden in die Zwischenablage?</string>
     <string name="EditLine">Zeile editieren</string>
-    <string name="CopyLine">Zeile kopieren</string>
+    <string name="CopyLine">Kopieren in Zwischenablage</string>
     <string name="noMediaPermission">Keine Berechtigung für Medienzugriff</string>
     <string name="inputOneSpace">Minimaler Input ist ein Leerzeichen</string>
     <string name="appHelp">Hilfe Seiten</string>

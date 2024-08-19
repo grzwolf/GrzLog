@@ -198,7 +198,7 @@
     <string name="cutToClipboard">Cut to clipboard</string>
     <string name="cutSelectedItems">Cut selected items to clipboard?</string>
     <string name="EditLine">Edit line</string>
-    <string name="CopyLine">Copy line</string>
+    <string name="CopyLine">Copy to clipboard</string>
     <string name="noMediaPermission">No media access permission</string>
     <string name="inputOneSpace">Input at least one space</string>
     <string name="appHelp">Help pages</string>
