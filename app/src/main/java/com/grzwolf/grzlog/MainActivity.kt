@@ -3731,7 +3731,7 @@ class MainActivity : AppCompatActivity(),
         }
         // CHANGE FILE selection MORE FILE OPTIONS
         changeFolderBuilder.setNeutralButton(
-            R.string.more,
+            R.string.next,
             DialogInterface.OnClickListener { dialog, which ->
                 folderMoreDialog(changeFolderBuilder.context, selectedSectionTemp, item)
             })
