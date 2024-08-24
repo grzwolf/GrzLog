@@ -114,18 +114,20 @@ class HelpActivity : AppCompatActivity() {
         "       end search by tap on Loupe + 2x X\n\n" +
         "d) tap Folder -> 'Select folder' dialog\n" +
         "       list of folders \n" +
+        "       more: Open\n" +
         "       more: Export to PDF, TXT, clipboard  \n" +
-        "       more: New folder\n" +
-        "       more: Rename folder\n" +
-        "       more: Clear folder content\n" +
-        "       more: Remove/delete folder\n" +
-        "       more: Move folder up in list\n" +
+        "       more: Rename\n" +
+        "       more: Clear content\n" +
+        "       more: Remove\n" +
+        "       more: Move to top\n" +
+        "       more: Move to bottom\n" +
         "       more: Set input timestamp HH:MM, HH:MM:SS, none  \n" +
         "       more: Search all folders\n" +
         "             type a global search phrase\n" +
         "             a list of search hits will appear\n" +
         "             select & jump to hit\n" +
         "             jump back to search hit list via red back button\n\n" +
+        "       more: New folder\n" +
         "e) tap Share -> share options dialog\n" +
         "       share selected items\n" +
         "       share current folder\n" +
