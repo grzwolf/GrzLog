@@ -95,11 +95,13 @@
     <string name="sequenceNotAllowed">Character sequence \'[[\' is not allowed and was changed to \'((\'.</string>
     <string name="writeGrzLog">Write to GrzLog</string>
     <string name="selectFolder">Select folder</string>
+    <string name="openFolder">Open</string>
     <string name="renFolder">Rename</string>
     <string name="useTimestamp">Timestamp</string>
     <string name="clearFolder">Clear content</string>
     <string name="removeFolder">Remove</string>
-    <string name="moveFolderUp">Move up in list</string>
+    <string name="moveFolderTop">Move to top</string>
+    <string name="moveFolderBottom">Move to bottom</string>
     <string name="newFolder">New folder</string>
     <string name="export">Export</string>
     <string name="whatTodoWithFolder">What to do with folder: \'</string>
@@ -108,6 +110,7 @@
     <string name="deleteFolder">Remove folder</string>
     <string name="folder">folder</string>
     <string name="folderAlreadyAtTop">Folder is already on top of the list</string>
+    <string name="folderAlreadyAtBottom">Folder is already at the list bottom</string>
     <string name="folderLimit">\"\nThere is a limit of \"</string>
     <string name="folders">\" folders.\"</string>
     <string name="folderNewName">Set new folder\'s name</string>

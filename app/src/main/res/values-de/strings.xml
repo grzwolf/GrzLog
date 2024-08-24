@@ -94,11 +94,13 @@
     <string name="sequenceNotAllowed">Zeichenfolge \'[[\' ist nicht erlaubt und wurde geändert in \'((\'.</string>
     <string name="writeGrzLog">Eintrag vornehmen</string>
     <string name="selectFolder">Ordner wählen</string>
+    <string name="openFolder">Öffnen</string>
     <string name="renFolder">Umbenennen</string>
     <string name="useTimestamp">Zeitstempel</string>
     <string name="clearFolder">Inhalt löschen</string>
     <string name="removeFolder">Entfernen</string>
-    <string name="moveFolderUp">In Liste aufwärts</string>
+    <string name="moveFolderTop">An Anfang der Liste</string>
+    <string name="moveFolderBottom">An Ende der Liste</string>
     <string name="newFolder">Neuer Ordner</string>
     <string name="export">Export</string>
     <string name="whatTodoWithFolder">Was soll geschehen mit Ordner: \'</string>
@@ -106,7 +108,8 @@
     <string name="clearFolderData">Daten im Ordner löschen \'</string>
     <string name="deleteFolder">Ordner löschen</string>
     <string name="folder">Ordner</string>
-    <string name="folderAlreadyAtTop">Ordner ist am Anfang </string>
+    <string name="folderAlreadyAtTop">Ordner ist bereits am Anfang </string>
+    <string name="folderAlreadyAtBottom">Ordner ist bereits am Ende </string>
     <string name="folderLimit">\"\nEs gibt ein Limit von \"</string>
     <string name="folders">\" Ordnern.\"</string>
     <string name="folderNewName">Neuer Ordnername</string>
