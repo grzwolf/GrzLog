@@ -2397,25 +2397,37 @@ class MainActivity : AppCompatActivity(),
                     } else {
                         linkText = ""
                     }
-                    // clicked item's original full text: extract the part after :::: within the brackets
-                    var fullLink = lvMain.arrayList[itemPosition].fullTitle
-                    // ... but there could be a recently added and not yet saved attachment
-                    if (fabPlus.attachmentUri!!.length > 0) {
-                        fullLink = "[" + linkTextNoBrackets + "::::" + fabPlus.attachmentUri!! + "]"
-                    }
-                    val matchOri = fullLink?.let { PATTERN.UriLink.matcher(it.toString()) }
-                    var oriLink = ""
-                    if (matchOri?.find() == true) {
-                        var noBrackets = matchOri.group()
-                        noBrackets = noBrackets.substring(1, noBrackets.length - 1)
-                        var parts = noBrackets.split("::::")
-                        if (parts != null && parts.size > 1) {
-                            oriLink = parts[1]
+                    if (itemPosition != -1) {
+                        // clicked item's original full text: extract the part after :::: within the brackets
+                        var fullLink = lvMain.arrayList[itemPosition].fullTitle
+                        // ... but there could be a recently added and not yet saved attachment
+                        if (fabPlus.attachmentUri!!.length > 0) {
+                            fullLink = "[" + linkTextNoBrackets + "::::" + fabPlus.attachmentUri!! + "]"
                         }
-                    }
-                    // add oriLink to linkText
-                    if (linkText.toString().isNotEmpty() && oriLink.isNotEmpty()) {
-                        linkText = linkText.substring(0, linkText.length-1) + "::::" + oriLink + "]"
+                        val matchOri = fullLink?.let { PATTERN.UriLink.matcher(it.toString()) }
+                        var oriLink = ""
+                        if (matchOri?.find() == true) {
+                            var noBrackets = matchOri.group()
+                            noBrackets = noBrackets.substring(1, noBrackets.length - 1)
+                            var parts = noBrackets.split("::::")
+                            if (parts != null && parts.size > 1) {
+                                oriLink = parts[1]
+                            }
+                        }
+                        // add oriLink to linkText
+                        if (linkText.toString().isNotEmpty() && oriLink.isNotEmpty()) {
+                            linkText = linkText.substring(0, linkText.length - 1) + "::::" + oriLink + "]"
+                        }
+                    } else {
+                        // edit an attachment, if it is not yet saved in lvMain.arrayList
+                        linkText = trimEndAll(fabPlus.inputAlertView!!.text.toString())
+                        if (linkText.contains(']')) {
+                            linkText = linkText.substring(0, linkText.indexOf(']') + 1)
+                        }
+                        var uriLink = fabPlus.attachmentUri ?: ""
+                        if (uriLink.length > 0) {
+                            linkText = linkText.substring(0, linkText.length - 1) + "::::" + uriLink + "]"
+                        }
                     }
                 }
                 // fire attachment picker dlg, which finally ends at onActivityResult
@@ -3749,7 +3761,7 @@ class MainActivity : AppCompatActivity(),
         val itemText = ds.namesSection[selectedSectionTemp]
         // MORE FOLDER OPTIONS
         val items = arrayOf<CharSequence>(     // x = FOLDER options
-            getString(R.string.openFolder),                    // 0 Open
+            getString(R.string.openFolder),                            // 0 Open
             getString(R.string.export),                          // 1 Export
             getString(R.string.renFolder),                          // 2 Rename
             getString(R.string.clearFolder),                   // 3 Clear
@@ -3757,7 +3769,7 @@ class MainActivity : AppCompatActivity(),
             getString(R.string.moveFolderTop),                     // 5 Move top
             getString(R.string.moveFolderBottom),                  // 6 Move top
             getString(R.string.useTimestamp),                       // 7 Timestamp
-            " ",                               // 8 empty ITEM as separator
+            "",                                // 8 empty ITEM as separator
             getString(R.string.searchFolders),              // 9 search folders
             getString(R.string.newFolder)                       // 10 New
         )
@@ -8246,7 +8258,7 @@ internal class LvAdapter : BaseAdapter {
                     }
                 }
             } else {
-                // check for folder attachment link, if folder name does not contain a .
+                // check for folder attachment link OR geo , if the folder name does not contain a .
                 if ( start != -1 && stop != -1 ) {
                     val fullItemText = items!![position].fullTitle
                     val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
@@ -8258,6 +8270,9 @@ internal class LvAdapter : BaseAdapter {
                             var fileName = lnkParts[1]
                             if (fileName.startsWith("folder/")) {
                                 res = android.R.drawable.ic_menu_agenda
+                            }
+                            if (fileName.startsWith("geo:")) {
+                                res = R.drawable.location
                             }
                         }
                     }
