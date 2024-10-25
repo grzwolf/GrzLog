@@ -26,6 +26,7 @@ import android.print.PrintAttributes.Resolution
 import android.print.pdf.PrintedPdfDocument
 import android.provider.MediaStore
 import android.provider.Settings
+import android.provider.Settings.Secure.DEFAULT_INPUT_METHOD
 import android.text.*
 import android.text.style.*
 import android.util.DisplayMetrics
@@ -48,6 +49,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.BlendModeColorFilterCompat
 import androidx.core.graphics.BlendModeCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
@@ -178,6 +181,13 @@ class MainActivity : AppCompatActivity(),
             if (!appImagesDir.mkdir()) {
                 okBox(this, "Note", "Cannot create image dir")
             }
+        }
+
+        // gboard keyboard usage warning: pen input doesn't work
+        //     gboard silently activated floating pen keyboard as default in API 35
+        var gboardStr = Settings.Secure.getString(getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD)
+        if (gboardStr.contains("com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME")) {
+            dontShowAgain(this, getString(R.string.no_pen_support), "gboardNote")
         }
 
         // make context static
@@ -2658,7 +2668,11 @@ class MainActivity : AppCompatActivity(),
                     val fromStr = dateFormat.format(c.time)
                     val fromDate = dateFormat.parse(fromStr)
                     // list contains all date strings between today and the last recorded entry
-                    val skippedDatesList = getDaysBetweenDates(fromDate, dateToday!!).reversed()
+                    // !! reversed():
+                    //    build & run < API 35 ok
+                    //    build & run = API 35 ok
+                    //    build API 35 + run < API 35 --> exception NoSuchMethodError
+                    val skippedDatesList = getDaysBetweenDates(fromDate, dateToday!!).asReversed()
                     numAutoFilledDates = skippedDatesList.size
                     if (skippedDatesList.size > 0) {
                         for (dateStr in skippedDatesList) {
@@ -5435,6 +5449,14 @@ class MainActivity : AppCompatActivity(),
     //
     // tricky way to show soft keyboard: https://stackoverflow.com/questions/4597690/how-to-set-timer-in-android
     // uses contextMainActivity instead of this to allow to call it from companion object
+    private fun showKeyboard_alt(et: EditText?, selectStart: Int, selectStop: Int, msDelay: Int) {
+        if (et!!.requestFocus()) {
+            Handler().postDelayed({
+                et.setSelection(selectStart, selectStop)
+                WindowCompat.getInsetsController(window, et)!!.show(WindowInsetsCompat.Type.ime())
+            }, msDelay.toLong())
+        }
+    }
     private fun showKeyboard(et: EditText?, selectStart: Int, selectStop: Int, msDelay: Int) {
         // show soft keyboard
         Handler().postDelayed({

@@ -59,7 +59,7 @@
     <string name="PDFcouldnotbecreated">PDF could not be created.</string>
     <string name="RTFcouldnotbecreated">RTF could not be created.</string>
     <string name="ChoosePrintQuality">choose print quality.</string>
-    <string name="dontShowAgain">Do not show this dialog again.</string>
+    <string name="dontShowAgain">Don\'t show again.</string>
     <string name="CleanupFiles">Cleanup orphaned images</string>
     <string name="unusedFilesDeleted">orphaned files deleted.</string>
     <string name="LockscreenReminder">Line as lockscreen reminder</string>
@@ -207,6 +207,7 @@
     <string name="inputOneSpace">Input at least one space</string>
     <string name="appHelp">Help pages</string>
     <string name="title_activity_help">Help</string>
+    <string name="title_activity_limits">Limitations</string>
     <string name="AppAtStartCheckUpdateTxt">Check GrzLog update at start</string>
     <string name="appCheckUpdate">Check GrzLog update</string>
     <string name="available">available</string>
@@ -296,4 +297,6 @@
     <string name="x_found">x found</string>
     <string name="jump_to_phrase">Jump to phrase</string>
     <string name="search_phrase">search phrase</string>
+    <string name="appLimitations">GrzLog limitations</string>
+    <string name="no_pen_support">No Gboard pen support, see Settings -> Limitations</string>
 </resources>

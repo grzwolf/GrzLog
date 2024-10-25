@@ -50,6 +50,7 @@
 
     <!-- android:requestLegacyExternalStorage="true" -->
     <application
+        android:windowSoftInputMode="adjustResize"
         android:requestLegacyExternalStorage="true"
         android:screenOrientation="portrait"
         android:allowBackup="true"
@@ -88,6 +89,15 @@
         <activity
             android:name="com.grzwolf.grzlog.HelpActivity"
             android:label="@string/title_activity_help"
+            android:screenOrientation="portrait"
+            android:parentActivityName="com.grzwolf.grzlog.MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.grzwolf.grzlog.MainActivity" />
+        </activity>
+        <activity
+            android:name="com.grzwolf.grzlog.LimitationsActivity"
+            android:label="@string/title_activity_limits"
             android:screenOrientation="portrait"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity">
             <meta-data

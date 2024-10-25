@@ -253,13 +253,24 @@ public class SettingsActivity :
                     true
                 }
 
-            // action after help
-            val showHelp = findPreference("AppHelp") as Preference?
+            // action after show help
+            var showHelp = findPreference("AppHelp") as Preference?
             showHelp!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 try {
                     requireActivity().startActivity(Intent(context, HelpActivity::class.java))
                 } catch (e: Exception) {
                     centeredToast(appContext!!, "Help error: " + e.message.toString(), 3000)
+                }
+                true
+            }
+
+            // action after show GrzLog limitations
+            showHelp = findPreference("AppLimitations") as Preference?
+            showHelp!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                try {
+                    requireActivity().startActivity(Intent(context, LimitationsActivity::class.java))
+                } catch (e: Exception) {
+                    centeredToast(appContext!!, "Limitations error: " + e.message.toString(), 3000)
                 }
                 true
             }

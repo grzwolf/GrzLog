@@ -522,12 +522,7 @@ fun dayNameOfWeek(dateStr: String?): String {
 
 // multipurpose AlertBuilder dialog boxes
 fun okBox(context: Context?, title: String?, message: String) {
-    var builder: AlertDialog.Builder?
-    builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
-    } else {
-        AlertDialog.Builder(context)
-    }
+    var builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
     builder.setTitle(title)
     builder.setMessage("\n" + message)
     builder.setPositiveButton(
@@ -571,12 +566,7 @@ fun twoChoicesDialog(
 ) {
 
     var dialog: AlertDialog?
-    var builder: AlertDialog.Builder?
-    builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
-    } else {
-        AlertDialog.Builder(context)
-    }
+    var builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
     builder.setTitle(title)
     builder.setMessage("\n" + message)
     builder.setPositiveButton(
@@ -622,12 +612,7 @@ fun decisionBox(
 ) {
     val decisionPositive = if (decision == DECISION.YESNO) context.getString(R.string.yes) else context.getString(R.string.ok)
     val decisionNegative = if (decision == DECISION.YESNO) context.getString(R.string.no) else context.getString(R.string.cancel)
-    var builder: AlertDialog.Builder?
-    builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
-    } else {
-        AlertDialog.Builder(context)
-    }
+    var builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
     builder.setTitle(title)
     builder.setMessage("\n" + message)
     builder.setPositiveButton(
@@ -650,17 +635,12 @@ fun decisionBox(
 
 // do not show again alert box
 fun dontShowAgain(context: Context, title: String?, sharedPreferencesString: String?) {
-    val sharedPref = context.getSharedPreferences(context.packageName, Context.MODE_PRIVATE)
+    val sharedPref = PreferenceManager.getDefaultSharedPreferences(context)
     if (!sharedPref.getBoolean(sharedPreferencesString, true)) {
         return
     }
     val items = arrayOf<CharSequence>(context.getString(R.string.dontShowAgain))
-    var builder: AlertDialog.Builder?
-    builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
-    } else {
-        AlertDialog.Builder(context)
-    }
+    var builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
     builder.setTitle(title)
     builder.setMultiChoiceItems(
         items,

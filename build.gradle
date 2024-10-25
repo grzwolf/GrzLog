@@ -1,6 +1,7 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
+    // keep it - otherwise "Unknown Kotlin JVM target: 21"
     ext.kotlin_version = '1.7.20-Beta'
     repositories {
         google()
@@ -8,7 +9,7 @@ buildscript {
         
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.4.1'
+        classpath 'com.android.tools.build:gradle:8.7.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // NOTE: Do not place your application dependencies here; they belong

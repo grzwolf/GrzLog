@@ -206,6 +206,7 @@
     <string name="inputOneSpace">Minimaler Input ist ein Leerzeichen</string>
     <string name="appHelp">Hilfe Seiten</string>
     <string name="title_activity_help">Hilfe</string>
+    <string name="title_activity_limits">Beschränkungen</string>
     <string name="appCheckUpdate">Check GrzLog Update</string>
     <string name="available">verfügbar</string>
     <string name="availableUpdate">Update verfügbar</string>
@@ -295,5 +296,7 @@
     <string name="x_found">x Treffer</string>
     <string name="jump_to_phrase">Springe zu Text</string>
     <string name="search_phrase">Suchbegriff</string>
+    <string name="appLimitations">GrzLog Einschränkungen</string>
+    <string name="no_pen_support">Kein Gboard Pen Support, Settings -> Beschränkungen</string>
 </resources>
 

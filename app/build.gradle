@@ -2,17 +2,17 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 34
+    compileSdkVersion 35
 
     def buildNum = 0
     defaultConfig {
         applicationId "com.grzwolf.grzlog"
         minSdkVersion 29
-        targetSdkVersion 34
+        targetSdkVersion 35
 
         // the one & only places to change the app version name and code version
         versionCode 1        // playstore relevant - increase it to prevent a downgrade
-        versionName "1.1.24" // user relevant
+        versionName "1.1.25" // user relevant
 
         //
         def buildTime = new Date()
@@ -67,29 +67,18 @@ android {
 }
 
 dependencies {
-    // w/o this section: duplicate class error --> https://stackoverflow.com/questions/75263047/duplicate-class-in-kotlin-android?page=1&tab=scoredesc#tab-top
-    constraints {
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.0") {
-            because("kotlin-stdlib-jdk7 is now a part of kotlin-stdlib")
-        }
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.0") {
-            because("kotlin-stdlib-jdk8 is now a part of kotlin-stdlib")
-        }
-    }
     implementation "androidx.browser:browser:1.8.0"
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'com.google.android.material:material:1.12.0'
     implementation "androidx.preference:preference-ktx:1.2.1"
-    implementation 'androidx.databinding:databinding-runtime:8.4.1'
+    implementation 'androidx.databinding:databinding-runtime:8.7.1'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    // next line needs the above constraints {..} section
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     implementation "androidx.core:core-ktx:1.13.1"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    // next line needs the above constraints {..} section
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.1'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6'
     implementation 'com.github.bumptech.glide:glide:4.13.2'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.13.2'
     // gps
@@ -97,7 +86,7 @@ dependencies {
     // in app update from GitHub
     implementation 'com.android.volley:volley:1.2.1'
     // app life cycle observer
-    implementation("androidx.lifecycle:lifecycle-process:2.8.1")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.6")
 }
 repositories {
     mavenCentral()
