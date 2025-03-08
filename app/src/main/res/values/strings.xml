@@ -280,7 +280,7 @@
     <string name="checked">"checked:"</string>
     <string name="continue_with_app_update">Continue with app update?</string>
     <string name="yes_checks_for_updates_no_manual_update">YES: check for updates\n\nNO: update manually</string>
-    <string name="where_to_search">Where to search?</string>
+    <string name="where_to_search">Search options</string>
     <string name="grzlog_update">GrzLog update</string>
     <string name="grzlog_update_available">GrzLog update available</string>
     <string name="check_for_update">Check for update</string>
@@ -299,4 +299,18 @@
     <string name="search_phrase">search phrase</string>
     <string name="appLimitations">GrzLog limitations</string>
     <string name="no_pen_support">No Gboard pen support, see Settings -> Limitations</string>
+    <string name="edited_items">edited items</string>
+    <string name="type_in_the_search_phrase">Type in the search phrase</string>
+    <string name="type_in_the_replace_phrase">Type in the replace phrase</string>
+    <string name="mark_items_to_replace">Mark items to replace \'</string>
+    <string name="with">\' with \'</string>
+    <string name="search_in_folder">"search in folder "</string>
+    <string name="search_replace_in_folder"><![CDATA["search & replace in folder "]]></string>
+    <string name="search_all_grzlog_folders">search all GrzLog folders</string>
+    <string name="exec_replace">"Replace"</string>
+    <string name="toggle_selection">Toggle selection</string>
+    <string name="replace_count_expected">"Line count expected: "</string>
+    <string name="updating_selection_count">"Updating status: "</string>
+    <string name="replacement_done_count">"Line count done: "</string>
+    <string name="nowhere_found">nowhere found</string>
 </resources>

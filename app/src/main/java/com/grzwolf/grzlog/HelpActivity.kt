@@ -54,13 +54,13 @@ class HelpActivity : AppCompatActivity() {
         "       Toggle line as header\n" +
         "       Cut to clipboard\n" +
         "       Delete line\n" +
-        "   !revert latest change via Menu bar Undo!\n\n" +
-        "b) tap item somewhere   -> show item content\n\n" +
-        "c) double tap item x<30 -> show item content\n\n" +
-        "d) double tap item x>30 -> edit item\n\n" +
-        "e) tap item left x<30   -> toggle item selection\n\n" +
-        "f) tap selection x>30   -> copy selection to clipboard\n\n" +
-        "g) tap long selection   -> 'What to do ...' dialog\n" +
+        "   Note: revert latest change tap Menu bar 'Undo circle'\n\n" +
+        "b) tap item somewhere    -> show item content\n\n" +
+        "c) double tap on left    -> show item content\n\n" +
+        "d) double tap in middle  -> edit item\n\n" +
+        "e) tap selection on left -> toggle item selection\n\n" +
+        "f) tap selection middle  -> copy selection to clipboard\n\n" +
+        "g) tap long selection    -> 'What to do ...' dialog\n" +
         "       Toggle item selection\n" +
         "       Select next 10 items\n" +
         "       Select items of day\n" +
@@ -107,32 +107,45 @@ class HelpActivity : AppCompatActivity() {
         "                   delete from GrzLog gallery\n" +
         "       Tidy orphaned files from GrzLog gallery\n" +
         "       Reset app preferences (data are not touched)\n\n" +
-        "c) tap Loupe -> type search word + Enter\n" +
-        "       current folder will be searched\n" +
-        "       search hits are marked\n" +
-        "       use up/down symbols to jump\n" +
-        "       end search by tap on Loupe + 2x X\n\n" +
-        "d) tap Folder -> 'Select folder' dialog\n" +
-        "       list of folders \n" +
-        "       more: Open\n" +
-        "       more: Export to PDF, TXT, clipboard  \n" +
-        "       more: Rename\n" +
-        "       more: Clear content\n" +
-        "       more: Remove\n" +
-        "       more: Move to top\n" +
-        "       more: Move to bottom\n" +
-        "       more: Set input timestamp HH:MM, HH:MM:SS, none  \n" +
-        "       more: Search all folders\n" +
+        "c) tap Loupe -> dialog with three options\n" +
+        "       search in current folder\n" +
+        "              type search phrase + Enter" +
+        "              current folder will be searched\n" +
+        "              search hits are marked\n" +
+        "              use up/down symbols to jump\n" +
+        "              end search by tap on Loupe + 2x X\n" +
+        "       search & replace in current folder\n" +
+        "              type search phrase\n" +
+        "              type replace phrase\n" +
+        "              make selection & replace\n" +
+        "              Note: search & replace is case sensitive\n" +
+        "       search in all GrzLog folders\n" +
         "             type a global search phrase\n" +
         "             a list of search hits will appear\n" +
         "             select & jump to hit\n" +
         "             jump back to search hit list via red back button\n\n" +
-        "       more: New folder\n" +
-        "e) tap Share -> share options dialog\n" +
-        "       share selected items\n" +
-        "       share current folder\n" +
-        "       share current folder as PDF\n" +
-        "       share current folder as RTF\n\n\n" +
+        "d) tap Folder -> 'Select folder'\n" +
+        "       List of folders appears\n" +
+        "       Button NEXT --> What to do with folder\n" +
+        "              Open\n" +
+        "              Export to PDF, TXT, clipboard  \n" +
+        "              Rename\n" +
+        "              Clear content\n" +
+        "              Remove\n" +
+        "              Move to top\n" +
+        "              Move to bottom\n" +
+        "              Auto timestamp at input: HH:MM, HH:MM:SS, none  \n" +
+        "              Search all folders\n" +
+        "                   type a global search phrase\n" +
+        "                   a list of search hits will appear\n" +
+        "                   select & jump to hit\n" +
+        "                   jump back to search hit list via red back button\n\n" +
+        "              New folder\n" +
+        "e) tap Share -> share / copy data dialog\n" +
+        "       selected items\n" +
+        "       current folder\n" +
+        "       folder as PDF\n" +
+        "       folder as RTF\n\n\n" +
         "3 Miscellaneous\n" +
         "~~~~~~~~~~~~~~~\n" +
         "Updates could be manually downloaded from\n" +

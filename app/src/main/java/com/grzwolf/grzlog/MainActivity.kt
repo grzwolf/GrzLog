@@ -8,6 +8,7 @@ import android.annotation.SuppressLint
 import android.app.*
 import android.content.*
 import android.content.ClipboardManager
+import android.content.DialogInterface.OnMultiChoiceClickListener
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.*
@@ -26,7 +27,6 @@ import android.print.PrintAttributes.Resolution
 import android.print.pdf.PrintedPdfDocument
 import android.provider.MediaStore
 import android.provider.Settings
-import android.provider.Settings.Secure.DEFAULT_INPUT_METHOD
 import android.text.*
 import android.text.style.*
 import android.util.DisplayMetrics
@@ -52,6 +52,7 @@ import androidx.core.graphics.BlendModeCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.setPadding
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -143,6 +144,9 @@ class MainActivity : AppCompatActivity(),
     // geo location
     var fusedLocationClient : FusedLocationProviderClient? = null
     var locationPermissionDenied : Int = 0
+
+    // global 'search dialog' to allow to restart it, if search phrase has no hit
+    var searchDialog: AlertDialog? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -3393,6 +3397,170 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
+    // three choices dialog
+    fun threeChoicesDialog(
+        context: Context?,
+        message: String,
+        option0: String,
+        option1: String,
+        option2: String,
+        runner0: Runnable?,
+        runner1: Runnable?,
+        runner2: Runnable?,
+        runnerClose: Runnable?
+    ) {
+        // theme
+        val builder: AlertDialog.Builder? = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+        // set title
+        builder?.setTitle(message)
+        // the three options
+        val charSequences: MutableList<CharSequence> = ArrayList()
+        charSequences.add(option0) // ITEM == 0
+        charSequences.add(option1) // ITEM == 1
+        charSequences.add(option2) // ITEM == 2
+        val itemsMore = charSequences.toTypedArray()
+        builder?.setItems(
+            itemsMore,
+            DialogInterface.OnClickListener { dialog, whichOri ->
+                var which = whichOri
+                // ITEM == 0
+                if (which == 0) {
+                    runner0?.run()
+                    dialog.dismiss()
+                }
+                // ITEM == 1
+                if (which == 1) {
+                    runner1?.run()
+                    dialog.dismiss()
+                }
+                // ITEM == 2
+                if (which == 2) {
+                    runner2?.run()
+                    dialog.dismiss()
+                }
+            })
+        // button close
+        builder?.setPositiveButton(
+            R.string.close,
+            DialogInterface.OnClickListener { dialog, which ->
+                runnerClose?.run()
+                dialog.dismiss()
+            }
+        )
+        // run dialog
+        var dialog = builder?.create()
+        val listView = dialog?.getListView()
+        listView?.divider = ColorDrawable(Color.GRAY)
+        listView?.dividerHeight = 2
+        dialog?.show()
+        dialog?.setCanceledOnTouchOutside(false)
+    }
+
+    // data structure to hold a string and a position in lvMain.arrayList OR dataStore
+    class Hit(text: String, pos: Int) {
+        var text: String = text
+        var pos: Int = pos
+    }
+    // replace an original phrase with a replace phrase in ListView items
+    fun replacePhraseInItems(replacePhrase: String, originalPhrase: String, replaceList: MutableList<Hit> ) {
+        try {
+            // hide all other menu items
+            showMenuItems(false)
+            // save undo data
+            ds.undoSection = ds.dataSection[ds.selectedSection]
+            ds.undoText = getString(R.string.edited_items)
+            ds.undoAction = ACTION.REVERTMULTIEDIT
+            showMenuItemUndo()
+            // clean up
+            lvMain.editLongPress = false
+            fabPlus.pickAttachment = false
+            fabPlus.editInsertLine = false
+            fabPlus.imageCapture = false
+            fabPlus.attachmentUri = ""
+            fabPlus.inputAlertText = ""
+            fabPlus.attachmentName = ""
+            // get original data from DataStore
+            val oriText = ds.dataSection[ds.selectedSection]
+            var oriParts: Array<String?> = oriText.split("\\n+".toRegex()).toTypedArray()
+            if (oriParts.size == 0) {
+                oriParts = arrayOf("")
+            }
+            // oriText text is showOrder dependent
+            if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                val botText = lvMain.toggleTextShowOrder(null, oriText).str
+                oriParts = botText.split("\\n+".toRegex()).toTypedArray()
+                if (oriParts.size == 0) {
+                    oriParts = arrayOf("")
+                }
+            }
+            // final string collector
+            var finalStr: String = ""
+            // loop items from replaceList
+            var sum = 0
+            replaceList.forEach() {
+                // exec requested replace: all occurrences need to match case
+                var newText = it.text
+                newText = newText.replace(originalPhrase, replacePhrase, false)
+                // make the actual change
+                oriParts[it.pos] = newText
+                sum++
+            }
+            centeredToast(
+                this@MainActivity,
+                getString(R.string.replacement_done_count) + sum,
+                Toast.LENGTH_LONG
+            )
+            // build a temporary full final text
+            val tmpStr = TextUtils.join("\n", oriParts)
+            // care about show order for the "final final text"
+            finalStr = if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                lvMain.toggleTextShowOrder(null, tmpStr).str
+            } else {
+                tmpStr
+            }
+            // sake of mind
+            if (!finalStr.endsWith("\n")) {
+                finalStr += "\n"
+            }
+            // save and re-read saved data
+            ds.dataSection[ds.selectedSection] = finalStr                          // update DataStore dataSection
+            writeAppData(appStoragePath, ds, appName)                              // serialize DataStore to GrzLog.ser
+            ds.clear()                                                             // clear DataStore
+            ds = readAppData(appStoragePath)                                       // un serialize DataStore from GrzLog.ser
+            val dsText = ds.dataSection[ds.selectedSection]                        // get raw data text from DataStore section/folder
+            title = ds.namesSection[ds.selectedSection]                            // set app title to folder Name
+            lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)      // convert & format raw text to array
+            lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList) // set adapter and populate main listview
+            lvMain.listView!!.adapter = lvMain.adapter
+            // temporarily highlight the edited items
+            if (ds.tagSection.size > 0) {
+                // jump/scroll to 1st modified item
+                lvMain.listView!!.setSelection(ds.tagSection[0])
+                // loop to temporarily highlight the edited items
+                for (i in 0 until ds.tagSection.size) {
+                    var index = ds.tagSection[i]
+                    if (index < lvMain.arrayList.size && index >= 0) {
+                        lvMain.arrayList[ds.tagSection[i]].setHighLighted(true)
+                    }
+                }
+            }
+            // revoke temporary highlighting of edited items
+            lvMain.listView!!.postDelayed({
+                // un mark edited items
+                if (ds.tagSection.size > 0) {
+                    for (i in 0 until ds.tagSection.size) {
+                        var index = ds.tagSection[i]
+                        if (index < lvMain.arrayList.size && index >= 0) {
+                            lvMain.arrayList[index].setHighLighted(false)
+                        }
+                    }
+                }
+                // inform listview adapter about the changes
+                lvMain.adapter!!.notifyDataSetChanged()
+            }, 3000)
+        } catch ( e:Exception) {}
+    }
+
     // handle action bar item clicks
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // selector
@@ -3431,58 +3599,270 @@ class MainActivity : AppCompatActivity(),
             }
             return true
         }
-        // SEARCH: tap icon action_search, it's a proxy for search actions local vs. global
+
+        // SEARCH: tap icon action_search, search actions: local vs. search&replace vs. global
         if (id == R.id.action_search) {
             // stop  menu '10s auto clear' mechanism
             menuItemsVisible = false
             mainMenuHandler.removeCallbacksAndMessages(null)
-            // two search options (current folder, GrzLog) + cancel
-            twoChoicesDialog(this,
-                "Option",
-                getString(R.string.where_to_search),
-                "'" + ds.namesSection[ds.selectedSection] + "'",
-                "GrzLog",
-                { // runner CANCEL
-                    // simply return to main activity
-                    showMenuItems(false)
-                    searchView!!.setQuery(searchViewQuery, false)
-                    searchViewQuery = ""
-                    title = ds.namesSection[ds.selectedSection]
-                    fabPlus.button?.background?.setAlpha(130)
-                    fabPlus.button?.show()
-                },
-                { // runner current folder search
-                    // show the 'current folder' search view
-                    onPrepareOptionsMenu(appMenu)
-                    searchView!!.isIconified = false
-                    var searchMenuItem = appMenu!!.findItem(R.id.action_search_view)
-                    searchMenuItem.expandActionView()
-                    searchMenuItem.isVisible = true
-                    searchView!!.isVisible = true
-                    // hide loupe icon
-                    var loupeMenuItem = appMenu!!.findItem(R.id.action_search)
-                    loupeMenuItem!!.isVisible = false
-                },
-                { // runner global GrzLog search
-                    // hide menu items
-                    showMenuItems(false)
-                    // execute global search
-                    val fbt = fabBack!!.tag as FabBackTag
-                    if (fbt.searchHitListGlobal.size > 0) {
-                        decisionBox(
-                            this,
-                            DECISION.YESNO,
-                            getString(R.string.searchResultsAvailable),
-                            getString(R.string.useExistingResults) + " " + fbt.searchPhrase,
-                            { prepareGlobalSearch(fbt.searchHitListGlobal, fbt.searchPhrase) },
-                            { prepareGlobalSearch(ArrayList(), "") }
-                        )
-                    } else {
-                        prepareGlobalSearch(ArrayList(), "")
+            // show the 'current folder' search view
+            var runnable0 = Runnable {
+                onPrepareOptionsMenu(appMenu)
+                searchView!!.isIconified = false
+                var searchMenuItem = appMenu!!.findItem(R.id.action_search_view)
+                searchMenuItem.expandActionView()
+                searchMenuItem.isVisible = true
+                searchView!!.isVisible = true
+                // hide loupe icon
+                var loupeMenuItem = appMenu!!.findItem(R.id.action_search)
+                loupeMenuItem!!.isVisible = false
+            }
+            // search & replace in current folder
+            var runnable1 = Runnable {
+                // a text input
+                val sText = EditText(contextMainActivity)
+                sText.inputType = InputType.TYPE_CLASS_TEXT
+                sText.setText("")
+                // get rid of menu search infra structure
+                showEditTextContextMenu(sText, false)
+                // input dialog builder for search phrase
+                var searchBuilder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity)
+                searchBuilder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+                searchBuilder.setTitle(getString(R.string.type_in_the_search_phrase))
+                searchBuilder.setView(sText)
+                searchBuilder.setPositiveButton(R.string.ok) { dialog, which ->
+                    // now we know, what to search for
+                    val searchText = sText.text.toString()
+                    // reset search hits
+                    lvMain.unselectSearchHits()
+                    lvMain.searchHitListFolder.clear()
+                    // loop current folder's array for search hits to generate a list of hits
+                    var hitList: MutableList<Hit> = ArrayList()
+                    var choiceItems: MutableList<Spanned> = ArrayList()
+                    for (pos in lvMain.arrayList.indices) {
+                        val text = lvMain.arrayList[pos].title!!
+                        if (text.contains(searchText, false)) {
+                            // holds the original text and its position in lvMain.arrayList
+                            hitList.add(Hit(text, pos))
+                            // customize color of search string
+                            var spanStr = SpannableString(lvMain.arrayList[pos].title!!)
+                            var startIndex = 0
+                            var start = text.indexOf(searchText, startIndex, false)
+                            while (start != -1) {
+                                val end = start + searchText.length
+                                spanStr.setSpan(
+                                    ForegroundColorSpan(
+                                        ContextCompat.getColor(
+                                            this,
+                                            R.color.yellow
+                                        )
+                                    ), start, end, 0
+                                )
+                                spanStr.setSpan(
+                                    BackgroundColorSpan(
+                                        ContextCompat.getColor(
+                                            this,
+                                            R.color.lightseagreen
+                                        )
+                                    ), start, end, 0
+                                )
+                                // continue
+                                startIndex = start + searchText.length
+                                start = text.indexOf(searchText, startIndex, false)
+                            }
+                            // add to array used in builder.setMultiChoiceItems
+                            choiceItems.add(spanStr)
+                        }
                     }
+                    // check nothing found
+                    if (choiceItems.size.equals(0)) {
+                        centeredToast(
+                            this@MainActivity,
+                            "'" + searchText + "' " + getString(R.string.nowhere_found),
+                            Toast.LENGTH_LONG
+                        )
+                        // close currently open search dialog
+                        dialog.dismiss()
+                        // restart search dialog: needs searchDialog to be global
+                        Handler().postDelayed({
+                            searchDialog!!.show()
+                            searchDialog!!.setCanceledOnTouchOutside(false)
+                            sText.requestFocus()
+                            showKeyboard(sText, 0, sText.text.length, 300)
+                        }, 300)
+                        return@setPositiveButton
+                    }
+                    // get to know the replace phrase
+                    val rText = EditText(contextMainActivity)
+                    rText.setText("")
+                    var replaceBuilder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity)
+                    replaceBuilder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+                    replaceBuilder.setTitle(getString(R.string.type_in_the_replace_phrase))
+                    replaceBuilder.setView(rText)
+                    replaceBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
+                        // hide all other menu items
+                        showMenuItems(false)
+                    }
+                    replaceBuilder.setPositiveButton(R.string.ok) { dialog, which ->
+                        // now we know the replace text
+                        val replaceText = rText.text.toString()
+                        // hide keyboard
+                        hideKeyboard(rText)
+                        // upcoming list of choiceItems to replace
+                        var replaceList: MutableList<Hit> = ArrayList()
+                        // visible screen
+                        val widthWnd: Int = contextMainActivity.resources.displayMetrics.widthPixels
+                        val heightWnd: Int = contextMainActivity.resources.displayMetrics.heightPixels
+                        // a 'replace phrase in choiceItems' AlertDialog.Builder
+                        val builder: AlertDialog.Builder =
+                            AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+                        builder.setTitle(getString(R.string.mark_items_to_replace) +
+                                searchText +
+                                getString(R.string.with) +
+                                replaceText +
+                                "'")
+                        // relying on listView selection status didn't work: better use this bool array
+                        var checkedItems = BooleanArray(choiceItems.size)
+                        builder.setMultiChoiceItems(choiceItems.toTypedArray(), checkedItems,
+                            OnMultiChoiceClickListener { dialog, position, isChecked ->
+                            })
+                        // exec the final replacements work according to the multichoice selection status
+                        builder.setPositiveButton(R.string.exec_replace) { dialog, which ->
+                            // clear tagSection --> a fresh start for highlighting edited ds items
+                            ds.tagSection.clear()
+                            // rely on checkedItems bool array rather than on listView
+                            for (i in 0 until checkedItems.size) {
+                                if (checkedItems.get(i)) {
+                                    // ds.tagSection index 0 is used as "scroll to position"
+                                    if (ds.tagSection.isEmpty()) {
+                                        ds.tagSection.add(hitList[i].pos)
+                                    }
+                                    // memorize listview item position for later highlighting
+                                    ds.tagSection.add(hitList[i].pos)
+                                    // memorize affected row in array list MINUS spacer count for later use in DataStore
+                                    var spacers = 0
+                                    for (i in 0 until hitList[i].pos) {
+                                        if (lvMain.arrayList[i].isSpacer) {
+                                            spacers++
+                                        }
+                                    }
+                                    hitList[i].pos = hitList[i].pos - spacers
+                                    // get hitList item and add it to replaceList
+                                    var hit = hitList[i]
+                                    replaceList.add(hit)
+                                }
+                            }
+                            centeredToast(
+                                this@MainActivity,
+                                getString(R.string.replace_count_expected) + replaceList.size,
+                                Toast.LENGTH_LONG
+                            )
+                            // finally do the replacement job
+                            replacePhraseInItems(replaceText, searchText, replaceList)
+                        }
+                        // cancel selection status
+                        builder.setNegativeButton(R.string.cancel) { dialog, which ->
+                            // hide all other menu items
+                            showMenuItems(false)
+                        }
+                        // toggle selection status of search choiceItems
+                        builder.setNeutralButton(getString(R.string.toggle_selection)) { dialog, which ->
+                            val listView = (dialog as AlertDialog?)?.listView
+                            listView?.let {
+                                // toggle selection status of search&replace choiceItems
+                                for (i in 0 until listView.count) {
+                                    var status = !listView.isItemChecked(i)
+                                    listView.setItemChecked(i, status)
+                                    listView?.setSelection(i)    // only visible after view is updated
+                                    checkedItems?.set(i, status) // important: reliable even w/o view update
+                                }
+                                centeredToast(
+                                    this@MainActivity,
+                                    getString(R.string.updating_selection_count) + listView.count,
+                                    Toast.LENGTH_LONG
+                                )
+                                // restart toggle dialog after toggling is done to show new status
+                                Handler().postDelayed({
+                                    var dlg = builder.create()
+                                    dlg.show()
+                                    if (choiceItems.size > 7) { // TBD don't use empirical value
+                                        dlg.getWindow()?.setLayout(widthWnd + 20, heightWnd)
+                                    }
+                                    dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
+                                    dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
+                                    dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+                                    dlg.setCanceledOnTouchOutside(false)
+                                }, 300)
+                            }
+                        }
+                        var dlg = builder.create()
+                        dlg.show()
+                        if (choiceItems.size > 7) { // TBD don't use empirical value
+                            dlg.getWindow()?.setLayout(widthWnd + 20, heightWnd)
+                        }
+                        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
+                        dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
+                        dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+                        dlg.setCanceledOnTouchOutside(false)
+                    }
+                    var replaceDialog = replaceBuilder.create()
+                    replaceDialog.show()
+                    replaceDialog.setCanceledOnTouchOutside(false)
+                    rText.requestFocus()
+                    showKeyboard(rText, 0, 0, 250)
                 }
-            )
+                searchBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
+                    // hide all other menu items
+                    showMenuItems(false)
+                }
+                // build + show search dialog + open keyboard
+                searchDialog = searchBuilder.create()
+                searchDialog!!.show()
+                searchDialog!!.setCanceledOnTouchOutside(false)
+                sText.requestFocus()
+                showKeyboard(sText, 0, 0, 250)
+            }
+            // search all GrzLog
+            var runnable2 = Runnable {
+                // hide menu items
+                showMenuItems(false)
+                // execute global search
+                val fbt = fabBack!!.tag as FabBackTag
+                if (fbt.searchHitListGlobal.size > 0) {
+                    decisionBox(
+                        this,
+                        DECISION.YESNO,
+                        getString(R.string.searchResultsAvailable),
+                        getString(R.string.useExistingResults) + " " + fbt.searchPhrase,
+                        { prepareGlobalSearch(fbt.searchHitListGlobal, fbt.searchPhrase) },
+                        { prepareGlobalSearch(ArrayList(), "") }
+                    )
+                } else {
+                    prepareGlobalSearch(ArrayList(), "")
+                }
+            }
+            var runnableClose = Runnable {
+                // simply return to main activity
+                showMenuItems(false)
+                searchView!!.setQuery(searchViewQuery, false)
+                searchViewQuery = ""
+                title = ds.namesSection[ds.selectedSection]
+                fabPlus.button?.background?.setAlpha(130)
+                fabPlus.button?.show()
+            }
+            // three options: search current folder, search&replace current folder, search GrzLog, cancel
+            threeChoicesDialog(
+                this,
+                getString(R.string.where_to_search),
+                getString(R.string.search_in_folder) + "'" + ds.namesSection[ds.selectedSection] + "'",
+                getString(R.string.search_replace_in_folder) + "'" + ds.namesSection[ds.selectedSection] + "'",
+                getString(R.string.search_all_grzlog_folders),
+                runnable0,
+                runnable1,
+                runnable2,
+                runnableClose)
         }
+
         // SEARCH: down
         if (id == R.id.action_searchDown) {
             // return if empty
@@ -4272,19 +4652,11 @@ class MainActivity : AppCompatActivity(),
             // input dialog for global search phrase
             val inputSearch = EditText(contextMainActivity)
             inputSearch.inputType = InputType.TYPE_CLASS_TEXT
-            inputSearch.setText("")
-            showEditTextContextMenu(inputSearch, false)
+            inputSearch.setText(searchPhrase)
+            inputSearch.postDelayed({ inputSearch.selectAll() }, 500)
             var inputBuilderDialog: AlertDialog? = null
             var inputBuilder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity)
-            inputBuilder =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    AlertDialog.Builder(
-                        contextMainActivity,
-                        android.R.style.Theme_Material_Dialog
-                    )
-                } else {
-                    AlertDialog.Builder(contextMainActivity)
-                }
+            inputBuilder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
             inputBuilder.setTitle(contextMainActivity.getString(R.string.searchPhrase))
             inputBuilder.setView(inputSearch)
             inputBuilder.setPositiveButton(R.string.ok) { dialog, which ->
@@ -4302,7 +4674,7 @@ class MainActivity : AppCompatActivity(),
                     centeredToast(contextMainActivity, contextMainActivity.getString(R.string.nothingFound), 3000)
                     inputBuilderDialog!!.dismiss()
                     Handler().postDelayed({
-                        prepareGlobalSearch(searchHitListGlobal, searchPhrase)
+                        prepareGlobalSearch(searchHitListGlobal, searchText)
                     }, 100)
                     return@setPositiveButton
                 }
@@ -5623,7 +5995,7 @@ class MainActivity : AppCompatActivity(),
         }
         // if tag section has useful data, aka delete a range
         var markRange = false
-        if ((ds.tagSection.size > 0) and (ds.undoAction == ACTION.REVERTDELETE)) {
+        if ((ds.tagSection.size > 0) and ((ds.undoAction == ACTION.REVERTDELETE) or (ds.undoAction == ACTION.REVERTMULTIEDIT)) ) {
             // try to keep restored items centered on screen
             posScrol = ds.tagSection[0]
             var maxPos = 0
@@ -7075,10 +7447,27 @@ class MainActivity : AppCompatActivity(),
                         val folderName = ds.namesSection[dsNdx]
                         val textCombined = inspectStr + "\n(" + sectionName + " / " + folderName + ")"
                         val spanCombined = SpannableString(textCombined)
-                        val searchTextStart = inspectStr.indexOf(searchText, ignoreCase = true)
-                        spanCombined.setSpan(BackgroundColorSpan(ContextCompat.getColor(context, R.color.yellow)), searchTextStart, searchTextStart + searchText.length, 0)
-                        spanCombined.setSpan(RelativeSizeSpan(0.9F), 0, inspectStr.length,0)
-                        spanCombined.setSpan(RelativeSizeSpan(0.7F), inspectStr.length, textCombined.length,0)
+                        var startIndex = 0
+                        var searchTextStart = inspectStr.indexOf(searchText, startIndex, ignoreCase = true)
+                        while (searchTextStart != -1 ) {
+                            spanCombined.setSpan(
+                                BackgroundColorSpan(
+                                    ContextCompat.getColor(
+                                        context,
+                                        R.color.yellow
+                                    )
+                                ), searchTextStart, searchTextStart + searchText.length, 0
+                            )
+                            spanCombined.setSpan(RelativeSizeSpan(0.9F), 0, inspectStr.length, 0)
+                            spanCombined.setSpan(
+                                RelativeSizeSpan(0.7F),
+                                inspectStr.length,
+                                textCombined.length,
+                                0
+                            )
+                            startIndex = searchTextStart + searchText.length
+                            searchTextStart = inspectStr.indexOf(searchText, startIndex, ignoreCase = true)
+                        }
                         hitList.add(GlobalSearchHit(spanCombined, i, folderName))
                     }
                 }
@@ -8368,7 +8757,7 @@ internal enum class SHOW_ORDER {
 class DataStore : Serializable {
     // undo actions
     enum class ACTION {
-        UNDEFINED, REVERTEDIT, REVERTDELETE, REVERTINSERT, REVERTADD
+        UNDEFINED, REVERTEDIT, REVERTDELETE, REVERTINSERT, REVERTADD, REVERTMULTIEDIT
     }
 
     // timestamp
