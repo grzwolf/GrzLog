@@ -1,7 +1,6 @@
 package com.grzwolf.grzlog
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -12,7 +11,6 @@ import android.util.Size
 import android.util.TypedValue
 import android.view.*
 import android.widget.*
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import java.io.File
@@ -26,6 +24,8 @@ class GalleryActivity : AppCompatActivity() {
     var adapter : ThumbGridAdapter? = null
     var galleryMenu: Menu? = null
     var returnPayload = true
+    var showOrphans = false
+    var stringOrphans: ArrayList<String>? = null
 
     var prevSelGridItem = -1
     var gridItemSelected = false
@@ -38,7 +38,6 @@ class GalleryActivity : AppCompatActivity() {
         super.onStop()
     }
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.gallery_activity)
@@ -52,6 +51,8 @@ class GalleryActivity : AppCompatActivity() {
                 returnPayload = true
             } else {
                 returnPayload = extras.getBoolean("ReturnPayload")
+                showOrphans = extras.getBoolean("ShowOrphans")
+                stringOrphans = extras.getStringArrayList("StringOrphans")
             }
         } else {
             returnPayload = true
@@ -87,46 +88,81 @@ class GalleryActivity : AppCompatActivity() {
                 prevSelGridItem = position
                 gridItemSelected = adapter!!.selGridItemChk
                 // change active color of upload icon
-                var itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
+                val itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
                 if (gridItemSelected) {
                     // individual action bar icon color: https://stackoverflow.com/questions/60412934/drawable-setcolorfilter-marked-as-deprecated
-                    itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
+                    itemUpload.icon!!.setColorFilter(
+                        BlendModeColorFilter(
+                            getResources().getColor(R.color.yellow),
+                            BlendMode.SRC_IN
+                        )
+                    )
                 } else {
-                    itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                    itemUpload.icon!!.setColorFilter(
+                        BlendModeColorFilter(
+                            getResources().getColor(R.color.lightgrey),
+                            BlendMode.SRC_IN
+                        )
+                    )
                 }
             } else {
                 // allow multiple item selection
                 adapter!!.list[position].selected = !adapter!!.list[position].selected
                 // change active color of usages & delete icons
-                var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
-                var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
+                val itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+                val itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
                 if (adapter!!.list.any { it.selected == true }) {
-                    itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
-                    itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
+                    itemDelete.icon!!.setColorFilter(
+                        BlendModeColorFilter(
+                            getResources().getColor(R.color.yellow),
+                            BlendMode.SRC_IN
+                        )
+                    )
+                    itemUsages.icon!!.setColorFilter(
+                        BlendModeColorFilter(
+                            getResources().getColor(R.color.yellow),
+                            BlendMode.SRC_IN
+                        )
+                    )
                 } else {
-                    itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
-                    itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                    itemDelete.icon!!.setColorFilter(
+                        BlendModeColorFilter(
+                            getResources().getColor(R.color.lightgrey),
+                            BlendMode.SRC_IN
+                        )
+                    )
+                    itemUsages.icon!!.setColorFilter(
+                        BlendModeColorFilter(
+                            getResources().getColor(R.color.lightgrey),
+                            BlendMode.SRC_IN
+                        )
+                    )
                 }
                 adapter!!.notifyDataSetChanged()
             }
             true
         })
-
-        // check whether adapter data are available
-        adapter = MainActivity.appGalleryAdapter
-
-        // have a choice to either use existing data or to re generate them
-        if (adapter != null) {
-            adapter!!.selGridItemChk = false
-            adapter!!.selGridItemPos = -1
-            gridView.setAdapter(adapter)
-            adapter!!.notifyDataSetChanged()
-        } else {
-            // generate list of thumbnails from fileNameList
+        // GrzLog gallery allows to show orphans only generated on the fly
+        if (showOrphans) {
+            // modify Activity title
+            this.setTitle(getString(R.string.grzlog_gallery_orphaned_items))
+            // generate list of thumbnails from stringOrphans if showOrphans is set
             getAppGalleryThumbs()
-            // just dummy data
+        } else {
+            // MainActivity silently fills full GrzLog gallery adapter data in background
+            adapter = MainActivity.appGalleryAdapter
+            // only use existing adapter data for full gallery
+            if (adapter != null) {
+                adapter!!.selGridItemChk = false
+                adapter!!.selGridItemPos = -1
+                gridView.setAdapter(adapter)
+                adapter!!.notifyDataSetChanged()
+            }
+        }
+        // not supposed to happen: generate just dummy data
+        if (adapter == null) {
             val listDummy = mutableListOf<GrzThumbNail>()
-            var adapterDummy = ThumbGridAdapter(this@GalleryActivity, listDummy.toTypedArray())
+            val adapterDummy = ThumbGridAdapter(this@GalleryActivity, listDummy.toTypedArray())
             gridView.setAdapter(adapterDummy)
             adapterDummy.notifyDataSetChanged()
         }
@@ -139,10 +175,10 @@ class GalleryActivity : AppCompatActivity() {
         // needed to work in onOptionsItemSelected
         galleryMenu = menu
         // visibility of two action menu items
-        var itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
-        var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
-        var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
-        var itemRefresh = galleryMenu!!.findItem(R.id.action_Refresh)
+        val itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
+        val itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+        val itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
+        val itemRefresh = galleryMenu!!.findItem(R.id.action_Refresh)
         itemUpload.isVisible = returnPayload
         itemDelete.isVisible = !returnPayload
         itemUsages.isVisible = !returnPayload
@@ -155,11 +191,11 @@ class GalleryActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // back to MainActivity
         if (item.itemId == android.R.id.home) {
-            for (item in adapter!!.list) {
-                item.selected = false
+            for (aItem in adapter!!.list) {
+                aItem.selected = false
             }
-            var item = galleryMenu!!.findItem(R.id.action_Delete)
-            item.isVisible = false
+            val mItem = galleryMenu!!.findItem(R.id.action_Delete)
+            mItem.isVisible = false
             onBackPressed()
         }
         // refresh gallery data
@@ -230,14 +266,14 @@ class GalleryActivity : AppCompatActivity() {
             }
             // pick the last selected item: allows to add items to the selection AND search usages
             var searchText = ""
-            for (item in adapter!!.list) {
-                if (item.selected) {
-                    searchText = item.fileName
+            for (aItem in adapter!!.list) {
+                if (aItem.selected) {
+                    searchText = aItem.fileName
                 }
             }
             if (searchText.length > 0) {
                 // find all item hits in DataStore
-                var searchHitList: MutableList<MainActivity.GlobalSearchHit> = MainActivity.findTextInDataStore(this, searchText, MainActivity.lvMain)
+                val searchHitList: MutableList<MainActivity.GlobalSearchHit> = MainActivity.findTextInDataStore(this, searchText, MainActivity.lvMain)
                 // nothing found --> get out
                 if (searchHitList.size == 0) {
                     centeredToast(this, getString(R.string.nothingFound), 3000)
@@ -326,6 +362,51 @@ class GalleryActivity : AppCompatActivity() {
 
     // get list of thumbnail images
     fun getAppGalleryThumbs() {
+        // very special handling in case of orphans
+        if (showOrphans) {
+            // create list from scratch
+            var thumbsList = mutableListOf<GrzThumbNail>()
+            for (str in stringOrphans!!) {
+                var drawable: BitmapDrawable? = null
+                var bmp: Bitmap? = null
+                var file = File(applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/" + str)
+                val mimeExt = getFileExtension(str)
+                if (IMAGE_EXT.contains(mimeExt, ignoreCase = true)) {
+                    bmp = ThumbnailUtils.createImageThumbnail(file, Size(128, 128), null)
+                } else {
+                    if (VIDEO_EXT.contains(mimeExt, ignoreCase = true)) {
+                        bmp = ThumbnailUtils.createVideoThumbnail(file, Size(128, 128), null)
+                    } else {
+                        if (AUDIO_EXT.contains(mimeExt, ignoreCase = true)) {
+                            bmp = ThumbnailUtils.createAudioThumbnail(file, Size(128, 128), null)
+                        } else {
+                            if (mimeExt.equals("pdf", ignoreCase = true)) {
+                                bmp = (resources.getDrawable(R.drawable.ic_pdf) as BitmapDrawable).bitmap
+                            } else {
+                                if (mimeExt.equals("txt", ignoreCase = true)) {
+                                    bmp = (resources.getDrawable(android.R.drawable.ic_dialog_email) as BitmapDrawable).bitmap
+                                }
+                            }
+                        }
+                    }
+                }
+                if (bmp != null) {
+                    drawable = BitmapDrawable(bmp)
+                    thumbsList.add(GalleryActivity.GrzThumbNail(str, "", drawable))
+                } else {
+                    thumbsList.add(GalleryActivity.GrzThumbNail(str, "", null))
+                }
+            }
+            // set adapter
+            adapter = ThumbGridAdapter(this@GalleryActivity, thumbsList.toTypedArray())
+            if (adapter != null) {
+                // update view
+                gridView.setAdapter(adapter)
+                adapter!!.notifyDataSetChanged()
+            }
+            return
+        }
+        // payload, delete and usage handling
         var success = false
         var thumbsList = mutableListOf<GrzThumbNail>()
         val appImagesPath = applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/"

@@ -312,5 +312,8 @@
     <string name="updating_selection_count">"Aktualisiere Status: "</string>
     <string name="replacement_done_count">"Anzahl Einträge erledigt: "</string>
     <string name="nowhere_found">nirgendwo gefunden</string>
+    <string name="delete">löschen</string>
+    <string name="show_or_delete">zeigen oder löschen?</string>
+    <string name="grzlog_gallery_orphaned_items">Waisen</string>
 </resources>
 

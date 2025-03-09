@@ -83,6 +83,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.regex.Pattern
+import kotlin.collections.ArrayList
 
 
 // permission constants
@@ -7547,6 +7548,7 @@ class MainActivity : AppCompatActivity(),
             val filePath = File(appAttachmentsPath)
             val attachmentsList = filePath.listFiles()
             val fileUsed = arrayOfNulls<Boolean>(attachmentsList!!.size)
+            var stringOrphans = ArrayList<String>()
             Arrays.fill(fileUsed, false)
             var oriText: String
             var newText: String
@@ -7614,22 +7616,31 @@ class MainActivity : AppCompatActivity(),
                 writeAppData(appPath.toString(), ds, appName)
             }
 
-            // get number of orphaned files
+            // get number of orphaned files and fill list with orphans
             var numOrphaned = 0
             for (j in fileUsed.indices) {
                 if (!fileUsed[j]!!) {
                     numOrphaned++
+                    stringOrphans.add(attachmentsList[j].name)
                 }
             }
 
-            // ask to delete unused files in app folder
+            // ask to show or delete unused files in app folder
             try {
-                decisionBox(context,
-                    DECISION.YESNO,
+                // two choices: navigate to, show + cancel
+                twoChoicesDialog(context,
                     context.getString(R.string.CleanupFiles) + ": " + numOrphaned,
-                    context.getString(R.string.continueQuestion),
-                    { deleteOrphanes(context, attachmentsList, fileUsed) },
-                    { null }
+                    context.getString(R.string.show_or_delete),
+                    context.getString(R.string.show),
+                    context.getString(R.string.delete),
+                    { // runner CANCEL
+                    },
+                    { // runner show orphans
+                        showAppGallery(context, contextMainActivity as Activity, true, stringOrphans)
+                    },
+                    { // runner delete orphans
+                        deleteOrphanes(context, attachmentsList, fileUsed)
+                    }
                 )
             } catch(e: Exception) {
                 var i = 5
@@ -7797,7 +7808,11 @@ class MainActivity : AppCompatActivity(),
         //
         // show app gallery
         //
-        fun showAppGallery(context: Context, activity: Activity) {
+        fun showAppGallery(
+            context: Context,
+            activity: Activity,
+            showOrphans: Boolean = false,
+            stringOrphans: ArrayList<String>? = null) {
             // start app gallery activity, if scan process is finished - under normal conditions, it's done before someone comes here
             if (appGalleryScanning) {
                 // show a progress window of gallery scanning, show gallery when scan finished
@@ -7826,6 +7841,8 @@ class MainActivity : AppCompatActivity(),
                             // finally show, what was supposed to be shown
                             val galleryIntent = Intent(context, GalleryActivity::class.java)
                             galleryIntent.putExtra("ReturnPayload", false)
+                            galleryIntent.putExtra("ShowOrphans", showOrphans)
+                            galleryIntent.putExtra("StringOrphans", stringOrphans)
                             activity.startActivity(galleryIntent)
                         }
                     }.start()
@@ -7833,6 +7850,8 @@ class MainActivity : AppCompatActivity(),
             } else {
                 val galleryIntent = Intent(context, GalleryActivity::class.java)
                 galleryIntent.putExtra("ReturnPayload", false)
+                galleryIntent.putExtra("ShowOrphans", showOrphans)
+                galleryIntent.putExtra("StringOrphans", stringOrphans)
                 activity.startActivity(galleryIntent)
             }
         }

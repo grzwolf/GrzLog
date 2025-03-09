@@ -313,4 +313,7 @@
     <string name="updating_selection_count">"Updating status: "</string>
     <string name="replacement_done_count">"Line count done: "</string>
     <string name="nowhere_found">nowhere found</string>
+    <string name="delete">delete</string>
+    <string name="show_or_delete">show or delete?</string>
+    <string name="grzlog_gallery_orphaned_items">Orphans</string>
 </resources>

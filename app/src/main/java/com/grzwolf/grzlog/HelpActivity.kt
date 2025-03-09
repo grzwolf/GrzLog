@@ -103,9 +103,11 @@ class HelpActivity : AppCompatActivity() {
         "       Restore data from /Download\n" +
         "       Restore from file explorer: Android 13 limits file access\n" +
         "       Show / edit GrzLog gallery\n" +
-        "                   find GrzLog gallery usages\n" +
-        "                   delete from GrzLog gallery\n" +
+        "              find GrzLog gallery usages\n" +
+        "              delete from GrzLog gallery\n" +
         "       Tidy orphaned files from GrzLog gallery\n" +
+        "              show orphaned files\n" +
+        "              delete orphaned files\n" +
         "       Reset app preferences (data are not touched)\n\n" +
         "c) tap Loupe -> dialog with three options\n" +
         "       search in current folder\n" +
