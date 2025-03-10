@@ -153,6 +153,14 @@
             android:key="RestoreFromFiles"
             android:summary="@string/clickToImport" />
         <Preference
+            android:title="@string/export_backup_to_google_drive"
+            android:summary="@string/clickHere"
+            android:key="BackupToGDrive" />
+        <Preference
+            android:title="@string/restore_data_from_google_drive"
+            android:summary="@string/clickHere"
+            android:key="RestoreFromGDrive" />
+        <Preference
             android:title="@string/showAppGallery"
             android:summary="@string/clickHere"
             android:key="ShowAppGallery" />

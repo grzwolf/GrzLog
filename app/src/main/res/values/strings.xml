@@ -316,4 +316,6 @@
     <string name="delete">delete</string>
     <string name="show_or_delete">show or delete?</string>
     <string name="grzlog_gallery_orphaned_items">Orphans</string>
+    <string name="export_backup_to_google_drive">Export Backup to Google Drive</string>
+    <string name="restore_data_from_google_drive">Import Backup from Google Drive</string>
 </resources>

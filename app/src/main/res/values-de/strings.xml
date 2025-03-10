@@ -315,5 +315,7 @@
     <string name="delete">löschen</string>
     <string name="show_or_delete">zeigen oder löschen?</string>
     <string name="grzlog_gallery_orphaned_items">Waisen</string>
+    <string name="export_backup_to_google_drive">Export Backup auf Google Drive</string>
+    <string name="restore_data_from_google_drive">Import Backup von Google Drive</string>
 </resources>
 

@@ -17,6 +17,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
 import android.provider.Settings
 import android.view.MenuItem
 import android.widget.Toast
@@ -25,6 +26,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -39,6 +41,7 @@ import com.android.volley.VolleyError
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
+import com.grzwolf.grzlog.MainActivity.Companion.lvMain
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -299,6 +302,38 @@ public class SettingsActivity :
                     }
             } else {
                 startCheckPref?.isVisible = false
+            }
+
+            // action after Import GrzLog Backup from Google Drive: let it restore data
+            var restFromGoogle = findPreference("RestoreFromGDrive") as Preference?
+            restFromGoogle!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                val intent = Intent(Intent.ACTION_GET_CONTENT)
+                intent.setType("*/*")
+                intent.setPackage("com.google.android.apps.docs")
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                // call continues in onActivityResult, where the received file is handled
+                requireActivity().startActivityForResult(Intent.createChooser(intent, "Import Backup"), MainActivity.PICK.ZIP)
+                true
+            }
+
+            // action after Export Backup to Google Drive: get GrzLog.zip from Download and upload it
+            var bakToGoogle = findPreference("BackupToGDrive") as Preference?
+            bakToGoogle!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                val appName = appContext!!.applicationInfo.loadLabel(appContext!!.packageManager).toString()
+                var bakFile = File(downloadDir, "$appName.zip")
+                var intent = Intent(Intent.ACTION_SEND)
+                intent.setType("*/*")
+                val fileURI = FileProvider.getUriForFile(
+                    MainActivity.contextMainActivity,
+                    "com.grzwolf.grzlog.provider",
+                    File(bakFile.absolutePath)
+                )
+                intent.setPackage("com.google.android.apps.docs")
+                intent.putExtra(Intent.EXTRA_STREAM, fileURI)
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                // fire & forget
+                startActivity(Intent.createChooser(intent, "Export Backup"))
+                true
             }
 
             // action check app update available
@@ -626,7 +661,7 @@ public class SettingsActivity :
             return
         }
 
-        // execute a restore from a file list
+        // GrzLog data restore from a previously picked zip file: a) local zip OR b) Google Drive zip file
         if (requestCode == MainActivity.PICK.ZIP) {
             val uri = data!!.data ?: return
 
