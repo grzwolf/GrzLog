@@ -20,14 +20,14 @@ Text notes / diary / journal / reports with various file attachments, time stamp
 16. Help pages to be found --> Hamburger symbol (top right) --> Gear symbol --> click 'Help pages'
 
 # App Update
-# Specific Update procedure to version v1.1.26 coming from version <= v1.1.25
+# Specific Update procedure to version >= v1.1.26 if coming from installed version <= v1.1.25
 - Note: Make a Backup before Update!
 - Note: If Update fails with 'App not installed as package conflicts with an existing package', don't worry.
 - Make sure, an up to date backup exists in the Download folder with the name GrzLog.zip.
 - Uninstall GrzLog from Phone --> Settings --> Apps
 - Follow the section above 'App Install'. Point 14. let you restore the data from backup. 
 
-# Simple update if App version >= v1.1.26
+# Simple update if installed App version >= v1.1.26
 1. Goto Settings
 2. Click 'Check GrzLog update'
 3. If an app update is available, click 'Execute GrzLog update' and follow the guide
