@@ -15,6 +15,7 @@ import android.graphics.drawable.Drawable
 import android.media.ExifInterface
 import android.media.ThumbnailUtils
 import android.net.ConnectivityManager
+import android.net.TrafficStats
 import android.net.Uri
 import android.os.Build
 import android.os.CountDownTimer
@@ -53,10 +54,15 @@ import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import javax.xml.datatype.DatatypeConstants.SECONDS
 
 
 // import a complete ZIP containing data + attached files into app's files folder
@@ -1419,4 +1425,23 @@ fun getBackupFile(context: Context) : File? {
         }
     }
     return file
+}
+
+// https://stackoverflow.com/questions/59234916/how-to-convert-byte-size-into-human-readable-format-in-kotlin
+fun bytesToHumanReadableSize(bytes: Double) = when {
+    bytes >= 1 shl 30 -> "%.1f GB".format(bytes / (1 shl 30))
+    bytes >= 1 shl 20 -> "%.1f MB".format(bytes / (1 shl 20))
+    bytes >= 1 shl 10 -> "%.0f kB".format(bytes / (1 shl 10))
+    else -> "$bytes bytes"
+}
+
+// inspired by https://stackoverflow.com/questions/67946980/im-trying-to-get-%d0%b0-real-traffic-stats-data-but-when-i-count-trafficstats-get
+class SpeedMeter {
+    private var txUptoNow: Long = 0
+    fun getTxNow() : Long {
+        return TrafficStats.getTotalTxBytes() - txUptoNow
+    }
+    fun initMeter() {
+        txUptoNow = TrafficStats.getTotalTxBytes()
+    }
 }

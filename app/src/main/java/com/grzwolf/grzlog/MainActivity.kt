@@ -130,6 +130,7 @@ class MainActivity : AppCompatActivity(),
 
     // different attachments
     internal object PICK {
+        const val DUMMY   = 0
         const val IMAGE   = 1
         const val CAPTURE = 2
         const val VIDEO   = 3
@@ -333,7 +334,7 @@ class MainActivity : AppCompatActivity(),
                     SettingsActivity.gBSzipName = "$appName.zip"
                     SettingsActivity.gBSmaxProgress = countFiles(File(SettingsActivity.gBSsrcFolder))
                     // start BackupService, which prevents interrupting the backup
-                    SettingsActivity.actionOnService(this, BackupService.Companion.Actions.START)
+                    SettingsActivity.actionOnBackupService(this, BackupService.Companion.Actions.START)
                 }
             }
         }

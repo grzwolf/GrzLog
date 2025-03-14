@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- BackupService -->
+    <!-- BackupService & MeterService -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -63,6 +63,14 @@
         <!-- BackupService -->
         <service
             android:name=".BackupService"
+            android:enabled="true"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+        </service>
+
+        <!-- MeterService -->
+        <service
+            android:name=".MeterService"
             android:enabled="true"
             android:foregroundServiceType="specialUse"
             android:exported="false">

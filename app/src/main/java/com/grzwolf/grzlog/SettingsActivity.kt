@@ -41,6 +41,7 @@ import com.android.volley.VolleyError
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
+import com.grzwolf.grzlog.MainActivity.Companion.appIsInForeground
 import com.grzwolf.grzlog.MainActivity.Companion.lvMain
 import java.io.File
 import java.io.FileOutputStream
@@ -93,6 +94,9 @@ public class SettingsActivity :
             setTheme(R.style.ThemeOverlay_AppCompat_Light)
         }
         super.onCreate(savedInstanceState)
+
+        // life cycle observer
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
         // make volatile data static
         appContext = applicationContext
@@ -319,20 +323,54 @@ public class SettingsActivity :
             // action after Export Backup to Google Drive: get GrzLog.zip from Download and upload it
             var bakToGoogle = findPreference("BackupToGDrive") as Preference?
             bakToGoogle!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                val appName = appContext!!.applicationInfo.loadLabel(appContext!!.packageManager).toString()
-                var bakFile = File(downloadDir, "$appName.zip")
-                var intent = Intent(Intent.ACTION_SEND)
-                intent.setType("*/*")
-                val fileURI = FileProvider.getUriForFile(
-                    MainActivity.contextMainActivity,
-                    "com.grzwolf.grzlog.provider",
-                    File(bakFile.absolutePath)
+                // only one upload allowed
+                if (gdriveUploadOngoing) {
+                    okBox(requireActivity(), getString(R.string.Note), "Upload is ongoing")
+                    return@OnPreferenceClickListener true
+                }
+                // ask
+                decisionBox(
+                    requireContext(),
+                    DECISION.YESNO,
+                    getString(R.string.note),
+                    getString(R.string.switchToGdriveApp),
+                    {
+                        val appName = appContext!!.applicationInfo.loadLabel(appContext!!.packageManager).toString()
+                        var bakFile = File(downloadDir, "$appName.zip")
+                        var intent = Intent(Intent.ACTION_SEND)
+                        intent.setType("*/*")
+                        val fileURI = FileProvider.getUriForFile(
+                            MainActivity.contextMainActivity,
+                            "com.grzwolf.grzlog.provider",
+                            File(bakFile.absolutePath)
+                        )
+                        intent.setPackage("com.google.android.apps.docs")
+                        intent.putExtra(Intent.EXTRA_STREAM, fileURI)
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        // lame parameter transfer to MeterService
+                        gMScontext = requireContext()
+                        gMSsrcFolder = "appPath"
+                        gMSoutFolder = downloadDir
+                        gMSzipName = "$appName.zip"
+                        // ugly workaround to virtually increase file length by a fake amount of 10%:
+                        //      total tx bytes are metered, but it's unknown, how much else is transmitted
+                        gMSmaxProgress = bakFile.length() + (bakFile.length() * 0.1f).toLong()
+                        // start upload meter service in onActivityResult to ensure selection is done
+                        requireActivity().startActivityForResult(Intent.createChooser(intent, "Export Backup"), MainActivity.PICK.DUMMY)
+                    },
+                    null
                 )
+                true
+            }
+
+            // action after check Google Drive
+            var checkGDrive = findPreference("CheckGDrive") as Preference?
+            checkGDrive!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                val intent = Intent(Intent.ACTION_GET_CONTENT)
+                intent.setType("*/*")
                 intent.setPackage("com.google.android.apps.docs")
-                intent.putExtra(Intent.EXTRA_STREAM, fileURI)
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                // fire & forget
-                startActivity(Intent.createChooser(intent, "Export Backup"))
+                startActivity(Intent.createChooser(intent, "Check GDrive"))
                 true
             }
 
@@ -515,7 +553,7 @@ public class SettingsActivity :
                                     gBSzipName = "$appName.zip"
                                     gBSmaxProgress = maxProgressCount
                                     // start BackupService, which prevents interrupting the backup
-                                    actionOnService(requireContext(), BackupService.Companion.Actions.START)
+                                    actionOnBackupService(requireContext(), BackupService.Companion.Actions.START)
                                 } else {
                                     centeredToast(MainActivity.contextMainActivity, "GrzLog silent backup ongoing", 3000)
                                 }
@@ -661,6 +699,15 @@ public class SettingsActivity :
             return
         }
 
+        // call comes from "bakToGoogle!!.onPreferenceClickListener"
+        if (requestCode == MainActivity.PICK.DUMMY) {
+            // start MeterService for Backup Export to GDrive, prevents killing the MeterService
+            actionOnMeterService(gMScontext, MeterService.Companion.Actions.START)
+            // note about boring gdrive
+            okBox(gMScontext, getString(R.string.Note), getString(R.string.gdrive))
+            return
+        }
+
         // GrzLog data restore from a previously picked zip file: a) local zip OR b) Google Drive zip file
         if (requestCode == MainActivity.PICK.ZIP) {
             val uri = data!!.data ?: return
@@ -713,6 +760,9 @@ public class SettingsActivity :
 
         // need val in static context
         lateinit var backupInfo: Preference
+
+        // GDrive Backup upload
+        var gdriveUploadOngoing = false
 
         // settings activity visibility status
         @JvmField
@@ -799,7 +849,7 @@ public class SettingsActivity :
         }
 
         // start backup in a service
-        fun actionOnService(context: Context, action: BackupService.Companion.Actions) {
+        fun actionOnBackupService(context: Context, action: BackupService.Companion.Actions) {
             var state = BackupService.Companion.getServiceState(context)
             // stop service
             if (state == BackupService.Companion.ServiceState.STARTED && action == BackupService.Companion.Actions.STOP) {
@@ -834,7 +884,6 @@ public class SettingsActivity :
                 gBSmaxProgress
             )
         }
-
         // run backup silently
         fun generateBackupSilent(context: Context,
                                  srcFolder: String?,
@@ -846,7 +895,7 @@ public class SettingsActivity :
                 val dst = File("$outFolder/$zipName")
                 if (dst.exists() && !dst.canWrite()) {
                     // stop backup service
-                    actionOnService(context, BackupService.Companion.Actions.STOP)
+                    actionOnBackupService(context, BackupService.Companion.Actions.STOP)
                     // info
                     okBox(
                         context,
@@ -890,7 +939,7 @@ public class SettingsActivity :
                     // jump back to UI
                     (context as Activity).runOnUiThread(Runnable {
                         // stop backup service
-                        actionOnService(context, BackupService.Companion.Actions.STOP)
+                        actionOnBackupService(context, BackupService.Companion.Actions.STOP)
                         // prepare & show notification
                         if (success) {
                             // success notification
@@ -935,6 +984,205 @@ public class SettingsActivity :
                 } else {
                     Toast.makeText(context, "GrzLog backup error: " + e.message.toString(), Toast.LENGTH_LONG)
                         .show()
+                }
+            }
+        }
+
+        // monitor ZIP upload to GDrive
+        fun monitorZipUpload(
+            context: Context,
+            srcFolder: String,
+            outFolder: String,
+            zipName: String,
+            pw: ProgressWindow?,
+            nm: NotificationManagerCompat?,
+            n: NotificationCompat.Builder?,
+            maxProgress: Long
+        ): Boolean {
+            // the actual speed meter
+            val txMeter = SpeedMeter()
+            txMeter.initMeter()
+            // locals
+            var txDeltaNow: Long = 0
+            var txDeltaMax: Long = 0
+            var txSoFar: Long = 0
+            var txSoFarPrev: Long = 0
+            var errorCounter = 0
+            var errorNote = ""
+            // permissions
+            var permissionGranted = false
+            if (androidx.core.app.ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissionGranted = true
+            }
+            // loop upload progress
+            while (txSoFar < maxProgress) {
+                // upload progress update
+                txSoFar = txMeter.getTxNow()
+                // do some stats
+                txDeltaNow = txSoFar - txSoFarPrev
+                if (txDeltaNow > txDeltaMax) {
+                    txDeltaMax = txDeltaNow
+                }
+                // detect a possible error situation: user might hava cancelled upload in gdrive app OR network error
+                if (txDeltaNow < txDeltaMax * 0.1f) {
+                    errorCounter++
+                    errorNote = " errors: " + errorCounter + "(10)"
+                } else {
+                    if (errorCounter > 0) {
+                        errorCounter--
+                    } else {
+                        errorNote = ""
+                    }
+                }
+                if (errorCounter > 10) {
+                    return false
+                }
+                txSoFarPrev = txSoFar
+                // set progress via nm in notification bar
+                if (nm != null) {
+                    with(nm) {
+                        if (permissionGranted) {
+                            (context as Activity).runOnUiThread(Runnable {
+                                n!!.setContentText(bytesToHumanReadableSize(txSoFar.toDouble())
+                                        + " (" + bytesToHumanReadableSize(maxProgress.toDouble()) + ")"
+                                        + " @ " + bytesToHumanReadableSize((txDeltaNow / 5f).toDouble())
+                                        + "/s"
+                                        + errorNote)
+                                    .setProgress((maxProgress / 1000).toInt(), (txSoFar / 1000).toInt(), false)
+                                notify(1, n.build())
+                            })
+                        }
+                    }
+                }
+                // relax
+                Thread.sleep(5000)
+            }
+            return true
+        }
+        // start upload meter in a service
+        fun actionOnMeterService(context: Context, action: MeterService.Companion.Actions) {
+            var state = MeterService.Companion.getServiceState(context)
+            // stop service
+            if (state == MeterService.Companion.ServiceState.STARTED && action == MeterService.Companion.Actions.STOP) {
+                Intent(context, MeterService::class.java).also {
+                    it.action = action.name
+                    context.stopService(it)
+                }
+                return
+            }
+            // start service
+            if (action == MeterService.Companion.Actions.START) {
+                Intent(context, MeterService::class.java).also {
+                    it.action = action.name
+                    context.startForegroundService(it)
+                }
+                return
+            }
+        }
+        // lame parameter transfer to helper for MeterService
+        lateinit var gMScontext: Context
+        lateinit var gMSsrcFolder: String
+        lateinit var gMSoutFolder: String
+        lateinit var gMSzipName: String
+        var gMSmaxProgress: Long = 0
+        // helper for MeterService to run upload meter silently
+        fun generateMeterSilent() {
+            generateMeterSilent(
+                gMScontext,
+                gMSsrcFolder,
+                gMSoutFolder,
+                gMSzipName,
+                gMSmaxProgress
+            )
+        }
+        // run upload meter silently
+        fun generateMeterSilent(context: Context,
+                                 srcFolder: String?,
+                                 outFolder: String,
+                                 zipName: String,
+                                 maxProgress: Long) {
+            try {
+                // show progress in notification bar
+                var notificationManager = NotificationManagerCompat.from(MainActivity.contextMainActivity)
+                val channelId = "GrzLog" as String
+                val intent = Intent(MainActivity.contextMainActivity, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                val pendingIntent: PendingIntent = getActivity(context, 0, intent, FLAG_IMMUTABLE)
+                val notification = NotificationCompat.Builder(context, channelId)
+                    .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                    .setContentTitle("GrzLog: GDrive upload is ongoing")
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .setOngoing(true)
+                    .setOnlyAlertOnce(true)
+                    .setProgress((maxProgress / 1000).toInt(), 0, true)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                with(notificationManager) {
+                    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        centeredToast(MainActivity.contextMainActivity, "GrzLog meter service: no progress bar available", 3000)
+                    }
+                    notify(1, notification.build())
+                }
+                // real work
+                Thread {
+                    // run the blocking long term task in a separate thread
+                    gdriveUploadOngoing = true
+                    var success = monitorZipUpload(context, srcFolder!!, outFolder, zipName, null, notificationManager, notification, maxProgress)
+                    gdriveUploadOngoing = false
+                    // jump back to UI as soon as monitorZipUpload is ready
+                    (context as Activity).runOnUiThread(Runnable {
+                        // stop meter service
+                        actionOnMeterService(context, MeterService.Companion.Actions.STOP)
+                        if (success) {
+                            // prepare & show notification
+                            notification.setContentTitle(context.getString(R.string.grzlog_silent_backup_success))
+                                .setContentText("")
+                                .setProgress((maxProgress / 1000).toInt(), (maxProgress / 1000).toInt(), false)
+                            if (MainActivity.appIsInForeground) {
+                                centeredToast(
+                                    MainActivity.contextMainActivity,
+                                    context.getString(R.string.grzlog_upload_success),
+                                    3000
+                                )
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.grzlog_silent_backup_success),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        } else {
+                            // fail notification
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.grzlog_upload_error),
+                                Toast.LENGTH_LONG
+                            ).show()
+                            if (MainActivity.appIsInForeground) {
+                                okBox(
+                                    MainActivity.contextMainActivity,
+                                    context.getString(R.string.Note),
+                                    context.getString(R.string.grzlog_upload_error)
+                                )
+                            }
+                            if (SettingsActivity.isSettingsActivityInForeground) {
+                                okBox(
+                                    SettingsActivity.appContext,
+                                    context.getString(R.string.Note),
+                                    context.getString(R.string.grzlog_upload_error)
+                                )
+                            }
+                        }
+                        notificationManager.notify(1, notification.build())
+                    })
+                }.start()
+            } catch (e: Exception) {
+                if (MainActivity.appIsInForeground) {
+                    centeredToast(MainActivity.contextMainActivity, "GrzLog upload meter error: " + e.message.toString(), 3000)
+                } else {
+                    Toast.makeText(context, "GrzLog upload meter error: " + e.message.toString(), Toast.LENGTH_LONG).show()
                 }
             }
         }

@@ -318,4 +318,12 @@
     <string name="grzlog_gallery_orphaned_items">Orphans</string>
     <string name="export_backup_to_google_drive">Export Backup to Google Drive</string>
     <string name="restore_data_from_google_drive">Import Backup from Google Drive</string>
+    <string name="Note">Note:</string>
+    <string name="grzlog_upload_success">Backup Export to GDrive success</string>
+    <string name="grzlog_upload_error">Export Backup to GDrive failed.</string>
+    <string name="gdrive">Uploading a file to Google Drive is known to be slow.</string>
+    <string name="switchToGdriveApp">The GDrive app will execute the actual Backup.</string>
+    <string name="check_google_drive">Check Google Drive via \'Drive app\'</string>
+    <string name="clickHere_get_GrzLogZip">Click here to get GrzLog.zip Backup</string>
+    <string name="clickHere_upload_GrzLogZip">Click here to upload GrzLog.zip backup</string>
 </resources>
