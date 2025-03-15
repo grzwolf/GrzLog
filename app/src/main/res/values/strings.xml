@@ -323,7 +323,8 @@
     <string name="grzlog_upload_error">Export Backup to GDrive failed.</string>
     <string name="gdrive">Uploading a file to Google Drive is known to be slow.</string>
     <string name="switchToGdriveApp">The GDrive app will execute the actual Backup.</string>
-    <string name="check_google_drive">Check Google Drive via \'Drive app\'</string>
     <string name="clickHere_get_GrzLogZip">Click here to get GrzLog.zip Backup</string>
-    <string name="clickHere_upload_GrzLogZip">Click here to upload GrzLog.zip backup</string>
+    <string name="last">", last: "</string>
+    <string name="grzlog_zip_gdrive_upload_is_ongoing">GrzLog.zip: GDrive upload is ongoing</string>
+    <string name="upload_error">Backup failed</string>
 </resources>

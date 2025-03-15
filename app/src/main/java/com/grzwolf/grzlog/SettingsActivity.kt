@@ -46,7 +46,11 @@ import com.grzwolf.grzlog.MainActivity.Companion.lvMain
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Date
+import java.util.Locale
 import java.util.regex.Pattern
 import java.util.zip.ZipFile
 
@@ -322,6 +326,7 @@ public class SettingsActivity :
 
             // action after Export Backup to Google Drive: get GrzLog.zip from Download and upload it
             var bakToGoogle = findPreference("BackupToGDrive") as Preference?
+            bakToGoogle!!.summary = getString(R.string.clickHere) + getString(R.string.last) + sharedPref.getString("BackupUploadGDrive", "- ?? -")
             bakToGoogle!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 // only one upload allowed
                 if (gdriveUploadOngoing) {
@@ -348,10 +353,9 @@ public class SettingsActivity :
                         intent.putExtra(Intent.EXTRA_STREAM, fileURI)
                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         // lame parameter transfer to MeterService
+                        gMSpreference = bakToGoogle
                         gMScontext = requireContext()
-                        gMSsrcFolder = "appPath"
-                        gMSoutFolder = downloadDir
-                        gMSzipName = "$appName.zip"
+                        gMSfileLength = bakFile.length()
                         // ugly workaround to virtually increase file length by a fake amount of 10%:
                         //      total tx bytes are metered, but it's unknown, how much else is transmitted
                         gMSmaxProgress = bakFile.length() + (bakFile.length() * 0.1f).toLong()
@@ -360,17 +364,6 @@ public class SettingsActivity :
                     },
                     null
                 )
-                true
-            }
-
-            // action after check Google Drive
-            var checkGDrive = findPreference("CheckGDrive") as Preference?
-            checkGDrive!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                val intent = Intent(Intent.ACTION_GET_CONTENT)
-                intent.setType("*/*")
-                intent.setPackage("com.google.android.apps.docs")
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                startActivity(Intent.createChooser(intent, "Check GDrive"))
                 true
             }
 
@@ -991,12 +984,9 @@ public class SettingsActivity :
         // monitor ZIP upload to GDrive
         fun monitorZipUpload(
             context: Context,
-            srcFolder: String,
-            outFolder: String,
-            zipName: String,
-            pw: ProgressWindow?,
             nm: NotificationManagerCompat?,
             n: NotificationCompat.Builder?,
+            fileLength: Long,
             maxProgress: Long
         ): Boolean {
             // the actual speed meter
@@ -1009,34 +999,53 @@ public class SettingsActivity :
             var txSoFarPrev: Long = 0
             var errorCounter = 0
             var errorNote = ""
-            // permissions
+            var doErrorCheck = true
+            // notification permission
             var permissionGranted = false
             if (androidx.core.app.ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 permissionGranted = true
             }
             // loop upload progress
             while (txSoFar < maxProgress) {
-                // upload progress update
+                // upload meter update
                 txSoFar = txMeter.getTxNow()
-                // do some stats
+                // if uploaded bytes exceed fileLength, don't check for errors anymore
+                if (txSoFar >= fileLength) {
+                    doErrorCheck = false
+                }
+                // latest upload chunk
                 txDeltaNow = txSoFar - txSoFarPrev
+                // memorize upload speed
                 if (txDeltaNow > txDeltaMax) {
                     txDeltaMax = txDeltaNow
                 }
-                // detect a possible error situation: user might hava cancelled upload in gdrive app OR network error
-                if (txDeltaNow < txDeltaMax * 0.1f) {
-                    errorCounter++
-                    errorNote = " errors: " + errorCounter + "(10)"
-                } else {
-                    if (errorCounter > 0) {
-                        errorCounter--
+                // if upload speed goes low: error OR upload is done
+                if (doErrorCheck) {
+                    // detect a possible error situation: user might hava cancelled upload in gdrive app OR network error
+                    // criterium: upload speed drops down to 10% of its previous max.
+                    if (txDeltaNow < txDeltaMax * 0.1f) {
+                        errorCounter++
+                        errorNote = " errors: " + errorCounter + "(10)"
                     } else {
-                        errorNote = ""
+                        // if upload speed resumes to normal, decrease error count
+                        if (errorCounter > 0) {
+                            errorCounter--
+                        } else {
+                            // if there are no errors anymore, don't show them
+                            errorNote = ""
+                        }
+                    }
+                    // empirical value of 10 errors are allowed, then get off
+                    if (errorCounter > 10) {
+                        return false
+                    }
+                } else {
+                    // if no error check: low upload may reasonably assert, the upload is done
+                    if (txDeltaNow < txDeltaMax * 0.1f) {
+                        return true
                     }
                 }
-                if (errorCounter > 10) {
-                    return false
-                }
+                // memorize current upload chunk size as the previous one
                 txSoFarPrev = txSoFar
                 // set progress via nm in notification bar
                 if (nm != null) {
@@ -1081,26 +1090,20 @@ public class SettingsActivity :
         }
         // lame parameter transfer to helper for MeterService
         lateinit var gMScontext: Context
-        lateinit var gMSsrcFolder: String
-        lateinit var gMSoutFolder: String
-        lateinit var gMSzipName: String
+        var gMSpreference: Preference? = null
+        var gMSfileLength: Long = 0
         var gMSmaxProgress: Long = 0
         // helper for MeterService to run upload meter silently
         fun generateMeterSilent() {
             generateMeterSilent(
                 gMScontext,
-                gMSsrcFolder,
-                gMSoutFolder,
-                gMSzipName,
+                gMSpreference,
+                gMSfileLength,
                 gMSmaxProgress
             )
         }
         // run upload meter silently
-        fun generateMeterSilent(context: Context,
-                                 srcFolder: String?,
-                                 outFolder: String,
-                                 zipName: String,
-                                 maxProgress: Long) {
+        fun generateMeterSilent(context: Context, preference: Preference?, fileLength: Long, maxProgress: Long) {
             try {
                 // show progress in notification bar
                 var notificationManager = NotificationManagerCompat.from(MainActivity.contextMainActivity)
@@ -1112,7 +1115,7 @@ public class SettingsActivity :
                 val pendingIntent: PendingIntent = getActivity(context, 0, intent, FLAG_IMMUTABLE)
                 val notification = NotificationCompat.Builder(context, channelId)
                     .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                    .setContentTitle("GrzLog: GDrive upload is ongoing")
+                    .setContentTitle(context.getString(R.string.grzlog_zip_gdrive_upload_is_ongoing))
                     .setPriority(NotificationCompat.PRIORITY_LOW)
                     .setOngoing(true)
                     .setOnlyAlertOnce(true)
@@ -1129,12 +1132,15 @@ public class SettingsActivity :
                 Thread {
                     // run the blocking long term task in a separate thread
                     gdriveUploadOngoing = true
-                    var success = monitorZipUpload(context, srcFolder!!, outFolder, zipName, null, notificationManager, notification, maxProgress)
+                    var success = monitorZipUpload(context, notificationManager, notification, fileLength, maxProgress)
                     gdriveUploadOngoing = false
                     // jump back to UI as soon as monitorZipUpload is ready
                     (context as Activity).runOnUiThread(Runnable {
                         // stop meter service
                         actionOnMeterService(context, MeterService.Companion.Actions.STOP)
+                        // memorize result in shared preferences
+                        var prefString = ""
+                        // distinguish
                         if (success) {
                             // prepare & show notification
                             notification.setContentTitle(context.getString(R.string.grzlog_silent_backup_success))
@@ -1153,6 +1159,7 @@ public class SettingsActivity :
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
+                            prefString = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").format(LocalDateTime.now())
                         } else {
                             // fail notification
                             Toast.makeText(
@@ -1174,7 +1181,16 @@ public class SettingsActivity :
                                     context.getString(R.string.grzlog_upload_error)
                                 )
                             }
+                            prefString = context.getString(R.string.upload_error)
                         }
+                        // memorize result in a shared preference
+                        val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
+                        val spe = sharedPref.edit()
+                        spe.putString("BackupUploadGDrive", prefString)
+                        spe.apply()
+                        // show result in provided preference
+                        preference!!.summary = context.getString(R.string.clickHere) + context.getString(R.string.last) + prefString
+                        // notification
                         notificationManager.notify(1, notification.build())
                     })
                 }.start()

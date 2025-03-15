@@ -154,16 +154,12 @@
             android:summary="@string/clickToImport" />
         <Preference
             android:title="@string/export_backup_to_google_drive"
-            android:summary="@string/clickHere_upload_GrzLogZip"
+            android:summary="@string/clickHere"
             android:key="BackupToGDrive" />
         <Preference
             android:title="@string/restore_data_from_google_drive"
             android:summary="@string/clickHere_get_GrzLogZip"
             android:key="RestoreFromGDrive" />
-        <Preference
-            android:title="@string/check_google_drive"
-            android:summary="@string/clickHere"
-            android:key="CheckGDrive" />
         <Preference
             android:title="@string/showAppGallery"
             android:summary="@string/clickHere"

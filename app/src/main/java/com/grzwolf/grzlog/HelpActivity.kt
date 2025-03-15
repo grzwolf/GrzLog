@@ -104,7 +104,6 @@ class HelpActivity : AppCompatActivity() {
         "       Restore from file explorer: Android 13 limits file access\n" +
         "       Export Backup to Google Drive (needs log in to Google account)\n" +
         "       Import Backup from Google Drive (needs log in to Google account)\n" +
-        "       Check Google Drive (needs log in to Google account)\n" +
         "       Show / edit GrzLog gallery\n" +
         "              find GrzLog gallery usages\n" +
         "              delete from GrzLog gallery\n" +
