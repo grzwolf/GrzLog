@@ -3,6 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.grzwolf.grzlog.GalleryActivity">
     <item
+        android:id="@+id/action_ToggleSelection"
+        android:title=""
+        app:showAsAction="always"
+        android:visible="false"
+        android:icon="@android:drawable/ic_menu_crop"
+        />
+    <item
         android:id="@+id/action_Usages"
         android:title=""
         app:showAsAction="always"

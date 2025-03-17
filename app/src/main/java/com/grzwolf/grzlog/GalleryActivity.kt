@@ -7,6 +7,7 @@ import android.graphics.drawable.Drawable
 import android.media.ThumbnailUtils
 import android.os.Build
 import android.os.Bundle
+import android.text.Html
 import android.util.Size
 import android.util.TypedValue
 import android.view.*
@@ -16,6 +17,7 @@ import androidx.core.content.ContextCompat
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.ArrayList
 
 
 class GalleryActivity : AppCompatActivity() {
@@ -49,6 +51,8 @@ class GalleryActivity : AppCompatActivity() {
             val extras = intent.extras
             if (extras == null) {
                 returnPayload = true
+                showOrphans = false
+                stringOrphans = null
             } else {
                 returnPayload = extras.getBoolean("ReturnPayload")
                 showOrphans = extras.getBoolean("ShowOrphans")
@@ -111,34 +115,8 @@ class GalleryActivity : AppCompatActivity() {
                 // change active color of usages & delete icons
                 val itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
                 val itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
-                if (adapter!!.list.any { it.selected == true }) {
-                    itemDelete.icon!!.setColorFilter(
-                        BlendModeColorFilter(
-                            getResources().getColor(R.color.yellow),
-                            BlendMode.SRC_IN
-                        )
-                    )
-                    itemUsages.icon!!.setColorFilter(
-                        BlendModeColorFilter(
-                            getResources().getColor(R.color.yellow),
-                            BlendMode.SRC_IN
-                        )
-                    )
-                } else {
-                    itemDelete.icon!!.setColorFilter(
-                        BlendModeColorFilter(
-                            getResources().getColor(R.color.lightgrey),
-                            BlendMode.SRC_IN
-                        )
-                    )
-                    itemUsages.icon!!.setColorFilter(
-                        BlendModeColorFilter(
-                            getResources().getColor(R.color.lightgrey),
-                            BlendMode.SRC_IN
-                        )
-                    )
-                }
-                adapter!!.notifyDataSetChanged()
+                // update availability signal color for menu items
+                updateMenuStatus()
             }
             true
         })
@@ -149,6 +127,8 @@ class GalleryActivity : AppCompatActivity() {
             // generate list of thumbnails from stringOrphans if showOrphans is set
             getAppGalleryThumbs()
         } else {
+            // match font to space
+            this.setTitle(Html.fromHtml("<small>" + this.title + "</small>"))
             // MainActivity silently fills full GrzLog gallery adapter data in background
             adapter = MainActivity.appGalleryAdapter
             // only use existing adapter data for full gallery
@@ -168,24 +148,75 @@ class GalleryActivity : AppCompatActivity() {
         }
     }
 
+    // update 'availability signal colors' = 'active status' of menu items
+    fun updateMenuStatus() {
+        var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+        var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
+        if (adapter!!.list.any { it.selected == true }) {
+            val selMap = adapter!!.list.groupingBy { it.selected == true }.eachCount()
+            if (selMap.getValue(true) == 1) {
+                // 1 selection --> usage search allowed
+                itemUsages.icon!!.setColorFilter(
+                    BlendModeColorFilter(
+                        getResources().getColor(R.color.yellow),
+                        BlendMode.SRC_IN
+                    )
+                )
+            } else {
+                // >1 selection --> no usage search allowed
+                itemUsages.icon!!.setColorFilter(
+                    BlendModeColorFilter(
+                        getResources().getColor(R.color.lightgrey),
+                        BlendMode.SRC_IN
+                    )
+                )
+            }
+            // any selection --> delete allowed
+            itemDelete.icon!!.setColorFilter(
+                BlendModeColorFilter(
+                    getResources().getColor(R.color.yellow),
+                    BlendMode.SRC_IN
+                )
+            )
+        } else {
+            // no selection --> no usage search + no delete
+            itemDelete.icon!!.setColorFilter(
+                BlendModeColorFilter(
+                    getResources().getColor(R.color.lightgrey),
+                    BlendMode.SRC_IN
+                )
+            )
+            itemUsages.icon!!.setColorFilter(
+                BlendModeColorFilter(
+                    getResources().getColor(R.color.lightgrey),
+                    BlendMode.SRC_IN
+                )
+            )
+        }
+        adapter!!.notifyDataSetChanged()
+    }
+
     // build a menu bar with options
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // inflate the menu adds items to the action bar
         menuInflater.inflate(R.menu.menu_gallery, menu)
         // needed to work in onOptionsItemSelected
         galleryMenu = menu
-        // visibility of two action menu items
+        // visibility of action menu items
         val itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
         val itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
         val itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
         val itemRefresh = galleryMenu!!.findItem(R.id.action_Refresh)
+        val itemToggle = galleryMenu!!.findItem(R.id.action_ToggleSelection)
         itemUpload.isVisible = returnPayload
         itemDelete.isVisible = !returnPayload
         itemUsages.isVisible = !returnPayload
+        itemToggle.isVisible = !returnPayload
         itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
         itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
         itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
         itemRefresh.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
+        itemToggle.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.yellow), BlendMode.SRC_IN))
         return true
     }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -197,6 +228,15 @@ class GalleryActivity : AppCompatActivity() {
             val mItem = galleryMenu!!.findItem(R.id.action_Delete)
             mItem.isVisible = false
             onBackPressed()
+        }
+        // toggle selection status of gallery items
+        if (item.itemId == R.id.action_ToggleSelection) {
+            // loop adapter list
+            for (item in adapter!!.list) {
+                item.selected = !item.selected
+            }
+            adapter!!.notifyDataSetChanged()
+            updateMenuStatus()
         }
         // refresh gallery data
         if (item.itemId == R.id.action_Refresh) {
@@ -211,6 +251,8 @@ class GalleryActivity : AppCompatActivity() {
                     adapter!!.selGridItemChk = false
                     adapter!!.selGridItemPos = -1
                     getAppGalleryThumbs()
+                    adapter!!.notifyDataSetChanged()
+                    updateMenuStatus()
                 },
                 { null }
             )
@@ -241,30 +283,48 @@ class GalleryActivity : AppCompatActivity() {
                 getString(R.string.appGalleryData),
                 getString(R.string.deleteSelectedItemsFromApp),
                 {
+                    // loop adapter list
                     for (item in adapter!!.list) {
                         if (item.selected) {
+                            // delete selected list element
                             val appImagesPath = applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/"
                             val fullFilePath = appImagesPath + item.fileName
                             val delFile = File(fullFilePath)
                             if (delFile.exists()) {
                                 delFile.delete()
                             }
+                            // in case of dealing with orphans, delete corresponding entry too
+                            if (stringOrphans != null) {
+                                stringOrphans!!.remove(item.fileName)
+                            }
                         }
                     }
+                    // update shown GrzLog gallery
+                    prevSelGridItem = -1
+                    gridItemSelected = false
+                    adapter!!.selGridItemChk = false
+                    adapter!!.selGridItemPos = -1
                     getAppGalleryThumbs()
                     MainActivity.deleteAppDataCache(MainActivity.contextMainActivity)
                     MainActivity.reReadAppFileData = true
+                    adapter!!.notifyDataSetChanged()
+                    updateMenuStatus()
                 },
                 { null }
             )
         }
         // take last selected item and show its usages in all folders
         if (item.itemId == R.id.action_Usages) {
-            // something to do ?
+            // anything to do ?
             if (adapter!!.list.all { it.selected == false }) {
                 return super.onOptionsItemSelected(item)
             }
-            // pick the last selected item: allows to add items to the selection AND search usages
+            // exactly 1 item selected ?
+            val selMap = adapter!!.list.groupingBy { it.selected == true }.eachCount()
+            if (selMap.getValue(true) != 1) {
+                return super.onOptionsItemSelected(item)
+            }
+            // pick the 1 selected item
             var searchText = ""
             for (aItem in adapter!!.list) {
                 if (aItem.selected) {
