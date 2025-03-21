@@ -60,8 +60,14 @@
 
     <PreferenceCategory app:title="@string/extra_header">
 
+        <ListPreference
+            android:title="@string/newInputPlace"
+            android:key="chosenPlacement"
+            android:entries="@array/placementArray_Names"
+            android:entryValues="@array/placementArray_Values" />
         <SwitchPreferenceCompat
             app:key="newAtBottom"
+            app:isPreferenceVisible="false"
             app:summaryOn="@string/newInputBottom"
             app:summaryOff="@string/newInputTop"
             app:title="@string/newInputPlace" />

@@ -31,6 +31,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
@@ -238,6 +239,35 @@ public class SettingsActivity :
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
             val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+
+            // new input placement
+            val nip = findPreference<ListPreference>("chosenPlacement")
+            if (sharedPref.getBoolean("newAtBottom", false)) {
+                nip!!.setValueIndex(1)
+            } else {
+                nip!!.setValueIndex(0)
+            }
+            nip!!.summary = nip!!.entry
+            nip!!.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { preference, newValue ->
+                    // parse change
+                    var newValBool = false
+                    if (newValue == "bottom") {
+                        newValBool = true
+                        nip!!.setValueIndex(1)
+                    }
+                    if (newValue == "top") {
+                        newValBool = false
+                        nip!!.setValueIndex(0)
+                    }
+                    // update summary
+                    nip!!.summary = nip!!.entry
+                    // update shared preference
+                    val spe = sharedPref.edit()
+                    spe.putBoolean("newAtBottom", newValBool)
+                    spe.apply()
+                    true
+                }
 
             // backup data info
             try {

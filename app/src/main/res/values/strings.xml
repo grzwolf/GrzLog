@@ -339,4 +339,12 @@
     <string name="warning">Warnung</string>
     <string name="you_selected">"Sie selektierten "</string>
     <string name="items">Items</string>
+    <string-array name="placementArray_Names">
+        <item>@string/newInputTop</item>
+        <item>@string/newInputBottom</item>
+    </string-array>
+    <string-array name="placementArray_Values">
+        <item>top</item>
+        <item>bottom</item>
+    </string-array>
 </resources>

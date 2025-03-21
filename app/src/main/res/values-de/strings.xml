@@ -338,5 +338,9 @@
     <string name="warning">Warning</string>
     <string name="you_selected">"You selected "</string>
     <string name="items">items</string>
+    <string-array name="placementArray_Names">
+        <item>@string/newInputTop</item>
+        <item>@string/newInputBottom</item>
+    </string-array>
 </resources>
 
