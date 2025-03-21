@@ -326,5 +326,17 @@
     <string name="last">", zuletzt: "</string>
     <string name="grzlog_zip_gdrive_upload_is_ongoing">GrzLog.zip: GDrive Upload läuft</string>
     <string name="upload_error">Backup Fehler</string>
+    <string name="scale_image">Bild skalieren</string>
+    <string name="match_to_phone_s_screen">Anpassen an Display</string>
+    <string name="reduces_data_storage_size">Reduziert Speicherbedarf</string>
+    <string name="GrzLogGallery">GrzLog Galerie</string>
+    <string name="rescale">Skalieren der Bilder auf Display</string>
+    <string name="image_scaling_done">Bilder Skalieren erfolgreich</string>
+    <string name="image_scaling_failed">Fehler bei Bilder Skalieren</string>
+    <string name="yes_is_recommended">\'Ja\' ist empfohlen, wenn GrzLog Galerie vor Version v1.1.30 entstand.</string>
+    <string name="grzlog_gallery_images_before_version">GrzLog Galerie Bilder vor Version v1.1.30 nehmen viel Platz ein.</string>
+    <string name="warning">Warning</string>
+    <string name="you_selected">"You selected "</string>
+    <string name="items">items</string>
 </resources>
 

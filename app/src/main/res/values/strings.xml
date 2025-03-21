@@ -327,4 +327,16 @@
     <string name="last">", last: "</string>
     <string name="grzlog_zip_gdrive_upload_is_ongoing">GrzLog.zip: GDrive upload is ongoing</string>
     <string name="upload_error">Backup failed</string>
+    <string name="scale_image">Scale Image</string>
+    <string name="match_to_phone_s_screen">Match to phone\'s screen</string>
+    <string name="reduces_data_storage_size">Reduces data storage size</string>
+    <string name="GrzLogGallery">GrzLog Gallery</string>
+    <string name="rescale">Scale images to phone display</string>
+    <string name="image_scaling_done">Image Scaling done</string>
+    <string name="image_scaling_failed">Image Scaling failed</string>
+    <string name="yes_is_recommended">\'Yes\' is recommended, if GrzLog gallery was created before version v1.1.30</string>
+    <string name="grzlog_gallery_images_before_version">GrzLog gallery images before version v1.1.30 consume a lot of space.</string>
+    <string name="warning">Warnung</string>
+    <string name="you_selected">"Sie selektierten "</string>
+    <string name="items">Items</string>
 </resources>

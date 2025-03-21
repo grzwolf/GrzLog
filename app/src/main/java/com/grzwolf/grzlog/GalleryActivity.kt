@@ -231,12 +231,30 @@ class GalleryActivity : AppCompatActivity() {
         }
         // toggle selection status of gallery items
         if (item.itemId == R.id.action_ToggleSelection) {
+            // selection count
+            var counter = 0
             // loop adapter list
             for (item in adapter!!.list) {
                 item.selected = !item.selected
+                if (item.selected) {
+                    counter++
+                }
             }
             adapter!!.notifyDataSetChanged()
             updateMenuStatus()
+            // warning
+            if (counter > adapter!!.list.size / 2) {
+                okBox(
+                    this,
+                    getString(R.string.warning),
+                    getString(R.string.you_selected)
+                            + counter.toString()
+                            + "("
+                            + adapter!!.list.size.toString()
+                            + ") "
+                            + getString(R.string.items)
+                )
+            }
         }
         // refresh gallery data
         if (item.itemId == R.id.action_Refresh) {
@@ -277,11 +295,22 @@ class GalleryActivity : AppCompatActivity() {
             if (adapter!!.list.all { it.selected == false }) {
                 return super.onOptionsItemSelected(item)
             }
+            // selection count
+            var counter = 0
+            for (item in adapter!!.list) {
+                if (item.selected) {
+                    counter++
+                }
+            }
             decisionBox(
                 this,
                 DECISION.YESNO,
                 getString(R.string.appGalleryData),
-                getString(R.string.deleteSelectedItemsFromApp),
+                counter.toString()
+                        + "("
+                        + adapter!!.list.size.toString()
+                        + ") "
+                        + getString(R.string.deleteSelectedItemsFromApp),
                 {
                     // loop adapter list
                     for (item in adapter!!.list) {

@@ -7,7 +7,9 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.DialogInterface.OnMultiChoiceClickListener
 import android.content.Intent
+import android.content.res.Resources
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
@@ -25,8 +27,11 @@ import android.util.Size
 import android.view.Gravity
 import android.view.View
 import android.view.Window
+import android.view.WindowManager
+import android.view.WindowMetrics
 import android.webkit.MimeTypeMap
 import android.widget.*
+import androidx.annotation.Nullable
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.NotificationCompat
@@ -39,8 +44,11 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.SimpleTarget
 import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.request.transition.Transition
 import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
+import com.grzwolf.grzlog.MainActivity.Companion.returnAttachmentFromAppGallery
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
@@ -54,15 +62,10 @@ import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import javax.xml.datatype.DatatypeConstants.SECONDS
 
 
 // import a complete ZIP containing data + attached files into app's files folder
@@ -235,6 +238,35 @@ fun createZipArchive(
             e.printStackTrace()
         } catch (e:NullPointerException){
             e.printStackTrace()
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        return false
+    }
+    return true
+}
+
+// image scaling for existing images
+fun execImageScaling(): Boolean {
+    try {
+        // GrzLog storage folder for attachments
+        var appAttachmentStoragePath = contextMainActivity.getExternalFilesDir(null)!!.absolutePath + "/Images"
+        val subDir = File(appAttachmentStoragePath)
+        // get a list of all files from directory and loop it
+        var counter = 0
+        val subdirList = subDir.list()
+        subdirList!!.forEach { sd ->
+            // only deal with image mimes
+            var mime = getFileExtension("$appAttachmentStoragePath/$sd")
+            if (!IMAGE_EXT.contains(mime, ignoreCase = true)) {
+                return@forEach
+            }
+            // check file
+            val f = File("$appAttachmentStoragePath/$sd")
+            if (f.isFile) {
+                resizeImageAndSave(f.absolutePath, f.absolutePath)
+                counter++
+            }
         }
     } catch (e: Exception) {
         e.printStackTrace()
@@ -559,7 +591,7 @@ fun okBox(context: Context?, title: String?, message: String, runnerOk: Runnable
     }
 }
 
-// dialog with two choices: a) or b) or camcel
+// dialog with two choices: a) or b) or cancel
 fun twoChoicesDialog(
     context: Context,
     title: String,
@@ -769,6 +801,77 @@ fun getFileExtension(fileName: String?): String {
         fileName
     }
     return MimeTypeMap.getFileExtensionFromUrl(encoded).lowercase(Locale.getDefault())
+}
+
+// https://stackoverflow.com/questions/50809679/resize-and-save-images
+//      Glide is twice as fast as BitmapFactory and allows to match to screen
+fun resizeImageAndSave(fileInp: String, fileOut: String): Boolean {
+    var retval = true
+    Glide
+        .with(contextMainActivity)
+        .asBitmap()
+        .load(fileInp)
+        .fitCenter()
+        .into(object : SimpleTarget<Bitmap?>(
+            contextMainActivity.resources.displayMetrics.widthPixels,
+            contextMainActivity.resources.displayMetrics.heightPixels
+        ) {
+            override fun onResourceReady(
+                resource: Bitmap,
+                @Nullable transition: Transition<in Bitmap?>?
+            ) {
+                try {
+                    resource.compress(
+                        Bitmap.CompressFormat.JPEG,
+                        75,
+                        FileOutputStream(fileOut)
+                    )
+                } catch (e: FileNotFoundException) {
+                    retval = false
+                }
+            }
+        })
+    return retval
+}
+// https://stackoverflow.com/questions/11688982/pick-image-from-sd-card-resize-the-image-and-save-it-back-to-sd-card
+//      Solution without OutOfMemoryException in Kotlin
+//      -- 2x longer execution time as Glide
+//      -- scaling in power of 2
+fun resizeImageAndSaveBMF(context: Context, fileInp: String, fileOut: String): Boolean {
+    var retval = false
+    val bmOptions = BitmapFactory.Options()
+    bmOptions.inJustDecodeBounds = true
+    BitmapFactory.decodeFile(fileInp, bmOptions)
+    val photoW = bmOptions.outWidth
+    val photoH = bmOptions.outHeight
+    var scaleFactor = 1
+    // screen capabilities
+    var screenW = 0
+    var screenH = 0
+    if (Build.VERSION.SDK_INT < 30) {
+        screenW = Resources.getSystem().getDisplayMetrics().widthPixels
+        screenH = Resources.getSystem().getDisplayMetrics().heightPixels
+    } else {
+        val deviceWindowMetrics: WindowMetrics =
+            context.getSystemService(WindowManager::class.java).getMaximumWindowMetrics()
+        screenW = deviceWindowMetrics.bounds.width()
+        screenH = deviceWindowMetrics.bounds.height()
+    }
+    // scale down the image
+    var scaleTo = Math.min(screenW, screenH)
+    scaleFactor = Math.min(photoW / scaleTo, photoH / scaleTo)
+    bmOptions.inJustDecodeBounds = false
+    bmOptions.inSampleSize = scaleFactor
+    // check decoding
+    val resized = BitmapFactory.decodeFile(fileInp, bmOptions) ?: return false
+    // create output stream
+    var fos = FileOutputStream(fileOut)
+    fos.use {
+        resized.compress(Bitmap.CompressFormat.JPEG, 75, it)
+        resized.recycle()
+    }
+    retval = true
+    return retval
 }
 
 // show a given image by its uri and its name in a customized alert dialog containing: title, message, image, close

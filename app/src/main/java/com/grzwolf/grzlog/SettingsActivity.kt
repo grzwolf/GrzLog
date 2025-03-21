@@ -41,8 +41,12 @@ import com.android.volley.VolleyError
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
+import com.grzwolf.grzlog.MainActivity.Companion.ReturnToDialogData
 import com.grzwolf.grzlog.MainActivity.Companion.appIsInForeground
+import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
+import com.grzwolf.grzlog.MainActivity.Companion.deleteOrphanes
 import com.grzwolf.grzlog.MainActivity.Companion.lvMain
+import com.grzwolf.grzlog.MainActivity.Companion.showAppGallery
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -644,6 +648,35 @@ public class SettingsActivity :
                 val appName = appContext!!.applicationInfo.loadLabel(appContext!!.packageManager).toString()
                 val appAttachmentsPath = appContext!!.getExternalFilesDir(null)!!.absolutePath + "/Images"
                 MainActivity.tidyOrphanedFiles(this.context as Context, appAttachmentsPath, appName)
+                true
+            }
+
+            // action after rescale iamges in app gallery
+            val rescaleImages = findPreference("RescaleImages") as Preference?
+            rescaleImages!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                // special handling for images to offer a GrzLog global downscaling option
+                try {
+                    // two choices: yes, no, help
+                    twoChoicesDialog(requireContext(),
+                        getString(R.string.rescale),
+                        getString(R.string.yes_is_recommended),
+                        getString(R.string.yes),
+                        getString(R.string.title_activity_help),
+                        { // runner CANCEL
+                        },
+                        { // runner YES
+                            if (execImageScaling()) {
+                                okBox(requireContext(), getString(R.string.image_scaling_done), "")
+                            } else {
+                                okBox(requireContext(), getString(R.string.image_scaling_failed), "")
+                            }
+                        },
+                        { // runner HELP
+                            okBox(requireContext(), getString(R.string.note),
+                                getString(R.string.grzlog_gallery_images_before_version))
+                        }
+                    )
+                } catch(e: Exception) {}
                 true
             }
 

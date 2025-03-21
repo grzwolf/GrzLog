@@ -601,6 +601,7 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.pickAttachment = true
                     fabPlus.attachmentUri = returnAttachmentFromAppGallery
                     fabPlus.attachmentUriUri = uriOri
+                    fabPlus.attachmentImageScale = false
                     var mime = getFileExtension(returnAttachmentFromAppGallery)
                     returnAttachmentFromAppGallery = ""
                     if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
@@ -778,6 +779,7 @@ class MainActivity : AppCompatActivity(),
                         fabPlus.pickAttachment = true
                         fabPlus.attachmentUri = imageUriString
                         fabPlus.attachmentUriUri = uriOri
+                        fabPlus.attachmentImageScale = false
                         fabPlus.attachmentName = getString(R.string.image)
                         fabPlus.inputAlertTextSelStart = 0          // insert position for attachment link
                         lvMain.editLongPress = false
@@ -904,6 +906,7 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.pickAttachment = true
                     fabPlus.attachmentUri = java.lang.String.format(Locale.ENGLISH, "geo:%f,%f", location.latitude, location.longitude)
                     fabPlus.attachmentUriUri = null
+                    fabPlus.attachmentImageScale = false
                     fabPlus.attachmentName = "[gps]"
                     fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 } else {
@@ -2502,7 +2505,12 @@ class MainActivity : AppCompatActivity(),
                         // full filename
                         var fn = fabPlus.attachmentUri!!
                         // execute the file attachment copy
-                        val appUriFile = copyAttachmentToApp(this, fabPlus.attachmentUri!!, fabPlus.attachmentUriUri, appStoragePath + "/Images")
+                        val appUriFile = copyAttachmentToApp(
+                            this,
+                            fabPlus.attachmentUri!!,
+                            fabPlus.attachmentUriUri,
+                            fabPlus.attachmentImageScale,
+                            appStoragePath + "/Images")
                         if (fabPlus.attachmentUri!!.endsWith(appUriFile)) {
                             newText = newText.replace(result, "[$key::::$appUriFile]")
                         } else {
@@ -5320,6 +5328,8 @@ class MainActivity : AppCompatActivity(),
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         fabPlus.imageCapture = false
+        fabPlus.attachmentImageScale = false
+        var pickIsImage = false
         if (resultCode != RESULT_OK) {
             startFilePickerDialog(
                 true,
@@ -5376,6 +5386,7 @@ class MainActivity : AppCompatActivity(),
                     }
                 }
                 if (uri != null) {
+                    pickIsImage = true
                     fabPlus.pickAttachment = true
                     fabPlus.attachmentUri = imageUriString
                     fabPlus.attachmentUriUri = uriOri
@@ -5622,15 +5633,67 @@ class MainActivity : AppCompatActivity(),
         }
 
         // back to main input with the option to return there to the calling dialog
-        fabPlusOnClick(
-            ReturnToDialogData.adapterView,
-            ReturnToDialogData.itemView,
-            ReturnToDialogData.itemPosition,
-            ReturnToDialogData.itemId!!,
-            ReturnToDialogData.returnToSearchHits,
-            ReturnToDialogData.function
-        )
-        ReturnToDialogData.reset()
+        if (pickIsImage) {
+            // special handling for images to offer a case by case downscaling option
+            var dialog: AlertDialog? = null
+            val items = arrayOf<CharSequence>(getString(R.string.match_to_phone_s_screen))
+            var checkedItems = BooleanArray(1) { true }
+            var builder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+            builder.setTitle(getString(R.string.scale_image))
+            builder.setMultiChoiceItems(
+                items,
+                checkedItems,
+                OnMultiChoiceClickListener { dlg, which, isChecked ->
+                    checkedItems[which] = isChecked
+                })
+            builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dlg, which ->
+                fabPlus.attachmentImageScale = checkedItems[0]
+                fabPlusOnClick(
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function
+                )
+                ReturnToDialogData.reset()
+            })
+            builder.setNegativeButton(R.string.cancel, DialogInterface.OnClickListener { dlg, which ->
+                startFilePickerDialog(
+                    true,
+                    ReturnToDialogData.linkText,
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function)
+                ReturnToDialogData.reset()
+            })
+            builder.setNeutralButton(R.string.title_activity_help, DialogInterface.OnClickListener { dlg, which ->
+                centeredToast(contextMainActivity, getString(R.string.reduces_data_storage_size), 1)
+                Handler().postDelayed({
+                    var dlgRestart = builder.create()
+                    dlgRestart.show()
+                    dlgRestart.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+                }, 300)
+            })
+            dialog = builder.create()
+            dialog.show()
+            dialog.setCanceledOnTouchOutside(false)
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+        } else {
+            // all picks but image
+            fabPlusOnClick(
+                ReturnToDialogData.adapterView,
+                ReturnToDialogData.itemView,
+                ReturnToDialogData.itemPosition,
+                ReturnToDialogData.itemId!!,
+                ReturnToDialogData.returnToSearchHits,
+                ReturnToDialogData.function
+            )
+            ReturnToDialogData.reset()
+        }
     }
 
     // provide an intent to start the selected camera app
@@ -7589,7 +7652,7 @@ class MainActivity : AppCompatActivity(),
                             } finally {
                             }
                             // copy file to local app storage, or skip copy if file is already there
-                            val localUriStr = copyAttachmentToApp(context, uriStrOri, null, appAttachmentsPath)
+                            val localUriStr = copyAttachmentToApp(context, uriStrOri, null, false, appAttachmentsPath)
                             // set new link in current line (only needed if compared strings deviate)
                             if (localUriStr != uriLocOri) {
                                 textLine = textLine.replace(lnkFull, "[$keyStrOri::::$localUriStr]")
@@ -7710,8 +7773,13 @@ class MainActivity : AppCompatActivity(),
             }
         }
 
-        // copy a file named by uriString to GrzLog Images folder and return just the filename (we don't need more than the filename, because we know the app storage path)
-        fun copyAttachmentToApp(context: Context, uriString: String, uri: Uri?, appAttachmentPath: String): String {
+        // copy a file named by uriString to GrzLog Images folder
+        //     return just the filename, no need for more, because app storage path is fix
+        fun copyAttachmentToApp(context: Context,
+                                uriString: String,
+                                uri: Uri?,
+                                attachmentImageScale: Boolean,
+                                appAttachmentPath: String): String {
             // file path
             var inputPath: String
             try {
@@ -7733,7 +7801,7 @@ class MainActivity : AppCompatActivity(),
             } else {
                 return uriString + "." + ERROR_EXT
             }
-            val outputPath = appAttachmentPath + fileName
+            var outputPath = appAttachmentPath + fileName
             // no override if file already exists
             val file = File(outputPath)
             if (file.exists()) {
@@ -7745,39 +7813,47 @@ class MainActivity : AppCompatActivity(),
             if (!folder.exists()) {
                 folder.mkdirs()
             }
-            // make a copy
-            var ins: InputStream?
-            var out: OutputStream?
-            try {
-                ins = FileInputStream(inputPath)
-                out = FileOutputStream(outputPath)
-                val buffer = ByteArray(1024)
-                var read: Int
-                if (ins != null) {
-                    while (ins.read(buffer).also { read = it } != -1) {
-                        out.write(buffer, 0, read)
-                    }
-                }
-                if (ins != null) {
-                    ins.close()
-                }
-                ins = null
-                // write the output file
-                out.flush()
-                out.close()
-                out = null
-            }
-            catch (fnfe: FileNotFoundException) {
-                // measure of last resort: alien PDF files didn't copy to Images, perhaps this method helps
-                var secondTryOk = false
-                if (uri != null) {
-                    secondTryOk = copyUriToAppImages(context, uri, outputPath)
-                }
-                if (!secondTryOk) {
+            // make a copy to GrzLog gallery
+            if (attachmentImageScale) {
+                // images to rescale
+                if (!resizeImageAndSave(inputPath, outputPath)) {
                     return uriString + "." + ERROR_EXT
                 }
-            } catch (e: Exception) {
-                return uriString + "." + ERROR_EXT
+                return outputPath.substring(outputPath.lastIndexOf("/"))
+            } else {
+                // all attachments but images AND images not to rescale
+                var ins: InputStream?
+                var out: OutputStream?
+                try {
+                    ins = FileInputStream(inputPath)
+                    out = FileOutputStream(outputPath)
+                    val buffer = ByteArray(1024)
+                    var read: Int
+                    if (ins != null) {
+                        while (ins.read(buffer).also { read = it } != -1) {
+                            out.write(buffer, 0, read)
+                        }
+                    }
+                    if (ins != null) {
+                        ins.close()
+                    }
+                    ins = null
+                    // write the output file
+                    out.flush()
+                    out.close()
+                    out = null
+                } catch (fnfe: FileNotFoundException) {
+                    // measure of last resort: alien PDF files didn't copy to Images, perhaps this method helps
+                    var secondTryOk = false
+                    if (uri != null) {
+                        secondTryOk = copyUriToAppImages(context, uri, outputPath)
+                    }
+                    if (!secondTryOk) {
+                        return uriString + "." + ERROR_EXT
+                    }
+                } catch (e: Exception) {
+                    return uriString + "." + ERROR_EXT
+                }
             }
             // return the filename of the copied file with a leading /
             return uriString.substring(uriString.lastIndexOf("/"))
@@ -8746,6 +8822,7 @@ class FabPlus {
     var inputAlertText: String? = ""         // last content of edit control inside of the AlertDialog.Builder
     var attachmentUri: String? = ""          // attachment link uri as String
     var attachmentName = ""                  // attachment link readable name
+    var attachmentImageScale = false         // attachment is an image to scale down to screen dimensions
     var attachmentUriUri: Uri? = null        // attachment as original Uri from onActivityResult
     var inputAlertTextSelStart = -1          // insert position for attachment link
     var pickAttachment = false               // flag indicates, fabPlus was called from onActivityResult

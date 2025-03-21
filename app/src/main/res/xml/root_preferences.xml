@@ -160,6 +160,9 @@
             android:title="@string/restore_data_from_google_drive"
             android:summary="@string/clickHere_get_GrzLogZip"
             android:key="RestoreFromGDrive" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/GrzLogGallery">
         <Preference
             android:title="@string/showAppGallery"
             android:summary="@string/clickHere"
@@ -168,6 +171,10 @@
             android:title="@string/tidyOrphanes"
             android:summary="@string/clickHere"
             android:key="TidyOrphanes" />
+        <Preference
+            android:title="@string/rescale"
+            android:summary="@string/clickHere"
+            android:key="RescaleImages" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Reset">
