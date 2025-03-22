@@ -197,7 +197,8 @@
     <string name="appGalleryData">App gallery data</string>
     <string name="refresh">Refresh?</string>
     <string name="waitForFinish">Wait a moment</string>
-    <string name="showAppGallery">Show / edit GrzLog gallery</string>
+    <string name="showAppGalleryByDate">Show GrzLog gallery - by date</string>
+    <string name="showAppGalleryBySize">Show GrzLog gallery - by size</string>
     <string name="tidyOrphanes">Tidy orphaned attachments</string>
     <string name="cutToClipboard">Cut to clipboard</string>
     <string name="cutSelectedItems">Cut selected items to clipboard?</string>

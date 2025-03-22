@@ -170,9 +170,13 @@
 
     <PreferenceCategory app:title="@string/GrzLogGallery">
         <Preference
-            android:title="@string/showAppGallery"
+            android:title="@string/showAppGalleryByDate"
             android:summary="@string/clickHere"
-            android:key="ShowAppGallery" />
+            android:key="ShowAppGalleryByDate" />
+        <Preference
+            android:title="@string/showAppGalleryBySize"
+            android:summary="@string/clickHere"
+            android:key="ShowAppGalleryBySize" />
         <Preference
             android:title="@string/tidyOrphanes"
             android:summary="@string/clickHere"

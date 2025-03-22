@@ -66,6 +66,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import kotlin.io.path.fileSize
 
 
 // import a complete ZIP containing data + attached files into app's files folder
@@ -1209,13 +1210,21 @@ class ProgressWindow(context: Context, message: String) {
             field = value
             onePercentTrigger = field / 100f
         }
+    var absFakeCount = -1f // if != -1 show this a max. count
+        set(value) {
+            field = value
+        }
     var incCount = 0 // if total event number is large, incCount reduces the the progress bar render load by 1% steps
         set(value) {
             field = value
             eventCollector += 1f
             if (eventCollector >= onePercentTrigger) {
                 progressBar?.progress = progressBar?.progress?.inc()!!
-                progressText?.text = progressBar?.progress.toString() + "%      " + field.toString() + "/" + absCount.toInt().toString()
+                if (absFakeCount != -1f) {
+                    progressText?.text = progressBar?.progress.toString() + "%      " + field.toString() + "/" + absFakeCount.toInt().toString()
+                } else {
+                    progressText?.text = progressBar?.progress.toString() + "%      " + field.toString() + "/" + absCount.toInt().toString()
+                }
                 eventCollector = eventCollector - onePercentTrigger
             }
         }
@@ -1224,7 +1233,11 @@ class ProgressWindow(context: Context, message: String) {
             field = value
             var pct = (100.0f * field.toFloat() / absCount).toInt()
             progressBar?.progress = pct
-            progressText?.text = pct.toString() + "%      " + field.toString() + "/" + absCount.toInt().toString()
+            if (absFakeCount != -1f) {
+                progressText?.text = pct.toString() + "%      " + field.toString() + "/" + absFakeCount.toInt().toString()
+            } else {
+                progressText?.text = pct.toString() + "%      " + field.toString() + "/" + absCount.toInt().toString()
+            }
         }
 
     init {
@@ -1262,114 +1275,142 @@ class ProgressWindow(context: Context, message: String) {
 }
 
 // get list of filenames in path, sorted descending by Date stamp
-fun getFolderFiles(path: String): List<GalleryActivity.GrzThumbNail> {
+fun getFolderFiles(context: Context, path: String, sortByDate: Boolean, fileList: Array<File>, pw: ProgressWindow? = null): List<GalleryActivity.GrzThumbNail> {
     // retVal
     var retVal = mutableListOf<GalleryActivity.GrzThumbNail>()
 
-    // attachment dir
-    val attDir = File(path)
-    if (attDir.isDirectory) {
-        // make a list of files from the given dir
-        val fileList: Array<File> = attDir.listFiles()
-
-        // either re use an already existing list, or create a new one
-        if (MainActivity.appGalleryAdapter != null) {
-            // re use
-            retVal = MainActivity.appGalleryAdapter!!.list.toMutableList()
-            // add to retVal files from fileList, which are missing in retVal
-            for (f in fileList) {
-                // look up f in retVal
-                val itemHitNdx = retVal.indexOfFirst { it.fileName.equals(f.name) }
-                // add missing files in retVal
-                if (itemHitNdx == -1) {
-                    retVal.add((GalleryActivity.GrzThumbNail(f.name, "", null)))
-                }
-            }
-            // remove files from retVal, which are not in fileList (happens after tidy orphaned files)
-            // https://stackoverflow.com/questions/48577158/remove-data-from-list-while-iterating-kotlin
-            val iterator = retVal.iterator()
-            while (iterator.hasNext()) {
-                // get item in retVal
-                val item = iterator.next()
-                // look up f in fileList
-                val itemHitNdx = fileList.indexOfFirst { it.name.equals(item.fileName) }
-                // remove file from retVal, which has no hit in fileList
-                if (itemHitNdx == -1) {
-                    iterator.remove()
-                }
-            }
-            // remove elements with empty item.fileName, because they are just headers or Date stamps
-            retVal.removeAll { it.fileName.isEmpty() }
-        } else {
-            // create list from scratch with filenames only
-            for (f in fileList) {
+    // either re use an already existing list, or create a new one
+    if (MainActivity.appGalleryAdapter != null) {
+        // re use
+        retVal = MainActivity.appGalleryAdapter!!.list.toMutableList()
+        // add to retVal files from fileList, which are missing in retVal
+        for (f in fileList) {
+            // look up f in retVal
+            val itemHitNdx = retVal.indexOfFirst { it.fileName.equals(f.name) }
+            // add missing files in retVal
+            if (itemHitNdx == -1) {
                 retVal.add((GalleryActivity.GrzThumbNail(f.name, "", null)))
             }
-        }
-
-        // the date-stamp output format
-        val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-
-        // loop loop retVal
-        for (item in retVal) {
-
-            // look up item.fileName in fileList
-            val fileListHitNdx = fileList.indexOfFirst { it.name.equals(item.fileName) }
-
-            // if retVal item does not have a valid fileDate, generate item.fileDate from item.fileName OR fileList[fileListHitNdx].absolutePath
-            if (item.fileDate.isEmpty()) {
-                // now parse the date from item.fileName
-                var fileDateStr = ""
-                var m = PATTERN.DatePattern.matcher(item.fileName) // out of experience: usual filename Pattern.compile("[_-]\\d{8}[_-]")
-                if (m.find()) {
-                    try {
-                        var group = m.group()
-                        fileDateStr = group.substring(1, group.length - 1)
-                        sdf.parse(fileDateStr)
-                    } catch (e: Exception) {
-                        centeredToast(contextMainActivity, "GrzLog date parse: " + e.message.toString(), 3000)
-                    }
+            // set progress
+            if (pw != null) {
+                (context as Activity).runOnUiThread {
+                    pw.incCount += 1
                 }
-                // if no valid date string, get it from file as a fallback date
-                if (fileDateStr.isEmpty()) {
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            var path = Paths.get(fileList[fileListHitNdx].absolutePath)
-                            var fAttr = Files.readAttributes(path, BasicFileAttributes::class.java)
-                            var fDate = fAttr.creationTime()
-                            var fDateStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(fDate.toString())
-                            fileDateStr = SimpleDateFormat("yyyyMMdd").format(fDateStr)
-                        } else {
-                            var fDate = Date(fileList[fileListHitNdx].lastModified())
-                            var fDateStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(fDate.toString())
-                            fileDateStr = SimpleDateFormat("yyyyMMdd").format(fDateStr)
-                        }
-                    } catch (e: Exception) {
-                        centeredToast(contextMainActivity, "GrzLog filetime parse: " + e.message.toString(), 3000)
-                    }
-                }
-                item.fileDate = fileDateStr
             }
         }
+        // remove files from retVal, which are not in fileList (happens after tidy orphaned files)
+        // https://stackoverflow.com/questions/48577158/remove-data-from-list-while-iterating-kotlin
+        val iterator = retVal.iterator()
+        while (iterator.hasNext()) {
+            // get item in retVal
+            val item = iterator.next()
+            // look up f in fileList
+            val itemHitNdx = fileList.indexOfFirst { it.name.equals(item.fileName) }
+            // remove file from retVal, which has no hit in fileList
+            if (itemHitNdx == -1) {
+                iterator.remove()
+            }
+        }
+        // remove elements with empty item.fileName, because they are just headers or Date stamps
+        retVal.removeAll { it.fileName.isEmpty() }
+    } else {
+        // create list from scratch with filenames only
+        for (f in fileList) {
+            // set progress
+            if (pw != null) {
+                (context as Activity).runOnUiThread {
+                    pw.incCount += 1
+                }
+            }
+            retVal.add((GalleryActivity.GrzThumbNail(f.name, "", null, false, 0)))
+        }
     }
-    // sort list in descending order by date stamp
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val cmp = compareBy<GalleryActivity.GrzThumbNail> { LocalDate.parse(it.fileDate, DateTimeFormatter.ofPattern("yyyMMdd")) }
+
+    // the date-stamp output format
+    val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+
+    // loop retVal
+    for (item in retVal) {
+
+        // look up item.fileName in fileList
+        val fileListHitNdx = fileList.indexOfFirst { it.name.equals(item.fileName) }
+
+        // set progress
+        if (pw != null) {
+            (context as Activity).runOnUiThread {
+                pw.incCount += 1
+            }
+        }
+
+        // get file size
+        var path = Paths.get(fileList[fileListHitNdx].absolutePath)
+        item.fileSize = path.fileSize()
+
+        // if retVal item does not have a valid fileDate, generate item.fileDate from item.fileName OR fileList[fileListHitNdx].absolutePath
+        if (item.fileDate.isEmpty()) {
+            // now parse the date from item.fileName
+            var fileDateStr = ""
+            var m = PATTERN.DatePattern.matcher(item.fileName) // out of experience: usual filename Pattern.compile("[_-]\\d{8}[_-]")
+            if (m.find()) {
+                try {
+                    var group = m.group()
+                    fileDateStr = group.substring(1, group.length - 1)
+                    sdf.parse(fileDateStr)
+                } catch (e: Exception) {
+                    centeredToast(
+                        contextMainActivity,
+                        "GrzLog date parse: " + e.message.toString(),
+                        3000
+                    )
+                }
+            }
+            // if no valid date string, get it from file as a fallback date
+            if (fileDateStr.isEmpty()) {
+                try {
+                    var fAttr = Files.readAttributes(path, BasicFileAttributes::class.java)
+                    var fDate = fAttr.creationTime()
+                    var fDateStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(fDate.toString())
+                    fileDateStr = SimpleDateFormat("yyyyMMdd").format(fDateStr)
+                } catch (e: Exception) {
+                    centeredToast(
+                        contextMainActivity,
+                        "GrzLog filetime parse: " + e.message.toString(),
+                        3000
+                    )
+                }
+            }
+            item.fileDate = fileDateStr
+        }
+    }
+
+    if (sortByDate) {
+        // sort list in descending order by date stamp
+        val cmp = compareBy<GalleryActivity.GrzThumbNail> {
+            LocalDate.parse(
+                it.fileDate,
+                DateTimeFormatter.ofPattern("yyyMMdd")
+            )
+        }
         retVal.sortWith(cmp.reversed())
+    } else {
+        // sort list in descending order by file size
+        retVal.sortByDescending { it.fileSize }
     }
+
     // back
     return retVal
 }
 
 // get list of thumbnail images silently - called from MainActivity ideally before GalleryActivity is called
-fun getAppGalleryThumbsSilent(context: Context) {
+fun getAppGalleryThumbsSilent(context: Context, sortByDate: Boolean) {
+    MainActivity.appGalleryScanning = true
     try {
         Thread {
             val appImagesPath = context.getExternalFilesDir(null)!!.absolutePath + "/Images/"
-            val listGrzThumbNail = getFolderFiles(appImagesPath)
+            val fileList: Array<File> = File(appImagesPath).listFiles()
+            val listGrzThumbNail = getFolderFiles(context, appImagesPath, sortByDate, fileList, null)
             MainActivity.appScanTotal = listGrzThumbNail.size
             MainActivity.appScanCurrent = 0
-            MainActivity.appGalleryScanning = true
             var list = mutableListOf<GalleryActivity.GrzThumbNail>()
             val sdfIn = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
             val sdfOutDate = SimpleDateFormat("yyyy MMM dd, EEE", Locale.getDefault())
@@ -1377,71 +1418,112 @@ fun getAppGalleryThumbsSilent(context: Context) {
             var index = 0
             for (item in listGrzThumbNail) {
                 MainActivity.appScanCurrent += 1
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        try {
-                            var drawable = item.thumbNail
-                            if ( drawable == null) {
-                                var file = File(appImagesPath + item.fileName)
-                                var bmp: Bitmap? = null
-                                val mimeExt = getFileExtension(item.fileName)
-                                if (IMAGE_EXT.contains(mimeExt, ignoreCase = true)) {
-                                    bmp = ThumbnailUtils.createImageThumbnail(file, Size(128, 128), null)
+                try {
+                    var drawable = item.thumbNail
+                    if (drawable == null) {
+                        var file = File(appImagesPath + item.fileName)
+                        var bmp: Bitmap? = null
+                        val mimeExt = getFileExtension(item.fileName)
+                        if (IMAGE_EXT.contains(mimeExt, ignoreCase = true)) {
+                            bmp = ThumbnailUtils.createImageThumbnail(file, Size(128, 128), null)
+                        } else {
+                            if (VIDEO_EXT.contains(mimeExt, ignoreCase = true)) {
+                                bmp =
+                                    ThumbnailUtils.createVideoThumbnail(file, Size(128, 128), null)
+                            } else {
+                                if (AUDIO_EXT.contains(mimeExt, ignoreCase = true)) {
+                                    bmp = ThumbnailUtils.createAudioThumbnail(
+                                        file,
+                                        Size(128, 128),
+                                        null
+                                    )
                                 } else {
-                                    if (VIDEO_EXT.contains(mimeExt, ignoreCase = true)) {
-                                        bmp = ThumbnailUtils.createVideoThumbnail(file, Size(128, 128), null)
+                                    if (mimeExt.equals("pdf", ignoreCase = true)) {
+                                        bmp = (context.getDrawable(R.drawable.ic_pdf) as BitmapDrawable).bitmap
                                     } else {
-                                        if (AUDIO_EXT.contains(mimeExt, ignoreCase = true)) {
-                                            bmp = ThumbnailUtils.createAudioThumbnail(file, Size(128, 128), null)
-                                        } else {
-                                            if (mimeExt.equals("pdf", ignoreCase = true)) {
-                                                bmp = (context.getDrawable(R.drawable.ic_pdf) as BitmapDrawable).bitmap
-                                            } else {
-                                                if (mimeExt.equals("txt", ignoreCase = true)) {
-                                                    bmp = (context.getDrawable(android.R.drawable.ic_dialog_email) as BitmapDrawable).bitmap
-                                                }
-                                            }
+                                        if (mimeExt.equals("txt", ignoreCase = true)) {
+                                            bmp = (context.getDrawable(android.R.drawable.ic_dialog_email) as BitmapDrawable).bitmap
                                         }
                                     }
                                 }
-                                drawable = BitmapDrawable(bmp)
                             }
-                            // introduce a date-stamp-header
-                            if (!lastDateStamp.equals(item.fileDate)) {
-                                // insert fully empty entry, the one right beneath an image
-                                if (index % 2 != 0) {
-                                    list.add(GalleryActivity.GrzThumbNail("", "", context.getDrawable(android.R.drawable.gallery_thumb)!!))
-                                    index++
-                                }
-                                // next line shall show the current date (!!the item right next to it carries a " ")
-                                var date = sdfIn.parse(item.fileDate)
-                                list.add(GalleryActivity.GrzThumbNail("", sdfOutDate.format(date), context.getDrawable(android.R.drawable.gallery_thumb)!!))
-                                index++
-                                list.add(GalleryActivity.GrzThumbNail("", " ", context.getDrawable(android.R.drawable.gallery_thumb)!!))
-                                index++
-                                lastDateStamp = item.fileDate
-                            }
-                            // set real data
-                            if (drawable != null) {
-                                // covers all files providing a Bitmap thumbnail
-                                list.add(GalleryActivity.GrzThumbNail(item.fileName, item.fileDate, drawable))
-                            } else {
-                                // covers: pdf, txt
-                                list.add(GalleryActivity.GrzThumbNail(item.fileName, item.fileDate, context.getDrawable(android.R.drawable.gallery_thumb)!!))
-                            }
-                        } catch (e: Exception) {
-                            list.add(GalleryActivity.GrzThumbNail(item.fileName, item.fileDate, context.getDrawable(android.R.drawable.gallery_thumb)!!))
                         }
-                    } else {
-                        list.add(GalleryActivity.GrzThumbNail(item.fileName, item.fileDate, context.getDrawable(android.R.drawable.gallery_thumb)!!))
+                        drawable = BitmapDrawable(bmp)
                     }
-                } else {
-                    list.add(GalleryActivity.GrzThumbNail(item.fileName, item.fileDate, ContextCompat.getDrawable(context, android.R.drawable.gallery_thumb)!!))
+                    // introduce a date-stamp-header
+                    if (!lastDateStamp.equals(item.fileDate)) {
+                        // insert fully empty entry, the one right beneath an image
+                        if (index % 2 != 0) {
+                            list.add(
+                                GalleryActivity.GrzThumbNail(
+                                    "",
+                                    "",
+                                    context.getDrawable(android.R.drawable.gallery_thumb)!!
+                                )
+                            )
+                            index++
+                        }
+                        // next line shall show the current date (!!the item right next to it carries a " ")
+                        var date = sdfIn.parse(item.fileDate)
+                        list.add(
+                            GalleryActivity.GrzThumbNail(
+                                "",
+                                sdfOutDate.format(date),
+                                context.getDrawable(android.R.drawable.gallery_thumb)!!
+                            )
+                        )
+                        index++
+                        list.add(
+                            GalleryActivity.GrzThumbNail(
+                                "",
+                                " ",
+                                context.getDrawable(android.R.drawable.gallery_thumb)!!
+                            )
+                        )
+                        index++
+                        lastDateStamp = item.fileDate
+                    }
+                    // set real data
+                    if (drawable != null) {
+                        // covers all files providing a Bitmap thumbnail
+                        list.add(
+                            GalleryActivity.GrzThumbNail(
+                                item.fileName,
+                                item.fileDate,
+                                drawable,
+                                false,
+                                item.fileSize
+                            )
+                        )
+                    } else {
+                        // covers: pdf, txt
+                        list.add(
+                            GalleryActivity.GrzThumbNail(
+                                item.fileName,
+                                item.fileDate,
+                                context.getDrawable(android.R.drawable.gallery_thumb)!!,
+                                false,
+                                item.fileSize
+                            )
+                        )
+                    }
+                } catch (e: Exception) {
+                    list.add(
+                        GalleryActivity.GrzThumbNail(
+                            item.fileName,
+                            item.fileDate,
+                            context.getDrawable(android.R.drawable.gallery_thumb)!!,
+                            false,
+                            item.fileSize
+                        )
+                    )
                 }
                 // just the current index
                 index++
             }
             MainActivity.appGalleryAdapter = GalleryActivity.ThumbGridAdapter(context, list.toTypedArray())
+            MainActivity.appGalleryAdapter!!.notifyDataSetChanged()
+            MainActivity.appGallerySortedByDate = sortByDate
             MainActivity.appGalleryScanning = false
         }.start()
     } catch (e: Exception) {

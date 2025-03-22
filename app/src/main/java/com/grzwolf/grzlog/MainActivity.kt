@@ -501,7 +501,7 @@ class MainActivity : AppCompatActivity(),
         })
 
         // silently scan app gallery data
-        getAppGalleryThumbsSilent(this)
+        getAppGalleryThumbsSilent(this, true)
 
         // memorize first app usage to make a backup reminder from it
         var deferredBakDate = sharedPref.getLong("deferredBak", 0)
@@ -2517,7 +2517,7 @@ class MainActivity : AppCompatActivity(),
                             newText = newText.replace(result, "[$key --> $appUriFile::::$fn]")
                         }
                         // silently scan app gallery data to show the recently added file
-                        getAppGalleryThumbsSilent(this)
+                        getAppGalleryThumbsSilent(this, true)
                     }
                 }
                 // any inserted text could contain links after paste from clipboard BUT with no attachmentUri
@@ -7363,8 +7363,9 @@ class MainActivity : AppCompatActivity(),
         var returningFromAppGallery = false
         var showFolderMoreDialog = false
         var returnAttachmentFromAppGallery = ""
-        var appGalleryAdapter : GalleryActivity.ThumbGridAdapter? = null
+        var appGalleryAdapter:  GalleryActivity.ThumbGridAdapter? = null
         var appGalleryScanning = false
+        var appGallerySortedByDate = false
         var appScanCurrent = 0
         var appScanTotal = 0
         // backup ongoing
@@ -7700,7 +7701,7 @@ class MainActivity : AppCompatActivity(),
                     { // runner CANCEL
                     },
                     { // runner show orphans
-                        showAppGallery(context, contextMainActivity as Activity, true, stringOrphans)
+                        showAppGallery(context, contextMainActivity as Activity, true, stringOrphans, false)
                     },
                     { // runner delete orphans
                         deleteOrphanes(context, attachmentsList, fileUsed)
@@ -7724,7 +7725,7 @@ class MainActivity : AppCompatActivity(),
             }
             // silently scan app gallery data to show the recent change
             if (filesDeleted > 0) {
-                getAppGalleryThumbsSilent(contextMainActivity)
+                getAppGalleryThumbsSilent(contextMainActivity, true)
             }
             // show result
             okBox(
@@ -7889,19 +7890,22 @@ class MainActivity : AppCompatActivity(),
             context: Context,
             activity: Activity,
             showOrphans: Boolean = false,
-            stringOrphans: ArrayList<String>? = null) {
+            stringOrphans: ArrayList<String>? = null,
+            sortByDate: Boolean) {
             // start app gallery activity, if scan process is finished - under normal conditions, it's done before someone comes here
             if (appGalleryScanning) {
                 // show a progress window of gallery scanning, show gallery when scan finished
                 centeredToast(context, context.getString(R.string.waitForFinish), Toast.LENGTH_SHORT)
                 var pw = ProgressWindow(context, context.getString(R.string.waitForFinish))
-                pw.dialog?.setOnDismissListener {
-                    folderMoreDialog?.show()
-                }
-                pw.show()
-                pw.absCount = appScanTotal.toFloat()
-                pw.curCount = appScanCurrent
                 try {
+                    pw.dialog?.setOnDismissListener {
+                        if (folderMoreDialog != null) {
+                            folderMoreDialog?.show()
+                        }
+                    }
+                    pw.show()
+                    pw.absCount = appScanTotal.toFloat()
+                    pw.curCount = appScanCurrent
                     Thread {
                         try {
                             while (pw.curCount < pw.absCount) {
@@ -7920,6 +7924,7 @@ class MainActivity : AppCompatActivity(),
                             galleryIntent.putExtra("ReturnPayload", false)
                             galleryIntent.putExtra("ShowOrphans", showOrphans)
                             galleryIntent.putExtra("StringOrphans", stringOrphans)
+                            galleryIntent.putExtra("SortByDate", sortByDate)
                             activity.startActivity(galleryIntent)
                         }
                     }.start()
@@ -7929,6 +7934,7 @@ class MainActivity : AppCompatActivity(),
                 galleryIntent.putExtra("ReturnPayload", false)
                 galleryIntent.putExtra("ShowOrphans", showOrphans)
                 galleryIntent.putExtra("StringOrphans", stringOrphans)
+                galleryIntent.putExtra("SortByDate", sortByDate)
                 activity.startActivity(galleryIntent)
             }
         }

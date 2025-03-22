@@ -657,18 +657,33 @@ public class SettingsActivity :
                 true
             }
 
-            // action after show app gallery
-            val showAppGallery = findPreference("ShowAppGallery") as Preference?
-            showAppGallery!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+            // action after show app gallery by date
+            val showAppGalleryByDate = findPreference("ShowAppGalleryByDate") as Preference?
+            showAppGalleryByDate!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 // release moreDialog, otherwise it would popup after search dlg close
                 if (MainActivity.folderMoreDialog != null) {
                     MainActivity.folderMoreDialog?.let { it.dismiss() }
                     MainActivity.folderMoreDialog = null
                 }
-                // generate a controlling intent to return to Settings, bc. from there the usages search was ignited
+                // generate a controlling intent to return to Settings, bc. from here the start was ignited
                 MainActivity.intentSettings = Intent(MainActivity.contextMainActivity, SettingsActivity::class.java)
                 // show gallery
-                MainActivity.showAppGallery(activity as Context, activity as Activity)
+                MainActivity.showAppGallery(activity as Context, activity as Activity, false, null, true)
+                true
+            }
+
+            // action after show app gallery by file date
+            val showAppGalleryBySize = findPreference("ShowAppGalleryBySize") as Preference?
+            showAppGalleryBySize!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                // release moreDialog, otherwise it would popup after search dlg close
+                if (MainActivity.folderMoreDialog != null) {
+                    MainActivity.folderMoreDialog?.let { it.dismiss() }
+                    MainActivity.folderMoreDialog = null
+                }
+                // generate a controlling intent to return to Settings, bc. from here the start was ignited
+                MainActivity.intentSettings = Intent(MainActivity.contextMainActivity, SettingsActivity::class.java)
+                // show gallery
+                MainActivity.showAppGallery(activity as Context, activity as Activity, false, null, false)
                 true
             }
 

@@ -196,7 +196,8 @@
     <string name="appGalleryData">App Galerie Daten</string>
     <string name="refresh">Refresh?</string>
     <string name="waitForFinish">Einen Moment warten</string>
-    <string name="showAppGallery">Zeige / edit GrzLog Galerie</string>
+    <string name="showAppGalleryByDate">Zeige GrzLog Galerie - nach Datum</string>
+    <string name="showAppGalleryBySize">Zeige GrzLog Galerie - nach Größe</string>
     <string name="tidyOrphanes">Bereinigen verwaister Dateianhänge</string>
     <string name="cutToClipboard">Ausschneiden in Zwischenablage</string>
     <string name="cutSelectedItems">Ausschneiden in die Zwischenablage?</string>
