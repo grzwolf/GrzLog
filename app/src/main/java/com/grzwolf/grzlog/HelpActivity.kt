@@ -78,13 +78,16 @@ class HelpActivity : AppCompatActivity() {
         "a) tap Hamburger\n" +
         "       more icons will appear: Loupe, Folder, Share, Wrench\n" +
         "       more icons disappear after 10s\n\n" +
-        "b) tap Gear -> Settings window\n" +
+        "b) tap Gear -> Settings Window opens\n" +
+        "   About GrzLog\n" +
         "       About\n" +
         "       Developer contact data\n" +
         "       Help pages\n" +
+        "       GrzLog limitations\n" +
         "       Check GrzLog update at start\n" +
         "       Check GrzLog update\n" +
         "       Execute GrzLog update\n" +
+        "   Extra\n" +
         "       Input placement: new at top (like email) or at bottom (like messengers)\n" +
         "       Tap widget: show GrzLog or jump to input\n" +
         "       Preview image auto close\n" +
@@ -93,23 +96,31 @@ class HelpActivity : AppCompatActivity() {
         "       Ask whether to autofill skipped dates\n" +
         "       Click on selection: copy to clipboard OR show attachment\n" +
         "       Click on search hit: edit line OR show attachment\n" +
-        "       Backup data info\n" +
+        "   Backup and Restore\n" +
+        "       Backup File Informaion\n" +
         "       Backup mode\n" +
         "              fully automated in background\n" +
         "              run backup manually\n" +
         "       Backup outdated reminder\n" +
-        "       Backup data in background OR foreground\n" +
+        "       Backup execution in background OR foreground\n" +
         "       Backup data to /Download\n" +
         "       Restore data from /Download\n" +
         "       Restore from file explorer: Android 13 limits file access\n" +
         "       Export Backup to Google Drive (needs log in to Google account)\n" +
         "       Import Backup from Google Drive (needs log in to Google account)\n" +
-        "       Show / edit GrzLog gallery\n" +
+        "   GrzLog Gallery\n" +
+        "       Show GrzLog gallery - by date\n" +
+        "              find GrzLog gallery usages\n" +
+        "              delete from GrzLog gallery\n" +
+        "       Show GrzLog gallery - by size\n" +
         "              find GrzLog gallery usages\n" +
         "              delete from GrzLog gallery\n" +
         "       Tidy orphaned files from GrzLog gallery\n" +
         "              show orphaned files\n" +
         "              delete orphaned files\n" +
+        "       Scale images to phone display\n" +
+        "              pro: reduces storage consumption\n" +
+        "   Reset\n" +
         "       Reset app preferences (data are not touched)\n\n" +
         "c) tap Loupe -> dialog with three options\n" +
         "       search in current folder\n" +
