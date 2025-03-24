@@ -280,9 +280,11 @@ public class SettingsActivity :
                 var file = getBackupFile(appContext!!)
                 if (file != null) {
                     val lastModDate = Date(file.lastModified())
-                    backupInfo!!.summary = file.toString() + getString(R.string.lastBackup) + lastModDate.toString() + "\""
+                    backupInfo.summary = file.toString() + "\n" +
+                            lastModDate.toString() + "\n" +
+                            bytesToHumanReadableSize(file.length().toDouble())
                 } else {
-                    backupInfo!!.summary = getString(R.string.noBackupExisting)
+                    backupInfo.summary = getString(R.string.noBackupExisting)
                 }
             } catch (ise: IllegalStateException) {
                 centeredToast(appContext!!, "Info error: " + ise.message.toString(), 3000)
