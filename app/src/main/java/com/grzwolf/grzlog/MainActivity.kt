@@ -779,9 +779,9 @@ class MainActivity : AppCompatActivity(),
                         fabPlus.pickAttachment = true
                         fabPlus.attachmentUri = imageUriString
                         fabPlus.attachmentUriUri = uriOri
-                        fabPlus.attachmentImageScale = false
+                        fabPlus.attachmentImageScale = true // since it is a new image --> rescale it
                         fabPlus.attachmentName = getString(R.string.image)
-                        fabPlus.inputAlertTextSelStart = 0          // insert position for attachment link
+                        fabPlus.inputAlertTextSelStart = 0  // insert position for attachment link
                         lvMain.editLongPress = false
                         lvMain.selectedText = ""
                         lvMain.selectedRow = 0
