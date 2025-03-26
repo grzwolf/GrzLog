@@ -50,7 +50,7 @@ class HelpActivity : AppCompatActivity() {
         "       Insert line above\n" +
         "       Insert line below\n" +
         "       Select items dialog\n" +
-        "       Line as lockscreen reminder\n" +
+        "       Line as GrzLog reminder\n" +
         "       Toggle line as header\n" +
         "       Cut to clipboard\n" +
         "       Delete line\n" +

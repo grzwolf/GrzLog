@@ -62,12 +62,11 @@
     <string name="dontShowAgain">Don\'t show again.</string>
     <string name="CleanupFiles">Cleanup orphaned images</string>
     <string name="unusedFilesDeleted">orphaned files deleted.</string>
-    <string name="LockscreenReminder">Line as lockscreen reminder</string>
+    <string name="LockscreenReminder">Line as GrzLog reminder</string>
     <string name="Reminder">Reminder</string>
-    <string name="willShow">will be shown on lockscreen</string>
     <string name="InsertFile">Attachment</string>
     <string name="Options">What to do with the current line?</string>
-    <string name="ShowOnLockscreen">Lockscreen reminder:</string>
+    <string name="ShowOnLockscreen">GrzLog reminder:</string>
     <string name="created_with">created with \"</string>
     <string name="imageFailure">[Image failure]</string>
 
@@ -340,6 +339,9 @@
     <string name="warning">Warnung</string>
     <string name="you_selected">"Sie selektierten "</string>
     <string name="items">Items</string>
+    <string name="reminder">Reminder</string>
+    <string name="keep">Keep</string>
+    <string name="keep_selection">Keep selection?</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

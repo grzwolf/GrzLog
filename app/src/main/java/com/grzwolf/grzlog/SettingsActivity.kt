@@ -104,6 +104,9 @@ public class SettingsActivity :
         }
         super.onCreate(savedInstanceState)
 
+        // local app reminders
+        MainActivity.showAppReminders = false
+
         // life cycle observer
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
@@ -147,6 +150,7 @@ public class SettingsActivity :
     override fun onBackPressed() {
         // release controlling intent, if Settings are left
         MainActivity.intentSettings = null
+        MainActivity.showAppReminders = false
         super.onBackPressed()
     }
 

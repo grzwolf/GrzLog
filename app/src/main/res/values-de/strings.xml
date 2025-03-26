@@ -62,12 +62,11 @@
     <string name="dontShowAgain">Nicht wieder zeigen.</string>
     <string name="CleanupFiles">Bereinigen verwaiste Bilder</string>
     <string name="unusedFilesDeleted">verwaiste Dateianhänge entfernt.</string>
-    <string name="LockscreenReminder">Zeile als Erinnerung auf Sperrschirm</string>
+    <string name="LockscreenReminder">Zeile als Erinnerung</string>
     <string name="Reminder">Erinnerung</string>
-    <string name="willShow">wird auf dem Sperrschirm gezeigt</string>
     <string name="InsertFile">Anhang</string>
     <string name="Options">Was soll mit der aktuellen Zeile geschehen?</string>
-    <string name="ShowOnLockscreen">Sperrschirm Erinnerung:</string>
+    <string name="ShowOnLockscreen">GrzLog Erinnerung:</string>
     <string name="created_with">erzeugt von \"</string>
     <string name="imageFailure">[Bidfehler]</string>
 
@@ -308,7 +307,7 @@
     <string name="search_replace_in_folder"><![CDATA["Suchen & Ersetzen in Ordner "]]></string>
     <string name="search_all_grzlog_folders">Suchen in allen GrzLog Ordnern</string>
     <string name="exec_replace">"Ersetzen"</string>
-    <string name="toggle_selection">Selektion umkehren</string>
+    <string name="toggle_selection">Auswahl invers</string>
     <string name="replace_count_expected">"Anzahl Einträge gewünscht: "</string>
     <string name="updating_selection_count">"Aktualisiere Status: "</string>
     <string name="replacement_done_count">"Anzahl Einträge erledigt: "</string>
@@ -339,6 +338,9 @@
     <string name="warning">Warning</string>
     <string name="you_selected">"You selected "</string>
     <string name="items">items</string>
+    <string name="reminder">Erinnerung</string>
+    <string name="keep">Behalten</string>
+    <string name="keep_selection">Auswahl behalten?</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

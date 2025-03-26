@@ -26,6 +26,7 @@ import android.os.Handler
 import android.util.Size
 import android.view.Gravity
 import android.view.View
+import android.view.View.MeasureSpec
 import android.view.Window
 import android.view.WindowManager
 import android.view.WindowMetrics
@@ -559,6 +560,22 @@ fun dayNameOfWeek(dateStr: String?): String {
     return SimpleDateFormat(" EEE", Locale.ENGLISH).format(date)
 }
 
+// https://stackoverflow.com/questions/3361423/android-get-listview-item-height
+fun listviewHeight(list: ListView): Int {
+    var height = 0
+    for (i in 0 until list.count) {
+        val childView = list.adapter.getView(i, null, list)
+        childView.measure(
+            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
+            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
+        )
+        height += childView.measuredHeight
+    }
+    //dividers height
+    height += list.dividerHeight * list.count
+    return height
+}
+
 // multipurpose AlertBuilder dialog boxes
 fun okBox(context: Context?, title: String?, message: String) {
     var builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
@@ -668,6 +685,40 @@ fun decisionBox(
         })
     try {
         builder.show()
+    } catch (e: Exception) {
+    }
+}
+
+fun decisionBoxCustom(
+    context: Context,
+    title: String?,
+    message: String,
+    decisionPositive: String,
+    decisionNegative: String,
+    runnerPositive: Runnable?,
+    runnerNegative: Runnable?
+) {
+    var builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+    builder.setTitle(title)
+    builder.setMessage("\n" + message)
+    builder.setPositiveButton(
+        decisionPositive,
+        DialogInterface.OnClickListener { dialog, which ->
+            runnerPositive?.run()
+            dialog.dismiss()
+        })
+    builder.setNegativeButton(
+        decisionNegative,
+        DialogInterface.OnClickListener { dialog, which ->
+            runnerNegative?.run()
+            dialog.dismiss()
+        })
+    try {
+        var dlg = builder.create()
+        dlg.show()
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
+        dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
+        dlg.setCanceledOnTouchOutside(false)
     } catch (e: Exception) {
     }
 }

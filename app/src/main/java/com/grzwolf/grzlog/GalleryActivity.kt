@@ -47,6 +47,9 @@ class GalleryActivity : AppCompatActivity() {
         val actionBar = supportActionBar
         actionBar?.setDisplayHomeAsUpEnabled(true)
 
+        // local app reminders
+        MainActivity.showAppReminders = false
+
         // return a selected attachment
         if (savedInstanceState == null) {
             val extras = intent.extras

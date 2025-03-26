@@ -11,6 +11,7 @@ import android.content.ClipboardManager
 import android.content.DialogInterface.OnMultiChoiceClickListener
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.database.DataSetObserver
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.graphics.pdf.PdfDocument
@@ -83,7 +84,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.regex.Pattern
-import kotlin.collections.ArrayList
 
 
 // permission constants
@@ -160,6 +160,8 @@ class MainActivity : AppCompatActivity(),
             setTheme(R.style.ThemeOverlay_AppCompat_Light)
         }
 
+        // show in app reminder
+        MainActivity.showAppReminders = true
         // register lock screen notification API26+: https://developer.android.com/training/notify-user/build-notification
         createNotificationChannels()
         // lock screen notification: register a receiver for "screen on" transitions --> start point for an "immediate notifier"
@@ -169,9 +171,9 @@ class MainActivity : AppCompatActivity(),
         registerReceiver(object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 if (intent.action == Intent.ACTION_SCREEN_ON && lockScreenMessageList.size > 0) {
-                    while (lockScreenMessageList.size > 0) {
-                        generateLockscreenNotification(lockScreenMessageList[0])
-                        lockScreenMessageList.removeAt(0)
+                    centeredToast(context, lockScreenMessageList[0], 0)
+                    for (i in 0 until lockScreenMessageList.size) {
+                        generateLockscreenNotification(lockScreenMessageList[i])
                     }
                 }
             }
@@ -704,6 +706,11 @@ class MainActivity : AppCompatActivity(),
 
         // if app was previously closed, an intent comes here
         handleSharedIntent(getIntent())
+
+        // show in app reminders
+        if (MainActivity.showAppReminders) {
+            showReminder()
+        }
     }
 
     // life cycle observer knows, if app is in foreground or not
@@ -713,6 +720,8 @@ class MainActivity : AppCompatActivity(),
     }
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
     fun onAppInBackground() {
+        // activate in app reminder, if app goes into background
+        MainActivity.showAppReminders = true
         appIsInForeground = false
     }
 
@@ -722,12 +731,111 @@ class MainActivity : AppCompatActivity(),
         handleSharedIntent(intent)
     }
 
+    // handle in app reminders
+    fun showReminder() {
+        // show reminder notification directly in app
+        lockScreenMessageList.clear()
+        // count of notifications
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+        var notificationCount = sharedPref.getInt("notificationCount", 0)
+        for (i in 0 until notificationCount) {
+            var key = "notification" + i.toString()
+            var notification = sharedPref.getString(key, "")
+            lockScreenMessageList.add(notification!!)
+        }
+        if (lockScreenMessageList.size > 0) {
+            var msg = ""
+            lockScreenMessageList.forEach() {
+                msg += it + "\n\n"
+            }
+            // AlertDialog.Builder
+            val builder: AlertDialog.Builder = AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+            // title
+            val head = SpannableString(getString(R.string.reminder) + "\n\n" + getString(R.string.keep_selection))
+            var pos = head.indexOf("\n")
+            head.setSpan(RelativeSizeSpan(1.5F), 0, pos,0)
+            var titleView: TextView = TextView(this)
+            titleView.text = head
+            builder.setCustomTitle(titleView)
+            // relying on listView selection status didn't work: better use this bool array
+            var checkedItems = BooleanArray(lockScreenMessageList.size)
+            Arrays.fill(checkedItems, true)
+            builder.setMultiChoiceItems(lockScreenMessageList.toTypedArray(), checkedItems,
+                OnMultiChoiceClickListener { dialog, position, isChecked ->
+                })
+            // exec the final work according to the multi choice selection status
+            builder.setNegativeButton(getString(R.string.keep)) { dialog, which ->
+                var listLeftOver: MutableList<String> = ArrayList()
+                // rely on checkedItems bool array rather than on listView
+                for (i in 0 until checkedItems.size) {
+                    // get all left over reminders
+                    if (checkedItems.get(i)) {
+                        listLeftOver.add(lockScreenMessageList[i])
+                    }
+                }
+                // clean up old data
+                var spe = sharedPref.edit()
+                for (i in 0 until notificationCount) {
+                    var key = "notification" + i.toString()
+                    spe.remove(key).commit()
+                }
+                spe.remove("notificationCount").commit()
+                lockScreenMessageList.clear()
+                // save changed preferences and build lockScreenMessageList
+                for (i in 0 until listLeftOver.size) {
+                    var key = "notification" + i.toString()
+                    spe.putString(key, listLeftOver[i])
+                    lockScreenMessageList.add(listLeftOver[i])
+                }
+                spe.putInt("notificationCount", listLeftOver.size)
+                spe.apply()
+            }
+            // cancel dialog and keep al reminders
+            builder.setPositiveButton(R.string.cancel) { dialog, which ->
+            }
+            // toggle selection status
+            builder.setNeutralButton(getString(R.string.toggle_selection)) { dialog, which ->
+                val listView = (dialog as AlertDialog?)?.listView
+                listView?.let {
+                    // toggle selection status
+                    for (i in 0 until listView.count) {
+                        var status = !listView.isItemChecked(i)
+                        listView.setItemChecked(i, status)
+                        listView?.setSelection(i)    // only visible after view is updated
+                        checkedItems?.set(i, status) // important: reliable even w/o view update
+                    }
+                    // restart toggle dialog after toggling is done to show new status
+                    Handler().postDelayed({
+                        (titleView.parent as? ViewGroup)?.removeView(titleView)
+                        var dlg = builder.create()
+                        dlg.show()
+                        dlg.getWindow()?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
+                        dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
+                        dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+                        dlg.setCanceledOnTouchOutside(false)
+                    }, 300)
+                }
+            }
+            var dlg = builder.create()
+            dlg.show()
+            dlg.getWindow()?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+            dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
+            dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
+            dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+            dlg.setCanceledOnTouchOutside(false)
+        }
+    }
+
     // handle event incoming content 'share with'
     fun handleSharedIntent(intent: Intent?) {
         // limited handling
         if (intent?.action != Intent.ACTION_SEND) {
             return
         }
+
+        // suppress in app reminder
+        MainActivity.showAppReminders = false
 
         // attachment picker dialog might be open after PICK.CAPTURE
         attachmentPickerDialog?.let {
@@ -808,6 +916,9 @@ class MainActivity : AppCompatActivity(),
         permissions: Array<String>,
         grantResults: IntArray
     ) {
+        // suppress in app reminder
+        MainActivity.showAppReminders = false
+
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_CAMERA) {
             // Request for camera permission.
@@ -1506,35 +1617,31 @@ class MainActivity : AppCompatActivity(),
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
-                // ITEM == 5 'lock screen notification'
+                // ITEM == 5 'add an in app reminder'
                 if (which == 5) {
                     if (!notificationPermissionGranted) {
                         whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                     }
                     val message = lvMain.arrayList[itemPosition].title
                     var youSureBld: AlertDialog.Builder? = null
-                    youSureBld =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            AlertDialog.Builder(
-                                this@MainActivity,
-                                android.R.style.Theme_Material_Dialog
-                            )
-                        } else {
-                            AlertDialog.Builder(this@MainActivity)
-                        }
+                    youSureBld = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
                     youSureBld.setTitle(R.string.ShowOnLockscreen)
                     youSureBld.setMessage(message)
                     // 'you sure' dlg OK + quit
                     youSureBld.setPositiveButton(
                         R.string.ok,
                         DialogInterface.OnClickListener { dialog, which ->
-                            Toast.makeText(
-                                applicationContext,
-                                message + " " + getString(R.string.willShow),
-                                Toast.LENGTH_LONG
-                            ).show()
-                            // lock screen notification: Huawei launcher does not allow to render lsm directly, only via a screen-on receiver, which needs a list of notifications
-                            lockScreenMessageList.add(message.toString())
+                            // notification: Huawei launcher does not allow to render lsm directly, only via a screen-on receiver, which needs a list of notifications
+                            lockScreenMessageList.add(message!!)
+                            // get count of notifications so far and add the recent one to shared prefs and list
+                            val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                            var notificationCount = sharedPref.getInt("notificationCount", 0)
+                            var spe = sharedPref.edit()
+                            var key = "notification" + notificationCount.toString()
+                            spe.putString(key, message)
+                            spe.putInt("notificationCount", ++notificationCount)
+                            spe.apply()
+                            // get back to where called from
                             whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                         })
                     // 'you sure' dlg CANCEL
@@ -3737,7 +3844,7 @@ class MainActivity : AppCompatActivity(),
                             OnMultiChoiceClickListener { dialog, position, isChecked ->
                             })
                         // exec the final replacements work according to the multichoice selection status
-                        builder.setPositiveButton(R.string.exec_replace) { dialog, which ->
+                        builder.setNegativeButton(R.string.exec_replace) { dialog, which ->
                             // clear tagSection --> a fresh start for highlighting edited ds items
                             ds.tagSection.clear()
                             // rely on checkedItems bool array rather than on listView
@@ -3771,7 +3878,7 @@ class MainActivity : AppCompatActivity(),
                             replacePhraseInItems(replaceText, searchText, replaceList)
                         }
                         // cancel selection status
-                        builder.setNegativeButton(R.string.cancel) { dialog, which ->
+                        builder.setPositiveButton(R.string.cancel) { dialog, which ->
                             // hide all other menu items
                             showMenuItems(false)
                         }
@@ -3795,9 +3902,8 @@ class MainActivity : AppCompatActivity(),
                                 Handler().postDelayed({
                                     var dlg = builder.create()
                                     dlg.show()
-                                    if (choiceItems.size > 7) { // TBD don't use empirical value
-                                        dlg.getWindow()?.setLayout(widthWnd + 20, heightWnd)
-                                    }
+                                    var lvHeight = listviewHeight(listView!!)
+                                    dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 +  lvHeight))
                                     dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
                                     dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
                                     dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
@@ -3807,9 +3913,9 @@ class MainActivity : AppCompatActivity(),
                         }
                         var dlg = builder.create()
                         dlg.show()
-                        if (choiceItems.size > 7) { // TBD don't use empirical value
-                            dlg.getWindow()?.setLayout(widthWnd + 20, heightWnd)
-                        }
+                        val listView = (dlg as AlertDialog?)?.listView
+                        var lvHeight = listviewHeight(listView!!)
+                        dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 +  lvHeight))
                         dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
                         dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
                         dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
@@ -4898,6 +5004,8 @@ class MainActivity : AppCompatActivity(),
         returnToSearchHits: Boolean = false,
         function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)? = null)
     {
+        // suppress in app reminder at return from picker
+        MainActivity.showAppReminders = false
         // build a dialog
         var pickerBuilder: AlertDialog.Builder?
         pickerBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -7227,15 +7335,11 @@ class MainActivity : AppCompatActivity(),
     // lock screen notification: generate message
     fun generateLockscreenNotification(message: String?) {
         // notification number must be unique
-        val sharedPref = PreferenceManager.getDefaultSharedPreferences(
-            applicationContext
-        )
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         var notificationNumber = sharedPref.getInt("notificationNumber", 0)
         // prepare notification
         val intentShow = Intent(applicationContext, MainActivity::class.java)
-        val taskStackBuilder = TaskStackBuilder.create(
-            applicationContext
-        )
+        val taskStackBuilder = TaskStackBuilder.create(applicationContext)
         taskStackBuilder.addParentStack(MainActivity::class.java)
         taskStackBuilder.addNextIntent(intentShow)
         val pendingIntent = taskStackBuilder.getPendingIntent(
@@ -7374,6 +7478,10 @@ class MainActivity : AppCompatActivity(),
         // app visibility status
         @JvmField
         var appIsInForeground = false
+
+        @JvmField
+        // returning from other GrzLog activities shall not show reminders again
+        var showAppReminders = true
 
         // make context accessible from everywhere
         lateinit var contextMainActivity: MainActivity
