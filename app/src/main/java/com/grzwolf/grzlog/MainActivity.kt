@@ -721,7 +721,12 @@ class MainActivity : AppCompatActivity(),
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
     fun onAppInBackground() {
         // activate in app reminder, if app goes into background
-        MainActivity.showAppReminders = true
+        if (MainActivity.temporaryBackground) {
+            MainActivity.showAppReminders = false
+            MainActivity.temporaryBackground = false
+        } else {
+            MainActivity.showAppReminders = true
+        }
         appIsInForeground = false
     }
 
@@ -790,9 +795,6 @@ class MainActivity : AppCompatActivity(),
                 spe.putInt("notificationCount", listLeftOver.size)
                 spe.apply()
             }
-            // cancel dialog and keep al reminders
-            builder.setPositiveButton(R.string.cancel) { dialog, which ->
-            }
             // toggle selection status
             builder.setNeutralButton(getString(R.string.toggle_selection)) { dialog, which ->
                 val listView = (dialog as AlertDialog?)?.listView
@@ -810,8 +812,6 @@ class MainActivity : AppCompatActivity(),
                         var dlg = builder.create()
                         dlg.show()
                         dlg.getWindow()?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
-                        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
-                        dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
                         dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
                         dlg.setCanceledOnTouchOutside(false)
                     }, 300)
@@ -820,8 +820,6 @@ class MainActivity : AppCompatActivity(),
             var dlg = builder.create()
             dlg.show()
             dlg.getWindow()?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
-            dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
-            dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
             dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
             dlg.setCanceledOnTouchOutside(false)
         }
@@ -1170,6 +1168,7 @@ class MainActivity : AppCompatActivity(),
                     { // runner CANCEL
                     },
                     { // runner 'navigate to with Goggle Maps'
+                        MainActivity.temporaryBackground = true
                         var uriString = "google.navigation:q=" +
                                 matchFullResult.substring(
                                     matchFullResult.indexOf("::::geo:") + 8,
@@ -1181,6 +1180,7 @@ class MainActivity : AppCompatActivity(),
                         startActivity(intent)
                     },
                     { // runner 'show location with app of choice'
+                        MainActivity.temporaryBackground = true
                         var uri = matchFullResult.substring(
                             matchFullResult.indexOf("::::geo:") + 4,
                             matchFullResult.lastIndexOf("]"))
@@ -7482,6 +7482,7 @@ class MainActivity : AppCompatActivity(),
         @JvmField
         // returning from other GrzLog activities shall not show reminders again
         var showAppReminders = true
+        var temporaryBackground = false
 
         // make context accessible from everywhere
         lateinit var contextMainActivity: MainActivity

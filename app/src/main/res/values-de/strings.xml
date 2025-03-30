@@ -307,7 +307,7 @@
     <string name="search_replace_in_folder"><![CDATA["Suchen & Ersetzen in Ordner "]]></string>
     <string name="search_all_grzlog_folders">Suchen in allen GrzLog Ordnern</string>
     <string name="exec_replace">"Ersetzen"</string>
-    <string name="toggle_selection">Auswahl invers</string>
+    <string name="toggle_selection">Auswahl umkehren</string>
     <string name="replace_count_expected">"Anzahl Einträge gewünscht: "</string>
     <string name="updating_selection_count">"Aktualisiere Status: "</string>
     <string name="replacement_done_count">"Anzahl Einträge erledigt: "</string>
@@ -339,8 +339,8 @@
     <string name="you_selected">"You selected "</string>
     <string name="items">items</string>
     <string name="reminder">Erinnerung</string>
-    <string name="keep">Behalten</string>
-    <string name="keep_selection">Auswahl behalten?</string>
+    <string name="keep">Auswahl anwenden</string>
+    <string name="keep_selection">Wiederholen der folgenden Auswahl?</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

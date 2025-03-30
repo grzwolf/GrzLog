@@ -1077,6 +1077,8 @@ fun showImageInAndroidGalleryViewer(context: Context, imageUri: Uri) {
     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     try {
+        MainActivity.showAppReminders = false
+        MainActivity.temporaryBackground = true
         // run Android gallery viewer
         context.startActivity(intent)
     } catch (e: Exception) {
@@ -1175,6 +1177,7 @@ fun showAppLinkOrAttachment(context: Context, title: String, fileName: String?) 
             }
         }
         // open in browser tabs: https://stackoverflow.com/questions/7197133/android-open-browser-from-service-avoiding-multiple-tabs
+        MainActivity.temporaryBackground = true
         val builder = CustomTabsIntent.Builder()
         val customTabsIntent = builder.build()
         customTabsIntent.launchUrl(context, uri)
@@ -1239,6 +1242,7 @@ fun showAppLinkOrAttachment(context: Context, title: String, fileName: String?) 
 
     // start intent
     try {
+        MainActivity.temporaryBackground = true
         startActivity(context, intent, null)
     } catch (e: Exception) {
         okBox(context, "Ups", e.message!!)
