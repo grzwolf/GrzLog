@@ -107,8 +107,7 @@ class MainActivity : AppCompatActivity(),
     ActivityCompat.OnRequestPermissionsResultCallback,
     LifecycleObserver {
 
-    // Huawei launcher does not show lockscreen notifications generated in advance (though AOSP does), therefore build a list and show it at wakeup/screen on
-    var lockScreenMessageList: MutableList<String> = ArrayList()
+    // in app reminder
     var notificationPermissionGranted = false
 
     var fabPlus = FabPlus()                               // floating action button is the main UI data input control
@@ -170,10 +169,10 @@ class MainActivity : AppCompatActivity(),
         val intentFilter = IntentFilter(Intent.ACTION_SCREEN_ON)
         registerReceiver(object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                if (intent.action == Intent.ACTION_SCREEN_ON && lockScreenMessageList.size > 0) {
-                    centeredToast(context, lockScreenMessageList[0], 0)
-                    for (i in 0 until lockScreenMessageList.size) {
-                        generateLockscreenNotification(lockScreenMessageList[i])
+                if (intent.action == Intent.ACTION_SCREEN_ON && grzlogReminderList.size > 0) {
+                    centeredToast(context, grzlogReminderList[0], 0)
+                    for (i in 0 until grzlogReminderList.size) {
+                        generateLockscreenNotification(grzlogReminderList[i])
                     }
                 }
             }
@@ -709,7 +708,7 @@ class MainActivity : AppCompatActivity(),
 
         // show in app reminders
         if (MainActivity.showAppReminders) {
-            showReminder()
+            showGrzLogReminder()
         }
     }
 
@@ -736,21 +735,45 @@ class MainActivity : AppCompatActivity(),
         handleSharedIntent(intent)
     }
 
+    // build new list of GrzLog reminders
+    fun buildGrzLogReminderList(list: MutableList<String>) {
+        // clean up old data
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+        var notificationCount = sharedPref.getInt("notificationCount", 0)
+        var spe = sharedPref.edit()
+        for (i in 0 until notificationCount) {
+            var key = "notification" + i.toString()
+            spe.remove(key).commit()
+        }
+        spe.remove("notificationCount").commit()
+        grzlogReminderList.clear()
+        // save changed preferences and build a new grzlogReminderList
+        for (i in 0 until list.size) {
+            var key = "notification" + i.toString()
+            spe.putString(key, list[i])
+            grzlogReminderList.add(list[i])
+        }
+        spe.putInt("notificationCount", list.size)
+        spe.apply()
+        // highlight reminder in UI listview
+        lvMain.adapter!!.notifyDataSetChanged()
+    }
+
     // handle in app reminders
-    fun showReminder() {
+    fun showGrzLogReminder() {
         // show reminder notification directly in app
-        lockScreenMessageList.clear()
+        grzlogReminderList.clear()
         // count of notifications
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
         var notificationCount = sharedPref.getInt("notificationCount", 0)
         for (i in 0 until notificationCount) {
             var key = "notification" + i.toString()
             var notification = sharedPref.getString(key, "")
-            lockScreenMessageList.add(notification!!)
+            grzlogReminderList.add(notification!!)
         }
-        if (lockScreenMessageList.size > 0) {
+        if (grzlogReminderList.size > 0) {
             var msg = ""
-            lockScreenMessageList.forEach() {
+            grzlogReminderList.forEach() {
                 msg += it + "\n\n"
             }
             // AlertDialog.Builder
@@ -763,9 +786,9 @@ class MainActivity : AppCompatActivity(),
             titleView.text = head
             builder.setCustomTitle(titleView)
             // relying on listView selection status didn't work: better use this bool array
-            var checkedItems = BooleanArray(lockScreenMessageList.size)
+            var checkedItems = BooleanArray(grzlogReminderList.size)
             Arrays.fill(checkedItems, true)
-            builder.setMultiChoiceItems(lockScreenMessageList.toTypedArray(), checkedItems,
+            builder.setMultiChoiceItems(grzlogReminderList.toTypedArray(), checkedItems,
                 OnMultiChoiceClickListener { dialog, position, isChecked ->
                 })
             // exec the final work according to the multi choice selection status
@@ -775,25 +798,11 @@ class MainActivity : AppCompatActivity(),
                 for (i in 0 until checkedItems.size) {
                     // get all left over reminders
                     if (checkedItems.get(i)) {
-                        listLeftOver.add(lockScreenMessageList[i])
+                        listLeftOver.add(grzlogReminderList[i])
                     }
                 }
-                // clean up old data
-                var spe = sharedPref.edit()
-                for (i in 0 until notificationCount) {
-                    var key = "notification" + i.toString()
-                    spe.remove(key).commit()
-                }
-                spe.remove("notificationCount").commit()
-                lockScreenMessageList.clear()
-                // save changed preferences and build lockScreenMessageList
-                for (i in 0 until listLeftOver.size) {
-                    var key = "notification" + i.toString()
-                    spe.putString(key, listLeftOver[i])
-                    lockScreenMessageList.add(listLeftOver[i])
-                }
-                spe.putInt("notificationCount", listLeftOver.size)
-                spe.apply()
+                // build new list of GrzLog reminders
+                buildGrzLogReminderList(listLeftOver)
             }
             // toggle selection status
             builder.setNeutralButton(getString(R.string.toggle_selection)) { dialog, which ->
@@ -1622,37 +1631,112 @@ class MainActivity : AppCompatActivity(),
                     if (!notificationPermissionGranted) {
                         whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                     }
+                    // cancel undo
+                    if (!fabPlus.editInsertLine) {
+                        ds.undoSection = ""
+                        ds.undoText = ""
+                        ds.undoAction = ACTION.UNDEFINED
+                    }
+                    showMenuItemUndo()
+                    // reminder candidate
                     val message = lvMain.arrayList[itemPosition].title
-                    var youSureBld: AlertDialog.Builder? = null
-                    youSureBld = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-                    youSureBld.setTitle(R.string.ShowOnLockscreen)
-                    youSureBld.setMessage(message)
-                    // 'you sure' dlg OK + quit
-                    youSureBld.setPositiveButton(
-                        R.string.ok,
-                        DialogInterface.OnClickListener { dialog, which ->
-                            // notification: Huawei launcher does not allow to render lsm directly, only via a screen-on receiver, which needs a list of notifications
-                            lockScreenMessageList.add(message!!)
-                            // get count of notifications so far and add the recent one to shared prefs and list
-                            val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-                            var notificationCount = sharedPref.getInt("notificationCount", 0)
-                            var spe = sharedPref.edit()
-                            var key = "notification" + notificationCount.toString()
-                            spe.putString(key, message)
-                            spe.putInt("notificationCount", ++notificationCount)
-                            spe.apply()
-                            // get back to where called from
-                            whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
-                        })
-                    // 'you sure' dlg CANCEL
-                    youSureBld.setNegativeButton(
-                        R.string.cancel,
-                        DialogInterface.OnClickListener { dialog, which ->
-                            whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
-                        })
-                    val youSureDlg = youSureBld.create()
-                    youSureDlg.setCanceledOnTouchOutside(false)
-                    youSureDlg.show()
+                    // reminder candidate may already exist or it is a new one
+                    if (MainActivity.grzlogReminderList.firstOrNull {it.toString() == message} != null) {
+                        // reminder already exists: offer option to keep ist or to remove it
+                        var bld: AlertDialog.Builder? = null
+                        bld = AlertDialog.Builder(
+                            this@MainActivity,
+                            android.R.style.Theme_Material_Dialog
+                        )
+                        bld.setTitle(getString(R.string.notification_is_already_active))
+                        bld.setMessage("\'" + message + "\'")
+                        // dlg Remove reminder + quit
+                        bld.setNeutralButton(
+                            getString(R.string.remove),
+                            DialogInterface.OnClickListener { dialog, which ->
+                                // get all left over reminders
+                                var listLeftOver: MutableList<String> = ArrayList()
+                                for (i in 0 until grzlogReminderList.size) {
+                                    // discard currently selected item
+                                    if (grzlogReminderList.get(i) != message) {
+                                        listLeftOver.add(grzlogReminderList[i])
+                                    }
+                                }
+                                // build new list of GrzLog reminders
+                                buildGrzLogReminderList(listLeftOver)
+                                // get out
+                                whatToDoWithLongClickItem(
+                                    adapterView,
+                                    itemView,
+                                    itemPosition,
+                                    itemId,
+                                    returnToSearchHits
+                                )
+                            })
+                        // dlg KEEP + quit
+                        bld.setNegativeButton(
+                            getString(R.string.keepIt),
+                            DialogInterface.OnClickListener { dialog, which ->
+                                // get back to where called from
+                                whatToDoWithLongClickItem(
+                                    adapterView,
+                                    itemView,
+                                    itemPosition,
+                                    itemId,
+                                    returnToSearchHits
+                                )
+                            })
+                        val dlg = bld.create()
+                        dlg.setCanceledOnTouchOutside(false)
+                        dlg.show()
+                    } else {
+                        // new reminder
+                        var youSureBld: AlertDialog.Builder? = null
+                        youSureBld = AlertDialog.Builder(
+                            this@MainActivity,
+                            android.R.style.Theme_Material_Dialog
+                        )
+                        youSureBld.setTitle(R.string.ShowReminder)
+                        youSureBld.setMessage(message)
+                        // 'you sure' dlg OK + quit
+                        youSureBld.setPositiveButton(
+                            R.string.ok,
+                            DialogInterface.OnClickListener { dialog, which ->
+                                // add reminder to list
+                                grzlogReminderList.add(message!!)
+                                // get count of notifications so far and add the recent one to shared prefs and list
+                                val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                                var notificationCount = sharedPref.getInt("notificationCount", 0)
+                                var spe = sharedPref.edit()
+                                var key = "notification" + notificationCount.toString()
+                                spe.putString(key, message)
+                                spe.putInt("notificationCount", ++notificationCount)
+                                spe.apply()
+                                // get back to where called from
+                                whatToDoWithLongClickItem(
+                                    adapterView,
+                                    itemView,
+                                    itemPosition,
+                                    itemId,
+                                    returnToSearchHits
+                                )
+                            })
+                        // 'you sure' dlg CANCEL
+                        youSureBld.setNegativeButton(
+                            R.string.cancel,
+                            DialogInterface.OnClickListener { dialog, which ->
+                                whatToDoWithLongClickItem(
+                                    adapterView,
+                                    itemView,
+                                    itemPosition,
+                                    itemId,
+                                    returnToSearchHits
+                                )
+                            })
+                        val youSureDlg = youSureBld.create()
+                        youSureDlg.setCanceledOnTouchOutside(false)
+                        youSureDlg.show()
+                    }
                 }
 
                 // ITEM == 6 'set header manually'
@@ -7479,6 +7563,9 @@ class MainActivity : AppCompatActivity(),
         @JvmField
         var appIsInForeground = false
 
+        // Huawei launcher does not show lockscreen notifications generated in advance (though AOSP does), therefore build a list and show it at wakeup/screen on
+        var grzlogReminderList: MutableList<String> = ArrayList()
+
         @JvmField
         // returning from other GrzLog activities shall not show reminders again
         var showAppReminders = true
@@ -8792,6 +8879,12 @@ internal class LvAdapter : BaseAdapter {
                     lp.setMargins(70, 0, 0, 0)
                     tv.layoutParams = lp
                 }
+            }
+        }
+        // highlight a reminder
+        if (MainActivity.grzlogReminderList.size > 0) {
+            if (MainActivity.grzlogReminderList.firstOrNull {it.toString() == tv.text} != null) {
+                tv.setTextColor(ContextCompat.getColor(context!!, R.color.red))
             }
         }
         // if item is a search hit

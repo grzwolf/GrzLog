@@ -66,7 +66,7 @@
     <string name="Reminder">Erinnerung</string>
     <string name="InsertFile">Anhang</string>
     <string name="Options">Was soll mit der aktuellen Zeile geschehen?</string>
-    <string name="ShowOnLockscreen">GrzLog Erinnerung:</string>
+    <string name="ShowReminder">GrzLog Erinnerung:</string>
     <string name="created_with">erzeugt von \"</string>
     <string name="imageFailure">[Bidfehler]</string>
 
@@ -341,6 +341,9 @@
     <string name="reminder">Erinnerung</string>
     <string name="keep">Auswahl anwenden</string>
     <string name="keep_selection">Wiederholen der folgenden Auswahl?</string>
+    <string name="notification_is_already_active">Erinnerung ist bereits aktiv</string>
+    <string name="remove">Löschen</string>
+    <string name="keepIt">Behalten</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>
