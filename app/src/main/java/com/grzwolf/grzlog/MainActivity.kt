@@ -1487,19 +1487,20 @@ class MainActivity : AppCompatActivity(),
         // the following options are related to the ListView item
         val charSequences: MutableList<CharSequence> = ArrayList()
         charSequences.add(getString(R.string.EditLine))                     // ITEM == 0
-        charSequences.add(getString(R.string.CopyLine))                     // ITEM == 1
-        charSequences.add(getString(R.string.InsertLineBefore))             // ITEM == 2
-        charSequences.add(getString(R.string.InsertLineAfter))             // ITEM == 3
-        charSequences.add(getString(R.string.SelectItems))           // ITEM == 4
-        charSequences.add(getString(R.string.LockscreenReminder))   // ITEM == 5
+        charSequences.add(getString(R.string.InsertLineBefore))             // ITEM == 1
+        charSequences.add(getString(R.string.InsertLineAfter))             // ITEM == 2
+        charSequences.add(getString(R.string.SelectItems))           // ITEM == 3
+        charSequences.add(getString(R.string.LockscreenReminder))   // ITEM == 4
         if (lvMain.arrayList[itemPosition].isSection) {
-            charSequences.add(getString(R.string.ToggleLineAsText))       // ITEM == 6
+            charSequences.add(getString(R.string.ToggleLineAsText))       // ITEM == 5
         } else {
-            charSequences.add(getString(R.string.ToggleLineAsHeader))     // ITEM == 6
+            charSequences.add(getString(R.string.ToggleLineAsHeader))     // ITEM == 5
         }
-        charSequences.add("")                              // ITEM == 7
-        charSequences.add(getString(R.string.cutToClipboard))              // ITEM == 8
-        charSequences.add(getString(R.string.RemoveLine))                   // ITEM == 9
+        charSequences.add("")                              // ITEM == 6
+        charSequences.add(getString(R.string.CopyLine))                     // ITEM == 7
+        charSequences.add("")                              // ITEM == 8
+        charSequences.add(getString(R.string.cutToClipboard))              // ITEM == 9
+        charSequences.add(getString(R.string.RemoveLine))                   // ITEM == 10
         val itemsMore = charSequences.toTypedArray()
         builderItemMore?.setItems(
             itemsMore,
@@ -1512,15 +1513,8 @@ class MainActivity : AppCompatActivity(),
                     onLongClickEditItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
-                // ITEM == 1 copy line
+                // ITEM == 1  'line insert before current line'
                 if (which == 1) {
-                    shareBody = lvMain.arrayList[itemPosition].fullTitle
-                    clipboard = shareBody
-                    whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
-                }
-
-                // ITEM == 2  'line insert before current line'
-                if (which == 2) {
                     // reject 'insert line before': at pos == 0 if SHOW_ORDER.BOTTOM
                     if (itemPosition == 0 && lvMain.showOrder == SHOW_ORDER.BOTTOM) {
                         okBox(
@@ -1581,8 +1575,8 @@ class MainActivity : AppCompatActivity(),
                     fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
-                // ITEM == 3  'line insert after current line'
-                if (which == 3) {
+                // ITEM == 2  'line insert after current line'
+                if (which == 2) {
                     // add line after the selected line in ListView array, which is showOrder aligned
                     lvMain.arrayList.add(itemPosition + 1, EntryItem(" ", "", ""))
                     // build finalStr from ListView array
@@ -1620,14 +1614,14 @@ class MainActivity : AppCompatActivity(),
                     fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
-                // ITEM == 4  'select items dialog' - afterwards return to here
-                if (which == 4) {
+                // ITEM == 3  'select items dialog' - afterwards return to here
+                if (which == 3) {
                     // function as parameter: https://stackoverflow.com/questions/62935022/pass-function-with-parameters-in-extension-functionkotlin
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
-                // ITEM == 5 'add an in app reminder'
-                if (which == 5) {
+                // ITEM == 4 'add an in app reminder'
+                if (which == 4) {
                     if (!notificationPermissionGranted) {
                         whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                     }
@@ -1739,8 +1733,8 @@ class MainActivity : AppCompatActivity(),
                     }
                 }
 
-                // ITEM == 6 'set header manually'
-                if (which == 6) {
+                // ITEM == 5 'set header manually'
+                if (which == 5) {
                     // if item is date header, dismiss
                     if (PATTERN.DateDay.matcher(lvMain.arrayList[itemPosition].title.toString()).find()) {
                         centeredToast(this, "Line is already header", 3000)
@@ -1815,13 +1809,25 @@ class MainActivity : AppCompatActivity(),
                     )
                 }
 
-                // ITEM == 7 'empty space'
-                if (which == 7) {
+                // ITEM == 6 'empty space'
+                if (which == 6) {
                     whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
                 }
 
-                // ITEM == 8 'cut line to clipboard'
+                // ITEM == 7 copy line
+                if (which == 7) {
+                    shareBody = lvMain.arrayList[itemPosition].fullTitle
+                    clipboard = shareBody
+                    whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
+                }
+
+                // ITEM == 8 'empty space'
                 if (which == 8) {
+                    whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
+                }
+
+                // ITEM == 9 'cut line to clipboard'
+                if (which == 9) {
                     val message = lvMain.arrayList[itemPosition].title
                     var youSureBld: AlertDialog.Builder?
                     youSureBld =
@@ -1862,8 +1868,8 @@ class MainActivity : AppCompatActivity(),
                     youSureDlg.show()
                 }
 
-                // ITEM == 9 'current line delete'
-                if (which == 9) {
+                // ITEM == 10 'current line delete'
+                if (which == 10) {
                     val message = lvMain.arrayList[itemPosition].title
                     var youSureBld: AlertDialog.Builder?
                     youSureBld =
