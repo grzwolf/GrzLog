@@ -54,7 +54,7 @@ class BackupService : Service() {
     override fun onDestroy() {
         stopService()
         super.onDestroy()
-        Toast.makeText(this, "GrzLog Backup Service finished", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "GrzLog Backup Service finished", Toast.LENGTH_LONG).show()
     }
 
     private fun startService() {
@@ -79,7 +79,6 @@ class BackupService : Service() {
     }
 
     private fun stopService() {
-        Toast.makeText(this, "GrzLog Backup Service stopping", Toast.LENGTH_SHORT).show()
         try {
             wakeLock?.let {
                 if (it.isHeld) {

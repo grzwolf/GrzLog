@@ -24,7 +24,7 @@
     <string name="BackupRestore">Backup and Restore</string>
     <string name="BackupInfo">Backup File Information</string>
     <string name="notExisting">not existing</string>
-    <string name="BackupData">Backup Data</string>
+    <string name="BackupData">Backup Data now</string>
     <string name="clickToBackup">Click here to backup your data manually</string>
     <string name="RestoreData">Restore Data</string>
     <string name="clickToRestore">Click here to restore data from Backup</string>
@@ -262,8 +262,7 @@
     <string name="makeBackup">Consider making a backup</string>
     <string name="useBackupReminder">Backup outdated reminder</string>
     <string name="nextReminderOneWeek">Next reminder in one week?</string>
-    <string name="backupExecution">Backup execution</string>
-    <string name="foreground">in foreground</string>
+    <string name="backupExecution">silent backup</string>
     <string name="background">in background</string>
     <string name="clickSelectedItemsToClipboard">Click on selection</string>
     <string name="showLink">show attachment</string>
@@ -352,5 +351,13 @@
     <string-array name="placementArray_Values">
         <item>top</item>
         <item>bottom</item>
+    </string-array>
+    <string-array name="backupModeArray_Names">
+        <item>@string/backup_manually</item>
+        <item>@string/backup_automated_in_background</item>
+    </string-array>
+    <string-array name="backupModeArray_Values">
+        <item>manually</item>
+        <item>automated</item>
     </string-array>
 </resources>

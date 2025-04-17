@@ -17,7 +17,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
-import android.os.Handler
 import android.provider.Settings
 import android.view.MenuItem
 import android.widget.Toast
@@ -42,20 +41,12 @@ import com.android.volley.VolleyError
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
-import com.grzwolf.grzlog.MainActivity.Companion.ReturnToDialogData
-import com.grzwolf.grzlog.MainActivity.Companion.appIsInForeground
-import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
-import com.grzwolf.grzlog.MainActivity.Companion.deleteOrphanes
-import com.grzwolf.grzlog.MainActivity.Companion.lvMain
-import com.grzwolf.grzlog.MainActivity.Companion.showAppGallery
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
-import java.util.Locale
 import java.util.regex.Pattern
 import java.util.zip.ZipFile
 
@@ -269,6 +260,65 @@ public class SettingsActivity :
                     // update shared preference
                     val spe = sharedPref.edit()
                     spe.putBoolean("newAtBottom", newValBool)
+                    spe.apply()
+                    true
+                }
+
+            // choose a backup mode strategy
+            // at the beginning, show current states after entering Settings
+            var manuallyValBoolOrig = sharedPref.getBoolean("BackupModeManually", false)
+            val bakModePref = findPreference<ListPreference>("backupMode")
+            if (manuallyValBoolOrig) {
+                bakModePref!!.setValueIndex(0)
+            } else {
+                bakModePref!!.setValueIndex(1)
+            }
+            var pref = findPreference<Preference>("backupReminder")
+            pref!!.isEnabled = manuallyValBoolOrig
+            var bakFg = sharedPref.getBoolean("backupForeground", false)
+            var spc = findPreference<SwitchPreferenceCompat>("backupForeground")
+            spc!!.setChecked(bakFg)
+            if (!manuallyValBoolOrig) {
+                spc!!.setChecked(true)
+            }
+            spc!!.isEnabled = manuallyValBoolOrig
+            pref = findPreference<Preference>("Backup")
+            pref!!.isEnabled = manuallyValBoolOrig
+            // handle the tap on backup mode strategy
+            bakModePref!!.summary = bakModePref!!.entry
+            bakModePref!!.onPreferenceChangeListener =
+                Preference.OnPreferenceChangeListener { preference, newValue ->
+                    // parse change
+                    var manuallyValBool = false
+                    if (newValue == "manually") {
+                        manuallyValBool = true
+                        bakModePref!!.setValueIndex(0)
+                    }
+                    if (newValue == "automated") {
+                        manuallyValBool = false
+                        bakModePref!!.setValueIndex(1)
+                    }
+                    // update summary
+                    bakModePref!!.summary = bakModePref!!.entry
+                    // update invisible switch preference
+                    var pref = findPreference<Preference>("BackupModeManually")
+                    pref!!.setDefaultValue(!manuallyValBool)
+                    // update 'outdated reminder'
+                    pref = findPreference<Preference>("backupReminder")
+                    pref!!.isEnabled = manuallyValBool
+                    // update 'fg vs. bg'
+                    var spc = findPreference<SwitchPreferenceCompat>("backupForeground")
+                    spc!!.setChecked(bakFg)
+                    if (!manuallyValBool) {
+                        spc!!.setChecked(true)
+                    }
+                    spc!!.isEnabled = manuallyValBool
+                    // update 'Backup Data now'
+                    pref = findPreference<Preference>("Backup")
+                    pref!!.isEnabled = manuallyValBool
+                    // update shared preference
+                    val spe = sharedPref.edit()
+                    spe.putBoolean("BackupModeManually", manuallyValBool)
                     spe.apply()
                     true
                 }
@@ -567,7 +617,8 @@ public class SettingsActivity :
                             val appPath = appContext!!.getExternalFilesDir(null)!!.absolutePath
                             val maxProgressCount = countFiles(File(appPath))
                             // distinguish backup in foreground vs. background
-                            if (sharedPref.getBoolean("backupForeground", false)) {
+                            if (!sharedPref.getBoolean("backupForeground", false)) {
+                                // backup in foreground
                                 generateBackupProgress(
                                     requireContext(),
                                     appPath,
@@ -578,6 +629,7 @@ public class SettingsActivity :
                                     getString(R.string.lastBackup)
                                 )
                             } else {
+                                // backup in background
                                 if (!MainActivity.backupOngoing) {
                                     // lame parameter transfer to BackupService
                                     gBScontext = requireContext()

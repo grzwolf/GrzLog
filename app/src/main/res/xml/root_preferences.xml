@@ -127,29 +127,33 @@
             android:title="@string/BackupInfo"
             android:key="BackupInfo"
             android:summary="@string/notExisting" />
+
+        <ListPreference
+            android:title="@string/backup_mode"
+            android:key="backupMode"
+            android:entries="@array/backupModeArray_Names"
+            android:entryValues="@array/backupModeArray_Values" />
         <SwitchPreferenceCompat
             android:title="@string/backup_mode"
             android:key="BackupModeManually"
+            app:isPreferenceVisible="false"
             app:defaultValue="true"
             android:summaryOff="@string/backup_automated_in_background"
             android:summaryOn="@string/backup_manually" />
+
         <SwitchPreferenceCompat
             app:title="@string/useBackupReminder"
             app:key="backupReminder"
-            app:defaultValue="true"
-            android:dependency="BackupModeManually" />
+            app:defaultValue="true" />
         <SwitchPreferenceCompat
             app:title="@string/backupExecution"
             app:key="backupForeground"
             app:defaultValue="true"
-            app:summaryOn="@string/foreground"
-            app:summaryOff="@string/background"
-            android:dependency="BackupModeManually" />
+            app:summaryOn="@string/background" />
         <Preference
             android:title="@string/BackupData"
             android:key="Backup"
-            android:summary="@string/clickToBackup"
-            android:dependency="BackupModeManually" />
+            android:summary="@string/clickToBackup" />
         <Preference
             android:title="@string/RestoreData"
             android:key="Restore"
