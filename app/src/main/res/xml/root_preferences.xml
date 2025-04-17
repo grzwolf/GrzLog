@@ -196,6 +196,10 @@
             android:title="@string/resetAppPreferences"
             android:key="Reset"
             android:summary="@string/resetAppPreferencesSummary" />
+        <Preference
+            android:title="@string/stopAppServices"
+            android:key="StopServices"
+            android:summary="@string/stopAppServicesSummary" />
     </PreferenceCategory>
 
 </PreferenceScreen>

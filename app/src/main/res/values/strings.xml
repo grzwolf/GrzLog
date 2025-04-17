@@ -344,6 +344,13 @@
     <string name="notification_is_already_active">Reminder is already active</string>
     <string name="remove">Remove</string>
     <string name="keepIt">Keep</string>
+    <string name="stopAppServices">Quit active services</string>
+    <string name="stopAppServicesSummary">Quit all GrzLog background activities</string>
+    <string name="backup_active">Backup active</string>
+    <string name="upload_active">Upload active</string>
+    <string name="and_upload_active">" and Upload active"</string>
+    <string name="quit_active_services">Quit </string>
+    <string name="really">Really?</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

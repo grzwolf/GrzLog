@@ -17,6 +17,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
 import android.provider.Settings
 import android.view.MenuItem
 import android.widget.Toast
@@ -229,11 +230,44 @@ public class SettingsActivity :
             }.start()
         }
 
+        // runnable to update status of active services
+        private val updateHandler = Handler()
+        private var updateRunnable: Runnable = Runnable {
+            run {
+                // pref summary update
+                var msg = ""
+                val stopSrvPref = findPreference("StopServices") as Preference?
+                if (MainActivity.backupOngoing || gdriveUploadOngoing) {
+                    if (MainActivity.backupOngoing) {
+                        stopSrvPref!!.isEnabled = true
+                        msg = getString(R.string.backup_active)
+                    }
+                    if (gdriveUploadOngoing) {
+                        stopSrvPref!!.isEnabled = true
+                        if (msg.length > 0) {
+                            msg += getString(R.string.and_upload_active)
+                        } else {
+                            msg = getString(R.string.upload_active)
+                        }
+                    }
+                } else {
+                    stopSrvPref!!.isEnabled = false
+                    msg = appContext!!.getString(R.string.stopAppServicesSummary)
+                }
+                stopSrvPref!!.summary = msg
+                // run & repeat it
+                updateHandler.postDelayed(updateRunnable, 5000)
+            }
+        }
+
         @Suppress("unused")
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(appContext!!)
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
             val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+
+            // check status of services
+            updateRunnable.run()
 
             // new input placement
             val nip = findPreference<ListPreference>("chosenPlacement")
@@ -817,6 +851,47 @@ public class SettingsActivity :
                     alert.show()
                     true
                 }
+
+            // action after quit services
+            val stopSrvPref = findPreference("StopServices") as Preference?
+            if (MainActivity.backupOngoing || gdriveUploadOngoing) {
+                stopSrvPref!!.isEnabled = true
+            } else {
+                stopSrvPref!!.isEnabled = false
+            }
+            stopSrvPref!!.onPreferenceClickListener =
+                Preference.OnPreferenceClickListener { // ... are you sure ...
+                    val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+                    builder.setTitle(getString(R.string.quit_active_services) + stopSrvPref!!.summary)
+                    var msg = getString(R.string.really)
+                    builder.setMessage(msg)
+                    // YES
+                    builder.setPositiveButton(
+                        R.string.yes,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            // stop backup service
+                            if (MainActivity.backupOngoing) {
+                                actionOnBackupService(requireContext(), BackupService.Companion.Actions.STOP)
+                            }
+                            // stop gdrive upload service
+                            if (gdriveUploadOngoing) {
+                                actionOnMeterService(requireContext(), MeterService.Companion.Actions.STOP)
+                            }
+                            dialog.dismiss()
+                            return@OnClickListener
+                        })
+                    // NO
+                    builder.setNegativeButton(
+                        R.string.no,
+                        DialogInterface.OnClickListener { dialog, which ->
+                            dialog.dismiss()
+                            return@OnClickListener
+                        })
+                    val alert = builder.create()
+                    alert.show()
+                    true
+                }
+
         }
     }
 
@@ -1143,6 +1218,11 @@ public class SettingsActivity :
             }
             // loop upload progress
             while (txSoFar < maxProgress) {
+                // srv was forced stopped
+                if (MeterService.Companion.getServiceState(context) == MeterService.Companion.ServiceState.STOPPED) {
+                    // app cannot quit a gdrive upload, so let google do whatever it does without further notice
+                    return false
+                }
                 // upload meter update
                 txSoFar = txMeter.getTxNow()
                 // if uploaded bytes exceed fileLength, don't check for errors anymore

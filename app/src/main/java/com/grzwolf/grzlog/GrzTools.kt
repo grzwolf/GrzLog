@@ -167,11 +167,19 @@ fun createZipArchive(
         val subDir = File(srcFolder)
         val subdirList = subDir.list()
         subdirList!!.forEach { sd ->
+            // srv was forced stopped
+            if (BackupService.Companion.getServiceState(context) == BackupService.Companion.ServiceState.STOPPED) {
+                return false
+            }
             // get a list of files from current directory
             val f = File("$srcFolder/$sd")
             if (f.isDirectory) {
                 val files = f.list()
                 for (i: Int in files?.indices!!) {
+                    // srv was forced stopped
+                    if (BackupService.Companion.getServiceState(context) == BackupService.Companion.ServiceState.STOPPED) {
+                        return false
+                    }
                     // set progress via pw in foreground
                     if (pw != null) {
                         (context as Activity).runOnUiThread(Runnable {

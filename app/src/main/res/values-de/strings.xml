@@ -343,6 +343,13 @@
     <string name="notification_is_already_active">Erinnerung ist bereits aktiv</string>
     <string name="remove">Löschen</string>
     <string name="keepIt">Behalten</string>
+    <string name="stopAppServices">Benden aktiver Dienste</string>
+    <string name="stopAppServicesSummary">Beenden aller GrzLog Hintergrund Aktivitäten</string>
+    <string name="backup_active">Backup aktiv</string>
+    <string name="upload_active">Upload aktiv</string>
+    <string name="and_upload_active">" und Upload aktiv"</string>
+    <string name="quit_active_services">Beenden </string>
+    <string name="really">Wirklich?</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>
