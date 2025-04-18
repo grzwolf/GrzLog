@@ -44,14 +44,14 @@ class HelpActivity : AppCompatActivity() {
         "\n" +
         "2.2 ListView item\n" +
         "~~~~~~~~~~~~~~~~~\n" +
-        "a) tap long item -> 'What to do ...' dialog\n" +
+        "a) tap long item -> 'What to do with the current line' dialog\n" +
         "       Edit line\n" +
-        "       Copy line\n" +
         "       Insert line above\n" +
         "       Insert line below\n" +
         "       Select items dialog\n" +
         "       Line as GrzLog reminder\n" +
         "       Toggle line as header\n" +
+        "       Copy line\n" +
         "       Cut to clipboard\n" +
         "       Delete line\n" +
         "   Note: revert latest change tap Menu bar 'Undo circle'\n\n" +
@@ -101,11 +101,11 @@ class HelpActivity : AppCompatActivity() {
         "       Backup mode\n" +
         "              fully automated in background\n" +
         "              run backup manually\n" +
-        "       Backup outdated reminder\n" +
-        "       Backup execution in background OR foreground\n" +
-        "       Backup data to /Download\n" +
-        "       Restore data from /Download\n" +
-        "       Restore from file explorer: Android 13 limits file access\n" +
+        "       Backup outdated reminder (gray if automated)\n" +
+        "       Backup execution in background OR foreground (gray if automated)\n" +
+        "       Backup Data now --> to /Download (gray if automated)\n" +
+        "       Restore Data <-- from /Download\n" +
+        "       Import backup from a file list\n" +
         "       Export Backup to Google Drive (needs log in to Google account)\n" +
         "       Import Backup from Google Drive (needs log in to Google account)\n" +
         "   GrzLog Gallery\n" +
@@ -122,6 +122,8 @@ class HelpActivity : AppCompatActivity() {
         "              pro: reduces storage consumption\n" +
         "   Reset\n" +
         "       Reset app preferences (data are not touched)\n\n" +
+        "   Quit active services\n" +
+        "       If a backup or a gdrive upload seems to hang, stop them from here\n\n" +
         "c) tap Loupe -> dialog with three options\n" +
         "       search in current folder\n" +
         "              type search phrase + Enter" +
