@@ -245,14 +245,14 @@ public class SettingsActivity :
                 if (MainActivity.backupOngoing || gdriveUploadOngoing) {
                     if (MainActivity.backupOngoing) {
                         stopSrvPref!!.isEnabled = true
-                        msg = getString(R.string.backup_active)
+                        msg = appContext!!.getString(R.string.backup_active)
                     }
                     if (gdriveUploadOngoing) {
                         stopSrvPref!!.isEnabled = true
                         if (msg.length > 0) {
-                            msg += getString(R.string.and_upload_active)
+                            msg += appContext!!.getString(R.string.and_upload_active)
                         } else {
-                            msg = getString(R.string.upload_active)
+                            msg = appContext!!.getString(R.string.upload_active)
                         }
                     }
                 } else {
