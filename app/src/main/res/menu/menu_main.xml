@@ -41,6 +41,13 @@
         android:icon="@mipmap/grz_hamburger_foreground"
         />
     <item
+        android:id="@+id/action_Hambullet"
+        android:title=""
+        app:showAsAction="always"
+        android:visible="false"
+        android:icon="@mipmap/grz_hambullet_foreground"
+        />
+    <item
         android:id="@+id/action_Settings"
         android:title=""
         app:showAsAction="always"

@@ -150,6 +150,9 @@ public class SettingsActivity :
 
         // http request to communicate with a website
         fun httpCheckForUpdate(context: Context, url: String, updateCheckPref: Preference, updateCheckTitle: String, appVer: String, updateLinkPref: Preference ) {
+            // reset MainActivity available update flag
+            MainActivity.grzlogUpdateAvailable = false
+            // build web request
             val queue = Volley.newRequestQueue(context)
             val stringRequest = StringRequest(Request.Method.GET, url,
                 object : Response.Listener<String?> {
@@ -176,6 +179,8 @@ public class SettingsActivity :
                                 }
                             }
                             if (updateAvailable) {
+                                // inform MainActivity about available update
+                                MainActivity.grzlogUpdateAvailable = true
                                 // build update website link
                                 var updateLink = "https://github.com/grzwolf/GrzLog/releases/tag/v" + tagVersion
                                 updateCheckPref.setTitle(updateCheckTitle + " - " + context.getString(R.string.available) + " v" + tagVersion)

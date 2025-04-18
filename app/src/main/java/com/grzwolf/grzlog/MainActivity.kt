@@ -233,6 +233,7 @@ class MainActivity : AppCompatActivity(),
                     // check for app update
                     checkForAppUpdate()
                 } else {
+                    grzlogUpdateAvailable = false
                     Toast.makeText(getApplicationContext(), "Internet error", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -3430,6 +3431,8 @@ class MainActivity : AppCompatActivity(),
                 // hide irrelevant menu items
                 var item = appMenu!!.findItem(R.id.action_Hamburger)
                 item.isVisible = false
+                item = appMenu!!.findItem(R.id.action_Hambullet)
+                item.isVisible = false
                 item = appMenu!!.findItem(R.id.action_Settings)
                 item.isVisible = false
                 item = appMenu!!.findItem(R.id.action_ChangeFolder)
@@ -3581,11 +3584,22 @@ class MainActivity : AppCompatActivity(),
             if (showAll) {
                 item = appMenu!!.findItem(R.id.action_Hamburger)
                 item.isVisible = false
+                item = appMenu!!.findItem(R.id.action_Hambullet)
+                item.isVisible = false
                 item = appMenu!!.findItem(R.id.action_Settings)
                 item.isVisible = true
             } else {
-                item = appMenu!!.findItem(R.id.action_Hamburger)
-                item.isVisible = true
+                if (grzlogUpdateAvailable) {
+                    item = appMenu!!.findItem(R.id.action_Hamburger)
+                    item.isVisible = false
+                    item = appMenu!!.findItem(R.id.action_Hambullet)
+                    item.isVisible = true
+                } else {
+                    item = appMenu!!.findItem(R.id.action_Hamburger)
+                    item.isVisible = true
+                    item = appMenu!!.findItem(R.id.action_Hambullet)
+                    item.isVisible = false
+                }
                 item = appMenu!!.findItem(R.id.action_Settings)
                 item.isVisible = false
             }
@@ -3773,7 +3787,7 @@ class MainActivity : AppCompatActivity(),
         // selector
         val id = item.itemId
         // HAMBURGER / GEAR: show settings activity
-        if (id == R.id.action_Hamburger || id == R.id.action_Settings) {
+        if (id == R.id.action_Hamburger || id == R.id.action_Hambullet || id == R.id.action_Settings) {
             // Hamburger always cancels undo
             ds.undoSection = ""
             ds.undoText = ""
@@ -7457,6 +7471,7 @@ class MainActivity : AppCompatActivity(),
 
     // http request to communicate with GitHub GrzLog release site
     fun checkForAppUpdate() {
+        grzlogUpdateAvailable = false
         val queue = Volley.newRequestQueue(this)
         var appVer = getString(R.string.tag_version).substring(1)
         val stringRequest = StringRequest(Request.Method.GET, getString(R.string.githubGrzLog),
@@ -7474,16 +7489,17 @@ class MainActivity : AppCompatActivity(),
                                 }
                             }
                         }
-                        var updateAvailable = false
                         var tagVersion = ""
                         for (tagVer in listTags) {
                             if (isUpdateDue(appVer.split('.').toTypedArray(), tagVer.split('.').toTypedArray())) {
-                                updateAvailable = true
                                 tagVersion = tagVer
+                                grzlogUpdateAvailable = true
                                 break
                             }
                         }
-                        if (updateAvailable) {
+                        if (grzlogUpdateAvailable) {
+                            // change menu bar hamburger icon to hamburger with bullet
+                            showMenuItems(false)
                             // make notification about available app update
                             val intent = Intent(applicationContext, MainActivity::class.java)
                             showNotification(MainActivity.contextMainActivity, "GrzLog", getString(R.string.availableUpdate) + " v" + tagVersion, intent, 1)
@@ -7576,6 +7592,10 @@ class MainActivity : AppCompatActivity(),
         // returning from other GrzLog activities shall not show reminders again
         var showAppReminders = true
         var temporaryBackground = false
+
+        @JvmField
+        // flag indicating a GrzLog update is available
+        var grzlogUpdateAvailable = false
 
         // make context accessible from everywhere
         lateinit var contextMainActivity: MainActivity
