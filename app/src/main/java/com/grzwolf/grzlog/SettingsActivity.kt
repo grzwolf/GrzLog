@@ -236,8 +236,8 @@ public class SettingsActivity :
         }
 
         // runnable to update status of active services
-        private val updateHandler = Handler()
-        private var updateRunnable: Runnable = Runnable {
+        private val srvStatusHandler = Handler()
+        private var srvStatusRunnable: Runnable = Runnable {
             run {
                 // pref summary update
                 var msg = ""
@@ -261,7 +261,7 @@ public class SettingsActivity :
                 }
                 stopSrvPref!!.summary = msg
                 // run & repeat it
-                updateHandler.postDelayed(updateRunnable, 5000)
+                srvStatusHandler.postDelayed(srvStatusRunnable, 5000)
             }
         }
 
@@ -271,8 +271,8 @@ public class SettingsActivity :
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
             val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 
-            // check status of services
-            updateRunnable.run()
+            // check status of GrzLog services
+            srvStatusRunnable.run()
 
             // new input placement
             val nip = findPreference<ListPreference>("chosenPlacement")
