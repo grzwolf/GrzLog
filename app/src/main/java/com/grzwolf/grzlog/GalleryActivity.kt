@@ -47,7 +47,7 @@ class GalleryActivity : AppCompatActivity() {
         val actionBar = supportActionBar
         actionBar?.setDisplayHomeAsUpEnabled(true)
 
-        // local app reminders
+        // quit local app reminders
         MainActivity.showAppReminders = false
 
         // return a selected attachment
@@ -67,7 +67,7 @@ class GalleryActivity : AppCompatActivity() {
         } else {
             returnPayload = true
         }
-        // GridView is the main UI component
+        // gridView is the main Gallery UI component
         gridView = findViewById(R.id.galleryList)
         // click shall provide a larger image
         gridView.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
@@ -138,7 +138,7 @@ class GalleryActivity : AppCompatActivity() {
             // MainActivity silently fills full GrzLog gallery adapter data in background
             adapter = MainActivity.appGalleryAdapter
             // check need for reload
-            if (MainActivity.appGallerySortedByDate != sortByDate) {
+            if (MainActivity.appGallerySortedByDate != sortByDate || MainActivity.appGalleryAdapter == null) {
                 prevSelGridItem = -1
                 gridItemSelected = false
                 getAppGalleryThumbs(sortByDate)
@@ -158,6 +158,17 @@ class GalleryActivity : AppCompatActivity() {
             val adapterDummy = ThumbGridAdapter(this@GalleryActivity, listDummy.toTypedArray())
             gridView.setAdapter(adapterDummy)
             adapterDummy.notifyDataSetChanged()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // do not care about orphans
+        if (!showOrphans) {
+            // GrzLog gallery adapter might have changed and GalleryActivity bypassed onCreate
+            if (MainActivity.appGalleryAdapter == null || adapter == null) {
+                getAppGalleryThumbs(true)
+            }
         }
     }
 
@@ -341,7 +352,7 @@ class GalleryActivity : AppCompatActivity() {
                             }
                         }
                     }
-                    // update shown GrzLog gallery
+                    // update GrzLog gallery
                     prevSelGridItem = -1
                     gridItemSelected = false
                     adapter!!.selGridItemChk = false

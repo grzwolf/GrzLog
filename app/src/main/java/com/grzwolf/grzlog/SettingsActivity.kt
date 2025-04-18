@@ -1441,6 +1441,9 @@ public class SettingsActivity :
 
             // dialog dismiss listener
             fun Dialog?.setOnDismissListener(success: Boolean) {
+                // GrzLog gallery might have changed, so let it re read at next usage
+                MainActivity.appGalleryAdapter = null
+                // two possible outcomes
                 if (success) {
                     // in case of success, delete temporary BAK folder
                     val bakFolder = File(outPath + "Bak")
@@ -1621,7 +1624,8 @@ public class SettingsActivity :
                         " " + bakFileInfo +
                         context.getString(R.string.noUndo)
             )
-            adYesNo.setPositiveButton(R.string.yes) { dialog, which -> // signal to re read complete app file data in MainActivity onCreate
+            adYesNo.setPositiveButton(R.string.yes) { dialog, which ->
+                // signal to re read complete app file data in MainActivity onCreate
                 MainActivity.reReadAppFileData = true
                 // signal to NOT generate the simple txt-backup in MainActivity onPause
                 MainActivity.returningFromRestore = true
@@ -1653,7 +1657,8 @@ public class SettingsActivity :
                         .show()
                 }
             }
-            adYesNo.setNegativeButton(R.string.no) { dialog, which -> // delete local backup zip in /Import made from a /Download backup
+            adYesNo.setNegativeButton(R.string.no) { dialog, which ->
+                // delete local backup zip in /Import made from a /Download backup
                 if (fileToDelete.length != 0) {
                     val file = File(fileToDelete)
                     file.delete()
