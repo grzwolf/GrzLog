@@ -1197,7 +1197,8 @@ public class SettingsActivity :
             }
         }
 
-        // monitor ZIP upload to GDrive
+        // monitor ZIP upload to GDrive:
+        // b/c it's unknown, what other network traffic exists, this metering might be totally wrong
         fun monitorZipUpload(
             context: Context,
             nm: NotificationManagerCompat?,
@@ -1233,6 +1234,10 @@ public class SettingsActivity :
                 // if uploaded bytes exceed fileLength, don't check for errors anymore
                 if (txSoFar >= fileLength) {
                     doErrorCheck = false
+                }
+                // if uploaded bytes >= 2 * fileLength, ASSUME the upload is done
+                if (txSoFar >= 2 * fileLength) {
+                    return true
                 }
                 // latest upload chunk
                 txDeltaNow = txSoFar - txSoFarPrev
