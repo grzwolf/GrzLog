@@ -862,7 +862,7 @@ public class SettingsActivity :
             stopSrvPref!!.onPreferenceClickListener =
                 Preference.OnPreferenceClickListener { // ... are you sure ...
                     val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
-                    builder.setTitle(getString(R.string.quit_active_services) + stopSrvPref!!.summary)
+                    builder.setTitle(getString(R.string.quit_active_services) + " \'" + stopSrvPref!!.summary + "\'")
                     var msg = getString(R.string.really)
                     builder.setMessage(msg)
                     // YES
