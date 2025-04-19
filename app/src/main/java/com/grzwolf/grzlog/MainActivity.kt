@@ -9116,6 +9116,6 @@ class DataStore : Serializable {
 
     companion object {
         // number of folders allowed
-        const val SECTIONS_COUNT = 30
+        const val SECTIONS_COUNT = 50
     }
 }
