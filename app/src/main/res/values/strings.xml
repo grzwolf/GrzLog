@@ -262,7 +262,7 @@
     <string name="makeBackup">Consider making a backup</string>
     <string name="useBackupReminder">Backup outdated reminder</string>
     <string name="nextReminderOneWeek">Next reminder in one week?</string>
-    <string name="backupExecution">silent backup</string>
+    <string name="backupExecution">Backup silent</string>
     <string name="background">in background</string>
     <string name="clickSelectedItemsToClipboard">Click on selection</string>
     <string name="showLink">show attachment</string>
@@ -351,6 +351,8 @@
     <string name="and_upload_active">" and Upload active"</string>
     <string name="quit_active_services">Quit </string>
     <string name="really">Really?</string>
+    <string name="pickBak">Pick a backup file</string>
+    <string name="pickExplain">This step is needed, if the backup file GrzLog.zip was not created by the current instance of GrzLog.</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

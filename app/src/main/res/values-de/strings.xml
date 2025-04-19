@@ -350,6 +350,8 @@
     <string name="and_upload_active">" und Upload aktiv"</string>
     <string name="quit_active_services">Beenden </string>
     <string name="really">Wirklich?</string>
+    <string name="pickBak">Backup Datei wählen</string>
+    <string name="pickExplain">Dieser Schritt ist nötig, wenn das Backup GrzLog.zip nicht von der aktuellen Instanz von GrzLog erzeugt wurde.</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

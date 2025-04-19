@@ -496,7 +496,7 @@ public class SettingsActivity :
                 true
             }
 
-            // action check app update available
+            // action check app update available, only DEBUG builds will come from github
             val updateLinkPref = findPreference("UpdateLink") as Preference?
             val checkUpdatePref = findPreference("AppCheckUpdate") as Preference?
             if (BuildConfig.DEBUG) {
@@ -524,6 +524,10 @@ public class SettingsActivity :
             } else {
                 updateLinkPref?.isVisible = false
                 checkUpdatePref?.isVisible = false
+            }
+            // unconditionally check for updates
+            if (BuildConfig.DEBUG) {
+                checkUpdatePref?.performClick()
             }
 
             // action execute app update
@@ -608,11 +612,6 @@ public class SettingsActivity :
                 }
             } else {
                 execUpdatePref?.isVisible = false
-            }
-
-            //
-            if (BuildConfig.DEBUG) {
-                checkUpdatePref?.performClick()
             }
 
             // tricky fake buttons in preferences: https://stackoverflow.com/questions/2697233/how-to-add-a-button-to-preferencescreen
@@ -746,11 +745,23 @@ public class SettingsActivity :
             // action after restore from file list
             val restoreFromFileList = findPreference("RestoreFromFiles") as Preference?
             restoreFromFileList!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
-                val intent = Intent(Intent.ACTION_GET_CONTENT)
-                intent.type = "*/*"
-                intent.addCategory(Intent.CATEGORY_OPENABLE)
-                // https://stackoverflow.com/questions/10564474/wrong-requestcode-in-onactivityresult getActivity().startActivityForResult
-                requireActivity().startActivityForResult(intent, MainActivity.PICK.ZIP)
+                // ask
+                decisionBox(
+                    requireContext(),
+                    DECISION.OKCANCEL,
+                    getString(R.string.pickBak),
+                    getString(R.string.pickExplain),
+                    // runner positive
+                    {
+                        val intent = Intent(Intent.ACTION_GET_CONTENT)
+                        intent.type = "*/*"
+                        intent.addCategory(Intent.CATEGORY_OPENABLE)
+                        // https://stackoverflow.com/questions/10564474/wrong-requestcode-in-onactivityresult getActivity().startActivityForResult
+                        requireActivity().startActivityForResult(intent, MainActivity.PICK.ZIP)
+                    },
+                    // runner negative
+                    null
+                )
                 true
             }
 
