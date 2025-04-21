@@ -252,7 +252,7 @@
     <string name="useExistingResults">Results for:</string>
     <string name="wwwDisabled">WWW text links are disabled</string>
     <string name="autoFillSkippedDates">Add skipped dates?</string>
-    <string name="askAutoFillSkippedDates">Ask for auto fill on skipped dates</string>
+    <string name="askAutoFillSkippedDates">Ask to auto fill skipped dates</string>
     <string name="askNever">never ask</string>
     <string name="askAlways">always ask</string>
     <string name="selectNextTen">Select next 10 items</string>
