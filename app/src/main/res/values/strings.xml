@@ -353,6 +353,8 @@
     <string name="really">Really?</string>
     <string name="pickBak">Pick a backup file</string>
     <string name="pickExplain">This step is needed, if the backup file GrzLog.zip was not created by the current instance of GrzLog.</string>
+    <string name="searchOrphans">Searching orphaned attachments</string>
+    <string name="repeatSearch">Repeat search.</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

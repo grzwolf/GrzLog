@@ -1281,7 +1281,7 @@ class ProgressWindow(context: Context, message: String) {
         set(value) {
             field = value
         }
-    var incCount = 0 // if total event number is large, incCount reduces the the progress bar render load by 1% steps
+    var incCount = 0 // if total event number is large, incCount reduces the progress bar render load by 1% steps
         set(value) {
             field = value
             eventCollector += 1f

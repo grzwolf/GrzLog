@@ -800,7 +800,7 @@ public class SettingsActivity :
             tidyOrphanes!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 val appName = appContext!!.applicationInfo.loadLabel(appContext!!.packageManager).toString()
                 val appAttachmentsPath = appContext!!.getExternalFilesDir(null)!!.absolutePath + "/Images"
-                MainActivity.tidyOrphanedFiles(this.context as Context, appAttachmentsPath, appName)
+                MainActivity.generateTidyOrphansProgress(this.context as Context, appAttachmentsPath, appName)
                 true
             }
 

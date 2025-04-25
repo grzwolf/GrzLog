@@ -11,7 +11,6 @@ import android.content.ClipboardManager
 import android.content.DialogInterface.OnMultiChoiceClickListener
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.database.DataSetObserver
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.graphics.pdf.PdfDocument
@@ -53,7 +52,6 @@ import androidx.core.graphics.BlendModeCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
-import androidx.core.view.setPadding
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -7829,108 +7827,146 @@ class MainActivity : AppCompatActivity(),
         //
         // verify attachment links, make attachments app local (if needed) and delete orphaned files
         //
-        fun tidyOrphanedFiles(context: Context, appAttachmentsPath: String, appName: String) {
-            // clear app cache before doing anything
-            deleteAppDataCache(MainActivity.contextMainActivity)
+        fun generateTidyOrphansProgress(
+            context: Context,
+            appAttachmentsPath: String,
+            appName: String
+        ) {
+            // init vars
+            var numOrphaned = 0
+            var stringOrphans = ArrayList<String>()
             val filePath = File(appAttachmentsPath)
             val attachmentsList = filePath.listFiles()
             val fileUsed = arrayOfNulls<Boolean>(attachmentsList!!.size)
-            var stringOrphans = ArrayList<String>()
             Arrays.fill(fileUsed, false)
-            var oriText: String
-            var newText: String
-            // iterate all data section of DataStore
+            // generate a progress window
+            var progressWindow = ProgressWindow(context, context.getString(R.string.searchOrphans) )
+            var maxProgressCount = 0
             for (dsNdx in ds.dataSection.indices) {
-
-                // get one data section as string
-                oriText = ds.dataSection[dsNdx]
-                newText = ""
-
-                // loop the split text line
-                val textLines = oriText.split("\\n+".toRegex()).toTypedArray()
-                for (i in textLines.indices) {
-                    var textLine = textLines[i]
-                    val m = PATTERN.UriLink.matcher(textLine)
-                    // deal with a line containing a link pattern
-                    if (m.find()) {
-                        val lnkFull = m.group()
-                        // only deal with lines containing "::::/", which is a file, not a www link
-                        if (lnkFull.contains("::::/")) {
-                            // get link parts: key and uri
-                            val lnkStr = lnkFull.substring(1, lnkFull.length - 1)
-                            var keyStrOri = ""
-                            var uriStrOri = ""
-                            var uriLocOri = ""
-                            try {
-                                val lnkParts = lnkStr.split("::::".toRegex()).toTypedArray()
-                                if (lnkParts != null && lnkParts.size == 2) {
-                                    keyStrOri = lnkParts[0]
-                                    uriStrOri = Uri.parse(lnkParts[1]).path!!
-                                    uriLocOri = uriStrOri
-                                    if (uriStrOri.startsWith("/")) {
-                                        uriLocOri = uriStrOri
-                                        uriStrOri = "file://$appAttachmentsPath$uriStrOri"
+                maxProgressCount += ds.dataSection[dsNdx].length
+            }
+            progressWindow.absCount = maxProgressCount.toFloat() / 30.0f // very, very coarse estimate
+            // local progress window dialog dismiss listener is called, after blocking task finished
+            fun setOnDismissListener(success: Boolean) {
+                if (success) {
+                    // ask to show or delete unused files in app folder
+                    try {
+                        // two choices: navigate to, show + cancel
+                        twoChoicesDialog(context,
+                            context.getString(R.string.CleanupFiles) + ": " + numOrphaned,
+                            context.getString(R.string.show_or_delete),
+                            context.getString(R.string.show),
+                            context.getString(R.string.delete),
+                            { // runner CANCEL
+                            },
+                            { // runner show orphans
+                                showAppGallery(context, contextMainActivity as Activity, true, stringOrphans, false)
+                            },
+                            { // runner delete orphans
+                                deleteOrphanes(context, attachmentsList, fileUsed)
+                            }
+                        )
+                    } catch(e: Exception) {
+                        centeredToast(context, e.message, Toast.LENGTH_LONG)
+                    }
+                } else {
+                    okBox(context, context.getString(R.string.Failure), context.getString(R.string.repeatSearch), { null })
+                }
+            }
+            // search orphans async in another thread
+            try {
+                // show progress window
+                progressWindow.show()
+                // real work
+                Thread {
+                    progressWindow.let { it
+                        // clear app cache before doing anything
+                        deleteAppDataCache(MainActivity.contextMainActivity)
+                        var oriText: String
+                        var newText: String
+                        // iterate all data section of DataStore
+                        for (dsNdx in ds.dataSection.indices) {
+                            // get one data section as string
+                            oriText = ds.dataSection[dsNdx]
+                            newText = ""
+                            // loop the split text line
+                            val textLines = oriText.split("\\n+".toRegex()).toTypedArray()
+                            for (i in textLines.indices) {
+                                // update progress via progressWindow ("it") in foreground
+                                (context as Activity).runOnUiThread(Runnable {
+                                    it.incCount++
+                                })
+                                // deal with one line containing a link pattern
+                                var textLine = textLines[i]
+                                val m = PATTERN.UriLink.matcher(textLine)
+                                if (m.find()) {
+                                    val lnkFull = m.group()
+                                    // only deal with lines containing "::::/", which is a file, not a www link
+                                    if (lnkFull.contains("::::/")) {
+                                        // get link parts: key and uri
+                                        val lnkStr = lnkFull.substring(1, lnkFull.length - 1)
+                                        var keyStrOri = ""
+                                        var uriStrOri = ""
+                                        var uriLocOri = ""
+                                        try {
+                                            val lnkParts = lnkStr.split("::::".toRegex()).toTypedArray()
+                                            if (lnkParts != null && lnkParts.size == 2) {
+                                                keyStrOri = lnkParts[0]
+                                                uriStrOri = Uri.parse(lnkParts[1]).path!!
+                                                uriLocOri = uriStrOri
+                                                if (uriStrOri.startsWith("/")) {
+                                                    uriLocOri = uriStrOri
+                                                    uriStrOri = "file://$appAttachmentsPath$uriStrOri"
+                                                }
+                                            }
+                                        } finally {
+                                        }
+                                        // copy file to local app storage, or skip copy if file is already there
+                                        val localUriStr = copyAttachmentToApp(context, uriStrOri, null, false, appAttachmentsPath)
+                                        // set new link in current line (only needed if compared strings deviate)
+                                        if (localUriStr != uriLocOri) {
+                                            textLine = textLine.replace(lnkFull, "[$keyStrOri::::$localUriStr]")
+                                        }
+                                        // check file usage
+                                        for (j in attachmentsList.indices) {
+                                            val fn = attachmentsList[j].absolutePath
+                                            if (fn.endsWith(localUriStr)) {
+                                                fileUsed[j] = true
+                                                break
+                                            }
+                                        }
                                     }
                                 }
-                            } finally {
+                                // all data in a single line
+                                newText += trimEndAll(textLine) + "\n"
+                                // write line back to DataStore
+                                ds.dataSection[dsNdx] = newText
                             }
-                            // copy file to local app storage, or skip copy if file is already there
-                            val localUriStr = copyAttachmentToApp(context, uriStrOri, null, false, appAttachmentsPath)
-                            // set new link in current line (only needed if compared strings deviate)
-                            if (localUriStr != uriLocOri) {
-                                textLine = textLine.replace(lnkFull, "[$keyStrOri::::$localUriStr]")
-                            }
-                            // check file usage
-                            for (j in attachmentsList.indices) {
-                                val fn = attachmentsList[j].absolutePath
-                                if (fn.endsWith(localUriStr)) {
-                                    fileUsed[j] = true
-                                    break
-                                }
+                        }
+                        // write DataStore to app file
+                        var appPath = File(appAttachmentsPath).parent
+                        if (appPath != null) {
+                            writeAppData(appPath.toString(), ds, appName)
+                        }
+                        // get number of orphaned files and fill list with orphans
+                        for (j in fileUsed.indices) {
+                            if (!fileUsed[j]!!) {
+                                numOrphaned++
+                                stringOrphans.add(attachmentsList[j].name)
                             }
                         }
                     }
-                    // all data in a single line
-                    newText += trimEndAll(textLine) + "\n"
-                    // write line back to DataStore
-                    ds.dataSection[dsNdx] = newText
-                }
-            }
-
-            // write DataStore to app file
-            var appPath = File(appAttachmentsPath).parent
-            if (appPath != null) {
-                writeAppData(appPath.toString(), ds, appName)
-            }
-
-            // get number of orphaned files and fill list with orphans
-            var numOrphaned = 0
-            for (j in fileUsed.indices) {
-                if (!fileUsed[j]!!) {
-                    numOrphaned++
-                    stringOrphans.add(attachmentsList[j].name)
-                }
-            }
-
-            // ask to show or delete unused files in app folder
-            try {
-                // two choices: navigate to, show + cancel
-                twoChoicesDialog(context,
-                    context.getString(R.string.CleanupFiles) + ": " + numOrphaned,
-                    context.getString(R.string.show_or_delete),
-                    context.getString(R.string.show),
-                    context.getString(R.string.delete),
-                    { // runner CANCEL
-                    },
-                    { // runner show orphans
-                        showAppGallery(context, contextMainActivity as Activity, true, stringOrphans, false)
-                    },
-                    { // runner delete orphans
-                        deleteOrphanes(context, attachmentsList, fileUsed)
-                    }
-                )
-            } catch(e: Exception) {
-                var i = 5
+                    // jump back to UI and tell success
+                    (context as Activity).runOnUiThread(Runnable {
+                        setOnDismissListener(true)
+                        progressWindow.close()
+                    })
+                }.start()
+            } catch (e: Exception) {
+                // tell UI, a failure happened
+                e.printStackTrace()
+                setOnDismissListener(false)
+                progressWindow.close()
             }
         }
         // delete unused files from app folder /Images
@@ -7949,13 +7985,14 @@ class MainActivity : AppCompatActivity(),
             if (filesDeleted > 0) {
                 getAppGalleryThumbsSilent(contextMainActivity, true)
             }
-            // show result
+            // show deletion result
             okBox(
                 context,
                 context.getString(R.string.CleanupFiles),
                 filesDeleted.toString() + " " + context.getString(R.string.unusedFilesDeleted)
             )
         }
+
         // DataStore serialization write
         fun writeAppData(storagePath: String, data: DataStore?, appName: String) {
             try {
