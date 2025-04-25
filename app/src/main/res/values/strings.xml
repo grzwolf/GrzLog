@@ -355,6 +355,7 @@
     <string name="pickExplain">This step is needed, if the backup file GrzLog.zip was not created by the current instance of GrzLog.</string>
     <string name="searchOrphans">Searching orphaned attachments</string>
     <string name="repeatSearch">Repeat search.</string>
+    <string name="returnToMain">Returning now to main window to read changed data.</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

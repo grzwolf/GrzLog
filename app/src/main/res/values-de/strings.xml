@@ -354,6 +354,7 @@
     <string name="pickExplain">Dieser Schritt ist nötig, wenn das Backup GrzLog.zip nicht von der aktuellen Instanz von GrzLog erzeugt wurde.</string>
     <string name="searchOrphans">Suche verwaiste Dateianhänge</string>
     <string name="repeatSearch">Suche ggf. wiederholen.</string>
+    <string name="returnToMain">Hauptfenster liest nun die neuen Daten.</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

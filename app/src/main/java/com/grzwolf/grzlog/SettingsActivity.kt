@@ -62,6 +62,10 @@ public class SettingsActivity :
         if (s == null) {
             return
         }
+        // update data in main after data restore from a backup
+        if (MainActivity.appGalleryAdapter == null) {
+            MainActivity.reReadAppFileData = true
+        }
         if (s == "newAtBottom") {
             MainActivity.reReadAppFileData = true
         }
@@ -104,7 +108,7 @@ public class SettingsActivity :
 
         // make volatile data static
         appContext = applicationContext
-        activity = this
+        settingsActivity = this
         setContentView(R.layout.settings_activity)
         supportFragmentManager
             .beginTransaction()
@@ -775,7 +779,7 @@ public class SettingsActivity :
                 }
                 // generate a controlling intent to return to Settings, bc. from here the start was ignited
                 MainActivity.intentSettings = Intent(MainActivity.contextMainActivity, SettingsActivity::class.java)
-                // show gallery
+                // show gallery: 2x activity == FragmentActivity to be able to return to here
                 MainActivity.showAppGallery(activity as Context, activity as Activity, false, null, true)
                 true
             }
@@ -790,7 +794,7 @@ public class SettingsActivity :
                 }
                 // generate a controlling intent to return to Settings, bc. from here the start was ignited
                 MainActivity.intentSettings = Intent(MainActivity.contextMainActivity, SettingsActivity::class.java)
-                // show gallery
+                // show gallery: 2x activity == FragmentActivity to be able to return to here
                 MainActivity.showAppGallery(activity as Context, activity as Activity, false, null, false)
                 true
             }
@@ -973,9 +977,9 @@ public class SettingsActivity :
     companion object {
         var appContext: Context? = null
             private set
-        private var activity: AppCompatActivity? = null
+        private var settingsActivity: AppCompatActivity? = null
         fun getActivity(): Context? {
-            return activity
+            return settingsActivity
         }
 
         // need val in static context
@@ -1468,7 +1472,8 @@ public class SettingsActivity :
                     okBox(
                         context,
                         context.getString(R.string.ZIPrestored) + " = " + context.getString(R.string.success),
-                        ""
+                        context.getString(R.string.returnToMain),
+                        { settingsActivity!!.onBackPressed() }
                     )
                 } else {
                     // if anything went wrong, delete the folder, which failed during restore
