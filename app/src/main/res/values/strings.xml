@@ -356,6 +356,8 @@
     <string name="searchOrphans">Searching orphaned attachments</string>
     <string name="repeatSearch">Repeat search.</string>
     <string name="returnToMain">Returning now to main window to read changed data.</string>
+    <string name="download_progress">download progress</string>
+    <string name="download_failed">"download failed: "</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

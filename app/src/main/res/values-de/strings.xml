@@ -355,6 +355,8 @@
     <string name="searchOrphans">Suche verwaiste Dateianhänge</string>
     <string name="repeatSearch">Suche ggf. wiederholen.</string>
     <string name="returnToMain">Hauptfenster liest nun die neuen Daten.</string>
+    <string name="download_progress">Download Fortschritt</string>
+    <string name="download_failed">"Download Fehler: "</string>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

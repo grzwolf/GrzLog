@@ -11,7 +11,6 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
@@ -53,11 +52,11 @@ class DownloadController(private val context: Context, private val url: String, 
 
         // enqueue a new download as referenced and toast the action
         val downloadId: Long = downloadManager.enqueue(request)
-        Toast.makeText(context, "Downloading " + fileName, Toast.LENGTH_LONG)
+        Toast.makeText(context, "Download " + fileName, Toast.LENGTH_LONG)
             .show()
 
         // create & show progress window
-        var progressWindow = ProgressWindow(context, "download progress" )
+        var progressWindow = ProgressWindow(context, context.getString(R.string.download_progress) )
         progressWindow.dialog?.setCancelable(true)
         progressWindow.show()
         Thread {
@@ -104,31 +103,21 @@ class DownloadController(private val context: Context, private val url: String, 
                 intent: Intent
             ) {
                 try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        val contentUri = FileProvider.getUriForFile(
-                            context,
-                            BuildConfig.APPLICATION_ID + PROVIDER_PATH,
-                            File(destination)
-                        )
-                        val install = Intent(Intent.ACTION_VIEW)
-                        install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        install.data = contentUri
-                        context.startActivity(install)
-                        context.unregisterReceiver(this)
-                    } else {
-                        val install = Intent(Intent.ACTION_VIEW)
-                        install.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        install.setDataAndType(
-                            uri,
-                            APP_INSTALL_PATH
-                        )
-                        context.startActivity(install)
-                        context.unregisterReceiver(this)
-                    }
+                    val contentUri = FileProvider.getUriForFile(
+                        context,
+                        BuildConfig.APPLICATION_ID + PROVIDER_PATH,
+                        File(destination)
+                    )
+                    val install = Intent(Intent.ACTION_VIEW)
+                    install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    install.data = contentUri
+                    context.startActivity(install)
+                    context.unregisterReceiver(this)
                 } catch (e: Exception) {
                     val data = e.message.toString()
-                    Toast.makeText(context, "download failed", Toast.LENGTH_LONG)
+                    Toast.makeText(context,
+                        context.getString(R.string.download_failed) + data, Toast.LENGTH_LONG)
                         .show()
                 }
             }
@@ -136,6 +125,7 @@ class DownloadController(private val context: Context, private val url: String, 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), RECEIVER_EXPORTED)
         } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
             context.registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
         }
     }
