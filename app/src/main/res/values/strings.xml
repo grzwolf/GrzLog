@@ -17,7 +17,6 @@
     <string name="newInputPlace">New input placement</string>
     <string name="newInputBottom">Show new input at bottom</string>
     <string name="newInputTop">Show new input at top</string>
-    <string name="darkMode">Dark Mode</string>
     <string name="backup_mode">Backup mode</string>
     <string name="backup_automated_in_background">Backup automated in background</string>
     <string name="backup_manually">Backup manually</string>
@@ -358,6 +357,21 @@
     <string name="returnToMain">Returning now to main window to read changed data.</string>
     <string name="download_progress">download progress</string>
     <string name="download_failed">"download failed: "</string>
+    <string name="themeDark">"Dark"</string>
+    <string name="themeLight">"Light"</string>
+    <string name="selectTheme">Select Theme</string>
+    <string name="chosenTheme">chosenTheme</string>
+    <string name="currentTheme">"Current theme is: "</string>
+    <string name="tmpDayNight">Fix MagicOS 8 too bright dialogs</string>
+    <string name="tmpDayNightSummary">Click here, if dialogs appear bright on white</string>
+    <string-array name="themeArray_Names">
+        <item>@string/themeDark</item>
+        <item>@string/themeLight</item>
+    </string-array>
+    <string-array name="themeArray_Values">
+        <item>Dark</item>
+        <item>Light</item>
+    </string-array>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>

@@ -22,6 +22,7 @@ import android.provider.Settings
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -69,7 +70,7 @@ public class SettingsActivity :
         if (s == "newAtBottom") {
             MainActivity.reReadAppFileData = true
         }
-        if (s == "darkMode") {
+        if (s == getString(R.string.chosenTheme)) {
             MainActivity.reReadAppFileData = true
         }
         if (s == "AppAtStartCheckUpdateFlag") {
@@ -93,10 +94,19 @@ public class SettingsActivity :
 
         // apply theme locally to settings; must be called before super.onCreate
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-        if (sharedPref.getBoolean("darkMode", false)) {
-            setTheme(R.style.ThemeOverlay_AppCompat_Dark)
-        } else {
-            setTheme(R.style.ThemeOverlay_AppCompat_Light)
+        var theme = sharedPref.getString(getString(R.string.chosenTheme), "Dark")
+        when (theme) {
+            "Dark"      -> setTheme(R.style.ThemeOverlay_AppCompat_Dark)
+            "Light"     -> setTheme(R.style.ThemeOverlay_AppCompat_Light)
+            else        -> {
+                             if (theme == "tmpdaynight") {
+                                 // supposed to fix too bright dialogs after a MagicOS 8 update
+                                 // --> MainAcvtivity will override such theme after being back there
+                                 setTheme(R.style.ThemeOverlay_AppCompat_DayNight)
+                             } else {
+                                 setTheme(R.style.ThemeOverlay_AppCompat_Dark)
+                             }
+                           }
         }
         super.onCreate(savedInstanceState)
 
@@ -277,6 +287,24 @@ public class SettingsActivity :
 
             // check status of GrzLog services
             srvStatusRunnable.run()
+
+            // theme chooser
+            val themePreference = findPreference<Preference>(getString(R.string.chosenTheme)) as ListPreference?
+            themePreference!!.summary = getString(R.string.currentTheme) + sharedPref.getString(getString(R.string.chosenTheme), "?")
+            themePreference!!.setOnPreferenceChangeListener { preference, newValue ->
+                if (preference is ListPreference) {
+                    // note: prefrence gets automatically updated after leaving setOnPreferenceChangeListener
+                    val index = preference.findIndexOfValue(newValue.toString())
+                    val entry = preference.entries.get(index)
+                    val entryvalue = preference.entryValues.get(index)
+                    themePreference!!.summary = getString(R.string.currentTheme) + entry
+                    // restart settings activity to apply the theme
+                    requireActivity().startActivity(Intent(context, SettingsActivity::class.java))
+                    // close current settings activity
+                    (context as Activity).finish()
+                }
+                true
+            }
 
             // new input placement
             val nip = findPreference<ListPreference>("chosenPlacement")
@@ -912,6 +940,21 @@ public class SettingsActivity :
                     true
                 }
 
+            // action after set temporary theme
+            val brightDlgPref = findPreference("TempDayNight") as Preference?
+            brightDlgPref!!.onPreferenceClickListener =
+                Preference.OnPreferenceClickListener {
+                    // temporary set some other theme to fix potential MagicOS update bug
+                    // --> MainAcvtivity will override such theme after being back there
+                    val spe = sharedPref.edit()
+                    spe.putString(getString(R.string.chosenTheme), "tmpdaynight")
+                    spe.apply()
+                    // restart settings activity to apply the theme
+                    requireActivity().startActivity(Intent(context, SettingsActivity::class.java))
+                    // close current settings activity
+                    (context as Activity).finish()
+                    true
+                }
         }
     }
 

@@ -151,13 +151,19 @@ class MainActivity : AppCompatActivity(),
     override fun onCreate(savedInstanceState: Bundle?) {
         // dark mode OR light mode; call before super.onCreate
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-        if (sharedPref.getBoolean("darkMode", false)) {
-            setTheme(R.style.ThemeOverlay_AppCompat_Dark)
-        } else {
-            setTheme(R.style.ThemeOverlay_AppCompat_Light)
+        // set theme
+        var theme = sharedPref.getString(getString(R.string.chosenTheme), "?")
+        when (theme) {
+            "Dark"      -> setTheme(R.style.ThemeOverlay_AppCompat_Dark)
+            "Light"     -> setTheme(R.style.ThemeOverlay_AppCompat_Light)
+            else        -> {
+                             // set default theme after app installation or preference reset
+                             setTheme(R.style.ThemeOverlay_AppCompat_Dark)
+                             val spe = sharedPref.edit()
+                             spe.putString(getString(R.string.chosenTheme), "Dark")
+                             spe.apply()
+                           }
         }
-
-        // show in app reminder
         MainActivity.showAppReminders = true
         // register lock screen notification API26+: https://developer.android.com/training/notify-user/build-notification
         createNotificationChannels()
@@ -2566,15 +2572,11 @@ class MainActivity : AppCompatActivity(),
 
         // show a customized standard dialog to obtain a text input: https://stackoverflow.com/questions/10903754/input-text-dialog-android
         var fabPlusBuilder: AlertDialog.Builder?
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            fabPlusBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-            if (!sharedPref.getBoolean("darkMode", false)) {
-                fabPlus.inputAlertView!!.setTextColor(Color.WHITE)
-            }
-        } else {
-            fabPlusBuilder = AlertDialog.Builder(this@MainActivity)
-            // force always black color in EditText input of AlertDialog, otherwise input is white in dark theme
-            fabPlus.inputAlertView!!.setTextColor(Color.BLACK)
+        fabPlusBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
+        // set theme
+        var theme = sharedPref.getString(getString(R.string.chosenTheme), "Dark")
+        if (theme != "Dark") {
+            fabPlus.inputAlertView!!.setTextColor(Color.WHITE)
         }
         // title
         val head = SpannableString(getString(R.string.writeGrzLog))
@@ -4306,12 +4308,7 @@ class MainActivity : AppCompatActivity(),
         showMenuItemUndo()
         // CHANGE FOLDER
         var changeFolderBuilder: AlertDialog.Builder? = null
-        changeFolderBuilder =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-            } else {
-                AlertDialog.Builder(this@MainActivity)
-            }
+        changeFolderBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         changeFolderBuilder.setTitle(R.string.selectFolder)
         var selectedSectionTemp = ds.selectedSection
         var lastClickTime = System.currentTimeMillis()
@@ -5273,15 +5270,12 @@ class MainActivity : AppCompatActivity(),
                         }
                     })
                     var wwwBuilder: AlertDialog.Builder
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        wwwBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-                        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-                        if (!sharedPref.getBoolean("darkMode", false)) {
-                            tv.setTextColor(Color.WHITE)
-                        }
-                    } else {
-                        wwwBuilder = AlertDialog.Builder(this@MainActivity)
-                        tv.setTextColor(Color.BLACK)
+                    wwwBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
+                    // set theme
+                    val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                    var theme = sharedPref.getString(getString(R.string.chosenTheme), "Dark")
+                    if (theme != "Dark") {
+                        tv!!.setTextColor(Color.WHITE)
                     }
                     wwwBuilder.setTitle(getString(R.string.wwwLink))
                     wwwBuilder.setPositiveButton(
@@ -5411,15 +5405,11 @@ class MainActivity : AppCompatActivity(),
                     })
                     // edit builder
                     var editLinkBuilder: AlertDialog.Builder
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        editLinkBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-                        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-                        if (!sharedPref.getBoolean("darkMode", false)) {
-                            tv.setTextColor(Color.WHITE)
-                        }
-                    } else {
-                        editLinkBuilder = AlertDialog.Builder(this@MainActivity)
-                        tv.setTextColor(Color.BLACK)
+                    editLinkBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
+                    val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                    var theme = sharedPref.getString(getString(R.string.chosenTheme), "Dark")
+                    if (theme != "Dark") {
+                        tv!!.setTextColor(Color.WHITE)
                     }
                     // edit builder title
                     editLinkBuilder.setTitle(getString(R.string.editExistingLink))
@@ -8886,7 +8876,7 @@ internal class LvAdapter : BaseAdapter {
         this.context = context
         this.items = items
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(context!!)
-        if (sharedPref.getBoolean("darkMode", false)) {
+        if (sharedPref.getString("chosenTheme", "Dark") == "Dark") {
             this.iconColor = R.color.lightskyblue
         } else {
             this.iconColor = R.color.royalblue

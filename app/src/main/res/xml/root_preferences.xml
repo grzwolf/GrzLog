@@ -88,9 +88,12 @@
             app:key="openLinks"
             app:title="@string/openLinksInBrowser" />
 
-        <SwitchPreferenceCompat
-            app:key="darkMode"
-            app:title="@string/darkMode" />
+        <ListPreference
+            android:title="@string/selectTheme"
+            android:key="@string/chosenTheme"
+            android:summary=""
+            android:entries="@array/themeArray_Names"
+            android:entryValues="@array/themeArray_Values" />
 
         <SwitchPreferenceCompat
             app:key="useGoogleCamera"
@@ -200,6 +203,10 @@
             android:title="@string/stopAppServices"
             android:key="StopServices"
             android:summary="@string/stopAppServicesSummary" />
+        <Preference
+            android:title="@string/tmpDayNight"
+            android:key="TempDayNight"
+            android:summary="@string/tmpDayNightSummary" />
     </PreferenceCategory>
 
 </PreferenceScreen>

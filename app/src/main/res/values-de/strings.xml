@@ -17,7 +17,6 @@
     <string name="newInputPlace">Platzierung neuer Eingabe</string>
     <string name="newInputBottom">Zeige neue Eingabe am Ende</string>
     <string name="newInputTop">Zeige neue Eingabe am Anfang</string>
-    <string name="darkMode">Dark Modus</string>
     <string name="backup_mode">Backup Modus</string>
     <string name="backup_automated_in_background">Backup automatisch im Hintergrund</string>
     <string name="backup_manually">Backup manuell</string>
@@ -357,6 +356,21 @@
     <string name="returnToMain">Hauptfenster liest nun die neuen Daten.</string>
     <string name="download_progress">Download Fortschritt</string>
     <string name="download_failed">"Download Fehler: "</string>
+    <string name="themeDark">"Dunkel"</string>
+    <string name="themeLight">"Hell"</string>
+    <string name="selectTheme">Auswahl Darstellung</string>
+    <string name="chosenTheme">chosenTheme</string>
+    <string name="currentTheme">"Derzeitige Darstellung ist: "</string>
+    <string name="tmpDayNight">Fix MagicOS 8 helle Dialoge</string>
+    <string name="tmpDayNightSummary">Klick hier, falls Dialoge weiß auf hell erscheinen</string>
+    <string-array name="themeArray_Names">
+        <item>@string/themeDark</item>
+        <item>@string/themeLight</item>
+    </string-array>
+    <string-array name="themeArray_Values">
+        <item>Dark</item>
+        <item>Light</item>
+    </string-array>
     <string-array name="placementArray_Names">
         <item>@string/newInputTop</item>
         <item>@string/newInputBottom</item>
