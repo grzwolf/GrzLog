@@ -364,6 +364,7 @@
     <string name="currentTheme">"Current theme is: "</string>
     <string name="tmpDayNight">Fix MagicOS 8 too bright dialogs</string>
     <string name="tmpDayNightSummary">Click here, if dialogs appear bright on white</string>
+    <string name="search_replace_selection"><![CDATA[Search & replace]]></string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

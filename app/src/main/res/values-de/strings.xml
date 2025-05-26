@@ -363,6 +363,7 @@
     <string name="currentTheme">"Derzeitige Darstellung ist: "</string>
     <string name="tmpDayNight">Fix MagicOS 8 helle Dialoge</string>
     <string name="tmpDayNightSummary">Klick hier, falls Dialoge weiß auf hell erscheinen</string>
+    <string name="search_replace_selection"><![CDATA[Suchen & Ersetzen]]></string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

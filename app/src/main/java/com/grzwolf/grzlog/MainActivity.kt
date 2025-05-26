@@ -2055,6 +2055,7 @@ class MainActivity : AppCompatActivity(),
             getString(R.string.invertSelection),
             "",
             getString(R.string.copyToClipboard),
+            getString(R.string.search_replace_selection),
             "",
             getString(R.string.cutToClipboard),
             getString(R.string.deleteFromList)
@@ -2127,13 +2128,16 @@ class MainActivity : AppCompatActivity(),
                     dialog.dismiss()
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 }
-                10 -> { // empty space as separator
+                10 -> { // Search & Replace in an active selection
+                    folderSearchReplace(true)
+                }
+                11 -> { // empty space as separator
                     dialog.dismiss()
                     Handler().postDelayed({
                         whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                     }, 100)
                 }
-                11 -> { // Cut to clipboard / shareBody
+                12 -> { // Cut to clipboard / shareBody
                     var itemsSelected = false
                     for (i in lvMain.arrayList.indices) {
                         if (lvMain.arrayList[i].isSelected()) {
@@ -2158,7 +2162,7 @@ class MainActivity : AppCompatActivity(),
                         centeredToast(this, getString(R.string.noSelection), 3000 )
                     }
                 }
-                12 -> { // Delete from ListView
+                13 -> { // Delete from ListView
                     var itemsSelected = false
                     for (i in lvMain.arrayList.indices) {
                         if (lvMain.arrayList[i].isSelected()) {
@@ -2234,6 +2238,245 @@ class MainActivity : AppCompatActivity(),
             rangeStr += start.toString() + "-" + end.toString()
         }
         return rangeStr
+    }
+
+    // search and replace in current selection
+    fun folderSearchReplace(selectedOnly: Boolean) {
+        // a text input
+        val sText = EditText(contextMainActivity)
+        sText.inputType = InputType.TYPE_CLASS_TEXT
+        sText.setText("")
+        // get rid of menu search infra structure
+        showEditTextContextMenu(sText, false)
+        // input dialog builder for search phrase
+        var searchBuilder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity)
+        searchBuilder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+        searchBuilder.setTitle(getString(R.string.type_in_the_search_phrase))
+        searchBuilder.setView(sText)
+        searchBuilder.setPositiveButton(R.string.ok) { dialog, which ->
+            // now we know, what to search for
+            val searchText = sText.text.toString()
+            // reset search hits: only needed, when items have search hit status, but doesn't harm if not
+            lvMain.unselectSearchHits()
+            lvMain.searchHitListFolder.clear()
+            // loop current folder's array for replace candidates and a list of hits
+            var hitList: MutableList<Hit> = ArrayList()
+            var choiceItems: MutableList<Spanned> = ArrayList()
+            for (pos in lvMain.arrayList.indices) {
+                val text = lvMain.arrayList[pos].title!!
+                // only selected items are taken into account
+                if (selectedOnly) {
+                    // simply skip not selected items
+                    if (!lvMain.arrayList[pos].isSelected()) {
+                        continue
+                    }
+                }
+                // item needs to comply to searchText
+                if (text.contains(searchText, false)) {
+                    // holds the original text and its position in lvMain.arrayList
+                    hitList.add(Hit(text, pos))
+                    // customize color of search string
+                    var spanStr = SpannableString(lvMain.arrayList[pos].title!!)
+                    var startIndex = 0
+                    var start = text.indexOf(searchText, startIndex, false)
+                    while (start != -1) {
+                        val end = start + searchText.length
+                        spanStr.setSpan(
+                            ForegroundColorSpan(
+                                ContextCompat.getColor(
+                                    this,
+                                    R.color.yellow
+                                )
+                            ), start, end, 0
+                        )
+                        spanStr.setSpan(
+                            BackgroundColorSpan(
+                                ContextCompat.getColor(
+                                    this,
+                                    R.color.lightseagreen
+                                )
+                            ), start, end, 0
+                        )
+                        // continue
+                        startIndex = start + searchText.length
+                        start = text.indexOf(searchText, startIndex, false)
+                    }
+                    // add to array to be used in builder.setMultiChoiceItems
+                    choiceItems.add(spanStr)
+                }
+            }
+            // check nothing found
+            if (choiceItems.size.equals(0)) {
+                centeredToast(
+                    this@MainActivity,
+                    "'" + searchText + "' " + getString(R.string.nowhere_found),
+                    Toast.LENGTH_LONG
+                )
+                // close currently open search dialog
+                dialog.dismiss()
+                // restart search dialog: needs searchDialog to be global
+                Handler().postDelayed({
+                    searchDialog!!.show()
+                    searchDialog!!.setCanceledOnTouchOutside(false)
+                    sText.requestFocus()
+                    showKeyboard(sText, 0, sText.text.length, 300)
+                }, 300)
+                return@setPositiveButton
+            }
+            // get to know the replace phrase
+            val rText = EditText(contextMainActivity)
+            rText.setText("")
+            var replaceBuilder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity)
+            replaceBuilder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+            replaceBuilder.setTitle(getString(R.string.type_in_the_replace_phrase))
+            replaceBuilder.setView(rText)
+            replaceBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
+                // hide all other menu items
+                showMenuItems(false)
+            }
+            replaceBuilder.setPositiveButton(R.string.ok) { dialog, which ->
+                // now we know the replace text
+                val replaceText = rText.text.toString()
+                // hide keyboard
+                hideKeyboard(rText)
+                // upcoming list of choiceItems to replace
+                var replaceList: MutableList<Hit> = ArrayList()
+                // visible screen
+                val widthWnd: Int = contextMainActivity.resources.displayMetrics.widthPixels
+                val heightWnd: Int = contextMainActivity.resources.displayMetrics.heightPixels
+                // a 'replace phrase in choiceItems' AlertDialog.Builder
+                val builder: AlertDialog.Builder =
+                    AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+                builder.setTitle(getString(R.string.mark_items_to_replace) +
+                        searchText +
+                        getString(R.string.with) +
+                        replaceText +
+                        "'")
+                // relying on Builder's internal listView selection status didn't work: use this bool array
+                var checkedItems = BooleanArray(choiceItems.size)
+                builder.setMultiChoiceItems(choiceItems.toTypedArray(), checkedItems,
+                    // listener only updates the 'Replace' button status
+                    OnMultiChoiceClickListener { dialog, position, isChecked ->
+                        // get out of old dialog
+                        dialog.dismiss()
+                        // restart dialog with updated 'Replace' button status
+                        Handler().postDelayed({
+                            val listView = (dialog as AlertDialog?)?.listView
+                            var dlg = builder.create()
+                            dlg.show()
+                            var lvHeight = listviewHeight(listView!!)
+                            dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 + lvHeight))
+                            dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
+                            dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
+                            var anySelection = false
+                            for (i in 0 until checkedItems.size) {
+                                if (checkedItems.get(i)) {
+                                    anySelection = true
+                                    break
+                                }
+                            }
+                            dlg.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = anySelection
+                            dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+                            dlg.setCanceledOnTouchOutside(false)
+                        }, 10)
+                    })
+                // exec the final replacements work according to the multi choice selection status
+                builder.setNegativeButton(R.string.exec_replace) { dialog, which ->
+                    // clear tagSection --> a fresh start for highlighting edited ds items
+                    ds.tagSection.clear()
+                    // rely on checkedItems bool array rather than on listView
+                    for (i in 0 until checkedItems.size) {
+                        if (checkedItems.get(i)) {
+                            // ds.tagSection index 0 is used as "scroll to position"
+                            if (ds.tagSection.isEmpty()) {
+                                ds.tagSection.add(hitList[i].pos)
+                            }
+                            // memorize listview item position for later highlighting
+                            ds.tagSection.add(hitList[i].pos)
+                            // memorize affected row in array list MINUS spacer count for later use in DataStore
+                            var spacers = 0
+                            for (i in 0 until hitList[i].pos) {
+                                if (lvMain.arrayList[i].isSpacer) {
+                                    spacers++
+                                }
+                            }
+                            hitList[i].pos = hitList[i].pos - spacers
+                            // get hitList item and add it to replaceList
+                            var hit = hitList[i]
+                            replaceList.add(hit)
+                        }
+                    }
+                    // finally do the replacement job
+                    replacePhraseInItems(replaceText, searchText, replaceList)
+                }
+                // cancel selection status / replacement dialog
+                builder.setPositiveButton(R.string.cancel) { dialog, which ->
+                    // hide all other menu items
+                    showMenuItems(false)
+                    // get out of old dialog
+                    dialog.dismiss()
+                }
+                // toggle selection status of search choiceItems
+                builder.setNeutralButton(getString(R.string.toggle_selection)) { dialog, which ->
+                    val listView = (dialog as AlertDialog?)?.listView
+                    listView?.let {
+                        // toggle selection status of search&replace choiceItems
+                        for (i in 0 until listView.count) {
+                            var status = !listView.isItemChecked(i)
+                            listView.setItemChecked(i, status)
+                            listView?.setSelection(i)    // only visible after view is updated
+                            checkedItems?.set(i, status) // important: reliable even w/o view update
+                        }
+                        // get out of old dialog
+                        dialog.dismiss()
+                        // restart toggle dialog after toggling is done to show new status
+                        Handler().postDelayed({
+                            var dlg = builder.create()
+                            dlg.show()
+                            var lvHeight = listviewHeight(listView!!)
+                            dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 + lvHeight))
+                            dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
+                            dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
+                            var anySelection = false
+                            for (i in 0 until checkedItems.size) {
+                                if (checkedItems.get(i)) {
+                                    anySelection = true
+                                    break
+                                }
+                            }
+                            dlg.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = anySelection
+                            dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+                            dlg.setCanceledOnTouchOutside(false)
+                        }, 10)
+                    }
+                }
+                var dlg = builder.create()
+                dlg.show()
+                val listView = (dlg as AlertDialog?)?.listView
+                var lvHeight = listviewHeight(listView!!)
+                dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 + lvHeight))
+                dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
+                dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
+                dlg.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = false // 1st show = no selection
+                dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+                dlg.setCanceledOnTouchOutside(false)
+            }
+            var replaceDialog = replaceBuilder.create()
+            replaceDialog.show()
+            replaceDialog.setCanceledOnTouchOutside(false)
+            rText.requestFocus()
+            showKeyboard(rText, 0, 0, 250)
+        }
+        searchBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
+            // hide all other menu items
+            showMenuItems(false)
+        }
+        // build + show search dialog + open keyboard
+        searchDialog = searchBuilder.create()
+        searchDialog!!.show()
+        searchDialog!!.setCanceledOnTouchOutside(false)
+        sText.requestFocus()
+        showKeyboard(sText, 0, 0, 250)
     }
 
     // items from ListView are search hits, what to do with them as next
@@ -3726,11 +3969,6 @@ class MainActivity : AppCompatActivity(),
                 oriParts[it.pos] = newText
                 sum++
             }
-            centeredToast(
-                this@MainActivity,
-                getString(R.string.replacement_done_count) + sum,
-                Toast.LENGTH_LONG
-            )
             // build a temporary full final text
             val tmpStr = TextUtils.join("\n", oriParts)
             // care about show order for the "final final text"
@@ -3838,209 +4076,9 @@ class MainActivity : AppCompatActivity(),
                 var loupeMenuItem = appMenu!!.findItem(R.id.action_search)
                 loupeMenuItem!!.isVisible = false
             }
-            // search & replace in current folder
+            // search & replace in the whole current folder, regardless if selected or not
             var runnable1 = Runnable {
-                // a text input
-                val sText = EditText(contextMainActivity)
-                sText.inputType = InputType.TYPE_CLASS_TEXT
-                sText.setText("")
-                // get rid of menu search infra structure
-                showEditTextContextMenu(sText, false)
-                // input dialog builder for search phrase
-                var searchBuilder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity)
-                searchBuilder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
-                searchBuilder.setTitle(getString(R.string.type_in_the_search_phrase))
-                searchBuilder.setView(sText)
-                searchBuilder.setPositiveButton(R.string.ok) { dialog, which ->
-                    // now we know, what to search for
-                    val searchText = sText.text.toString()
-                    // reset search hits
-                    lvMain.unselectSearchHits()
-                    lvMain.searchHitListFolder.clear()
-                    // loop current folder's array for search hits to generate a list of hits
-                    var hitList: MutableList<Hit> = ArrayList()
-                    var choiceItems: MutableList<Spanned> = ArrayList()
-                    for (pos in lvMain.arrayList.indices) {
-                        val text = lvMain.arrayList[pos].title!!
-                        if (text.contains(searchText, false)) {
-                            // holds the original text and its position in lvMain.arrayList
-                            hitList.add(Hit(text, pos))
-                            // customize color of search string
-                            var spanStr = SpannableString(lvMain.arrayList[pos].title!!)
-                            var startIndex = 0
-                            var start = text.indexOf(searchText, startIndex, false)
-                            while (start != -1) {
-                                val end = start + searchText.length
-                                spanStr.setSpan(
-                                    ForegroundColorSpan(
-                                        ContextCompat.getColor(
-                                            this,
-                                            R.color.yellow
-                                        )
-                                    ), start, end, 0
-                                )
-                                spanStr.setSpan(
-                                    BackgroundColorSpan(
-                                        ContextCompat.getColor(
-                                            this,
-                                            R.color.lightseagreen
-                                        )
-                                    ), start, end, 0
-                                )
-                                // continue
-                                startIndex = start + searchText.length
-                                start = text.indexOf(searchText, startIndex, false)
-                            }
-                            // add to array used in builder.setMultiChoiceItems
-                            choiceItems.add(spanStr)
-                        }
-                    }
-                    // check nothing found
-                    if (choiceItems.size.equals(0)) {
-                        centeredToast(
-                            this@MainActivity,
-                            "'" + searchText + "' " + getString(R.string.nowhere_found),
-                            Toast.LENGTH_LONG
-                        )
-                        // close currently open search dialog
-                        dialog.dismiss()
-                        // restart search dialog: needs searchDialog to be global
-                        Handler().postDelayed({
-                            searchDialog!!.show()
-                            searchDialog!!.setCanceledOnTouchOutside(false)
-                            sText.requestFocus()
-                            showKeyboard(sText, 0, sText.text.length, 300)
-                        }, 300)
-                        return@setPositiveButton
-                    }
-                    // get to know the replace phrase
-                    val rText = EditText(contextMainActivity)
-                    rText.setText("")
-                    var replaceBuilder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity)
-                    replaceBuilder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
-                    replaceBuilder.setTitle(getString(R.string.type_in_the_replace_phrase))
-                    replaceBuilder.setView(rText)
-                    replaceBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
-                        // hide all other menu items
-                        showMenuItems(false)
-                    }
-                    replaceBuilder.setPositiveButton(R.string.ok) { dialog, which ->
-                        // now we know the replace text
-                        val replaceText = rText.text.toString()
-                        // hide keyboard
-                        hideKeyboard(rText)
-                        // upcoming list of choiceItems to replace
-                        var replaceList: MutableList<Hit> = ArrayList()
-                        // visible screen
-                        val widthWnd: Int = contextMainActivity.resources.displayMetrics.widthPixels
-                        val heightWnd: Int = contextMainActivity.resources.displayMetrics.heightPixels
-                        // a 'replace phrase in choiceItems' AlertDialog.Builder
-                        val builder: AlertDialog.Builder =
-                            AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
-                        builder.setTitle(getString(R.string.mark_items_to_replace) +
-                                searchText +
-                                getString(R.string.with) +
-                                replaceText +
-                                "'")
-                        // relying on listView selection status didn't work: better use this bool array
-                        var checkedItems = BooleanArray(choiceItems.size)
-                        builder.setMultiChoiceItems(choiceItems.toTypedArray(), checkedItems,
-                            OnMultiChoiceClickListener { dialog, position, isChecked ->
-                            })
-                        // exec the final replacements work according to the multichoice selection status
-                        builder.setNegativeButton(R.string.exec_replace) { dialog, which ->
-                            // clear tagSection --> a fresh start for highlighting edited ds items
-                            ds.tagSection.clear()
-                            // rely on checkedItems bool array rather than on listView
-                            for (i in 0 until checkedItems.size) {
-                                if (checkedItems.get(i)) {
-                                    // ds.tagSection index 0 is used as "scroll to position"
-                                    if (ds.tagSection.isEmpty()) {
-                                        ds.tagSection.add(hitList[i].pos)
-                                    }
-                                    // memorize listview item position for later highlighting
-                                    ds.tagSection.add(hitList[i].pos)
-                                    // memorize affected row in array list MINUS spacer count for later use in DataStore
-                                    var spacers = 0
-                                    for (i in 0 until hitList[i].pos) {
-                                        if (lvMain.arrayList[i].isSpacer) {
-                                            spacers++
-                                        }
-                                    }
-                                    hitList[i].pos = hitList[i].pos - spacers
-                                    // get hitList item and add it to replaceList
-                                    var hit = hitList[i]
-                                    replaceList.add(hit)
-                                }
-                            }
-                            centeredToast(
-                                this@MainActivity,
-                                getString(R.string.replace_count_expected) + replaceList.size,
-                                Toast.LENGTH_LONG
-                            )
-                            // finally do the replacement job
-                            replacePhraseInItems(replaceText, searchText, replaceList)
-                        }
-                        // cancel selection status
-                        builder.setPositiveButton(R.string.cancel) { dialog, which ->
-                            // hide all other menu items
-                            showMenuItems(false)
-                        }
-                        // toggle selection status of search choiceItems
-                        builder.setNeutralButton(getString(R.string.toggle_selection)) { dialog, which ->
-                            val listView = (dialog as AlertDialog?)?.listView
-                            listView?.let {
-                                // toggle selection status of search&replace choiceItems
-                                for (i in 0 until listView.count) {
-                                    var status = !listView.isItemChecked(i)
-                                    listView.setItemChecked(i, status)
-                                    listView?.setSelection(i)    // only visible after view is updated
-                                    checkedItems?.set(i, status) // important: reliable even w/o view update
-                                }
-                                centeredToast(
-                                    this@MainActivity,
-                                    getString(R.string.updating_selection_count) + listView.count,
-                                    Toast.LENGTH_LONG
-                                )
-                                // restart toggle dialog after toggling is done to show new status
-                                Handler().postDelayed({
-                                    var dlg = builder.create()
-                                    dlg.show()
-                                    var lvHeight = listviewHeight(listView!!)
-                                    dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 +  lvHeight))
-                                    dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
-                                    dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
-                                    dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
-                                    dlg.setCanceledOnTouchOutside(false)
-                                }, 300)
-                            }
-                        }
-                        var dlg = builder.create()
-                        dlg.show()
-                        val listView = (dlg as AlertDialog?)?.listView
-                        var lvHeight = listviewHeight(listView!!)
-                        dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 +  lvHeight))
-                        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
-                        dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
-                        dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
-                        dlg.setCanceledOnTouchOutside(false)
-                    }
-                    var replaceDialog = replaceBuilder.create()
-                    replaceDialog.show()
-                    replaceDialog.setCanceledOnTouchOutside(false)
-                    rText.requestFocus()
-                    showKeyboard(rText, 0, 0, 250)
-                }
-                searchBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
-                    // hide all other menu items
-                    showMenuItems(false)
-                }
-                // build + show search dialog + open keyboard
-                searchDialog = searchBuilder.create()
-                searchDialog!!.show()
-                searchDialog!!.setCanceledOnTouchOutside(false)
-                sText.requestFocus()
-                showKeyboard(sText, 0, 0, 250)
+                folderSearchReplace(false)
             }
             // search all GrzLog
             var runnable2 = Runnable {
@@ -8694,7 +8732,7 @@ class GrzListView {
             } catch(e: Exception) {}
             retVal = retVal.trimEnd('\n')
             return retVal
-        }// collect data with file links
+        }
 
     // return search hit items from ListView array as String --> copy/paste
     val folderSearchHits: String

@@ -60,17 +60,18 @@ class HelpActivity : AppCompatActivity() {
         "d) double tap in middle  -> edit item\n\n" +
         "e) tap selection on left -> toggle item selection\n\n" +
         "f) tap selection middle  -> copy selection to clipboard\n\n" +
-        "g) tap long selection    -> 'What to do ...' dialog\n" +
-        "       Toggle item selection\n" +
+        "g) tap long selection    -> 'What to do with selection?' dialog\n" +
+        "       Toggle active item\n" +
         "       Select next 10 items\n" +
         "       Select items of day\n" +
         "       Select items of month\n" +
-        "       Unselect all items\n" +
-        "       Select all items\n" +
-        "       Invert items selection\n" +
-        "       Copy selection\n" +
-        "       Cut selection\n" +
-        "       Delete selection\n" +
+        "       Unselect all\n" +
+        "       Select all\n" +
+        "       Invert selection\n" +
+        "       Copy to clipboard\n" +
+        "       Search & replace\n" +
+        "       Cut to clipboard\n" +
+        "       Delete selection from list\n" +
         "   !revert latest change via Menu bar Undo!\n" +
         "\n" +
         "2.3 Menu bar\n" +
