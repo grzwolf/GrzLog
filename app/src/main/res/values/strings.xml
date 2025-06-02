@@ -298,8 +298,8 @@
     <string name="appLimitations">GrzLog limitations</string>
     <string name="no_pen_support">No Gboard pen support, see Settings -> Limitations</string>
     <string name="edited_items">edited items</string>
-    <string name="type_in_the_search_phrase">Type in the search phrase</string>
-    <string name="type_in_the_replace_phrase">Type in the replace phrase</string>
+    <string name="type_in_the_search_phrase">Type search phrase</string>
+    <string name="type_in_the_replace_phrase">Type replace phrase</string>
     <string name="mark_items_to_replace">Mark items to replace \'</string>
     <string name="with">\' with \'</string>
     <string name="search_in_folder">"search in folder "</string>
