@@ -98,7 +98,7 @@ class HelpActivity : AppCompatActivity() {
         "       Click on selection: copy to clipboard OR show attachment\n" +
         "       Click on search hit: edit line OR show attachment\n" +
         "   Backup and Restore\n" +
-        "       Backup File Informaion\n" +
+        "       Backup File Information\n" +
         "       Backup mode\n" +
         "              fully automated in background\n" +
         "              run backup manually\n" +
@@ -131,6 +131,7 @@ class HelpActivity : AppCompatActivity() {
         "              current folder will be searched\n" +
         "              search hits are marked\n" +
         "              use up/down symbols to jump\n" +
+        "              long tap a search hit grants further options\n" +
         "              end search by tap on Loupe + 2x X\n" +
         "       search & replace in current folder\n" +
         "              type search phrase\n" +
