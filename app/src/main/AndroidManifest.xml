@@ -80,7 +80,8 @@
             android:name="com.grzwolf.grzlog.SettingsActivity"
             android:label="@string/title_activity_settings"
             android:screenOrientation="portrait"
-            android:parentActivityName="com.grzwolf.grzlog.MainActivity">
+            android:parentActivityName="com.grzwolf.grzlog.MainActivity"
+            android:enableOnBackInvokedCallback="true">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.grzwolf.grzlog.MainActivity" />

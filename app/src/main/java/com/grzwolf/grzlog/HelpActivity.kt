@@ -138,7 +138,7 @@ class HelpActivity : AppCompatActivity() {
         "              type replace phrase\n" +
         "              make selection & replace\n" +
         "              Note: search & replace is case sensitive\n" +
-        "       search in all GrzLog folders\n" +
+        "       search in all GrzLog folders (protected folders are excluded)\n" +
         "             type a global search phrase\n" +
         "             a list of search hits will appear\n" +
         "             select & jump to hit\n" +
@@ -153,8 +153,8 @@ class HelpActivity : AppCompatActivity() {
         "              Remove\n" +
         "              Move to top\n" +
         "              Move to bottom\n" +
-        "              Auto timestamp at input: HH:MM, HH:MM:SS, none  \n" +
-        "              Search all folders\n" +
+        "              Property: no property, auto timestamp at input HH:MM, auto timestamp at input HH:MM:SS, folder protection requires system authorization\n" +
+        "              Search all folders (protected folders are excluded)\n" +
         "                   type a global search phrase\n" +
         "                   a list of search hits will appear\n" +
         "                   select & jump to hit\n" +
@@ -167,6 +167,8 @@ class HelpActivity : AppCompatActivity() {
         "       folder as RTF\n\n\n" +
         "3 Miscellaneous\n" +
         "~~~~~~~~~~~~~~~\n" +
+        "Folder protection in GrzLog is very weak!\n" +
+        "Such protected folders are not encrypted in any way.\n\n" +
         "Updates could be manually downloaded from\n" +
         "   https://github.com/grzwolf/GrzLog/tags\n\n" +
         "GrzLog uses the following permissions\n" +

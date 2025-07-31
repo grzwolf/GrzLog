@@ -94,7 +94,7 @@
     <string name="selectFolder">Ordner wählen</string>
     <string name="openFolder">Öffnen</string>
     <string name="renFolder">Umbenennen</string>
-    <string name="useTimestamp">Zeitstempel</string>
+    <string name="moreSetting">Eigenschaft</string>
     <string name="clearFolder">Inhalt löschen</string>
     <string name="removeFolder">Entfernen</string>
     <string name="moveFolderTop">An Anfang der Liste</string>
@@ -123,8 +123,8 @@
     <string name="image">[Bild]</string>
     <string name="attachmentLink">\"Verknüpfung \"</string>
     <string name="notValid">\" ist nicht mehr gültig.\"</string>
-    <string name="timestampSetting">Zeitstempel Einstellung</string>
-    <string name="noTimestamp">kein Zeitstempel</string>
+    <string name="folderSetting">Ordner Einstellung</string>
+    <string name="noProperty">keine Eigenschaft</string>
     <string name="generatingRTF">Erzeuge RTF ...</string>
     <string name="generatingPDF">Erzeuge PDF ...</string>
     <string name="ZIPcreated">Backup erstellt</string>
@@ -364,6 +364,11 @@
     <string name="tmpDayNight">Fix MagicOS 8 helle Dialoge</string>
     <string name="tmpDayNightSummary">Klick hier, falls Dialoge weiß auf hell erscheinen</string>
     <string name="search_replace_selection"><![CDATA[Suchen & Ersetzen]]></string>
+    <string name="authenticate">Authorisierung</string>
+    <string name="folderNotAuthorized">Aktueller Ordner ist nicht authorisiert</string>
+    <string name="folderProtect">Ordnerschutz</string>
+    <string name="handleFolderProtection">Ordner öffnen erfordert System Authorisierung.</string>
+    <string name="revokeFolderProtection">Ordnerschutz wird entfernt.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

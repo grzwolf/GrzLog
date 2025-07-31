@@ -14,7 +14,9 @@ class LimitationsActivity : AppCompatActivity() {
         "GrzLog limitations\n" +
         "==================\n" +
         "\nFloation keyboard (like Gboard pen input)\n" +
-        "is not supported. 'Pen input' must be disabled.\n"
+        "is not supported. 'Pen input' must be disabled.\n\n" +
+        "Folder protection in GrzLog is very weak!\n" +
+        "Such protected folders are not encrypted in any way."
 
     override fun onStart() {
         super.onStart()

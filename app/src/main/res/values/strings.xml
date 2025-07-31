@@ -95,7 +95,7 @@
     <string name="selectFolder">Select folder</string>
     <string name="openFolder">Open</string>
     <string name="renFolder">Rename</string>
-    <string name="useTimestamp">Timestamp</string>
+    <string name="moreSetting">Property</string>
     <string name="clearFolder">Clear content</string>
     <string name="removeFolder">Remove</string>
     <string name="moveFolderTop">Move to top</string>
@@ -124,8 +124,8 @@
     <string name="image">[image]</string>
     <string name="attachmentLink">\"Attachment link \"</string>
     <string name="notValid">\" is not valid anymore.\"</string>
-    <string name="timestampSetting">Timestamp setting</string>
-    <string name="noTimestamp">no timestamp</string>
+    <string name="folderSetting">Folder setting</string>
+    <string name="noProperty">no property</string>
     <string name="generatingRTF">Generating RTF ...</string>
     <string name="generatingPDF">Generating PDF ...</string>
     <string name="ZIPcreated">Backup created</string>
@@ -365,6 +365,11 @@
     <string name="tmpDayNight">Fix MagicOS 8 too bright dialogs</string>
     <string name="tmpDayNightSummary">Click here, if dialogs appear bright on white</string>
     <string name="search_replace_selection"><![CDATA[Search & replace]]></string>
+    <string name="authenticate">Authenticate</string>
+    <string name="folderNotAuthorized">current folder is not authorized</string>
+    <string name="folderProtect">Folder protection</string>
+    <string name="handleFolderProtection">Open folder requires system authorization.</string>
+    <string name="revokeFolderProtection">Folder protection will be revoked.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

@@ -82,6 +82,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.regex.Pattern
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import kotlin.properties.Delegates
 
 
 // permission constants
@@ -286,16 +289,22 @@ class MainActivity : AppCompatActivity(),
         // prevents onPause / onResume to make a text bak: reset flag in onCreate
         returningFromRestore = false
 
-        //
-        // this is the full workflow sequence from app data file up to show data in ListView
-        //
-        ds = readAppData(appStoragePath)                                                                   // read complete GrzLog.ser into DataStore
-        val sectionText = ds.dataSection[ds.selectedSection]                                               // get active section text (folder) from DataStore
-        lvMain.arrayList = lvMain.makeArrayList(sectionText, lvMain.showOrder)                             // generate ListView array list data
-        lvMain.adapter = LvAdapter(this, lvMain.arrayList)                                          // make ListView adapter
-        (lvMain.listView)?.setAdapter(lvMain.adapter)                                                      // set ListView adapter
-        title = ds.namesSection[ds.selectedSection]                                                        // set app title
-        lvMain.scrollToItemPos(if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList.size - 1)   // scroll ListView
+        // read complete GrzLog.ser into DataStore
+        ds = readAppData(appStoragePath)
+
+        // listview scroll position
+        var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else Math.max(lvMain.arrayList.size - 1, 0)
+
+        // only check for folder protection, if protected folder is not already open
+        MainActivity.folderIsAuthenticated = false
+        if (ds.timeSection[ds.selectedSection] == TIMESTAMP.AUTH) {
+            // authenticate before opening a protected folder: MainActivity.folderIsAuthenticated will be set inside the prompt
+            showBiometricPromptAndOpenFolder(-1, ds.selectedSection, scrollPos)
+        } else {
+            // open unprotected folder
+            MainActivity.folderIsAuthenticated = true
+            openFolder(ds.selectedSection, scrollPos)
+        }
 
         // onCreate shall clear any undo data + set two ds tags to 0 (first and last deleted item positions)
         ds.undoAction = ACTION.UNDEFINED
@@ -660,7 +669,9 @@ class MainActivity : AppCompatActivity(),
         }
 
         // refresh ListView, just redraw
-        lvMain.adapter!!.notifyDataSetChanged()
+        if (lvMain.adapter != null) {
+            lvMain.adapter!!.notifyDataSetChanged()
+        }
 
         // settings shared preferences
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
@@ -843,6 +854,11 @@ class MainActivity : AppCompatActivity(),
     fun handleSharedIntent(intent: Intent?) {
         // limited handling
         if (intent?.action != Intent.ACTION_SEND) {
+            return
+        }
+
+        // if current folder is not authenticated
+        if (!MainActivity.folderIsAuthenticated) {
             return
         }
 
@@ -2718,6 +2734,12 @@ class MainActivity : AppCompatActivity(),
             return
         }
 
+        // get out, if current folder is not authorized
+        if (!MainActivity.folderIsAuthenticated) {
+            centeredToast(this, getString(R.string.folderNotAuthorized), 3000)
+            return
+        }
+
         // access prefs
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
 
@@ -2936,6 +2958,11 @@ class MainActivity : AppCompatActivity(),
         //
         fabPlusBuilder.setPositiveButton(R.string.ok, DialogInterface.OnClickListener { dialog, which ->
 
+            // sanity check
+            if (ds.selectedSection == -1) {
+                return@OnClickListener
+            }
+
             // timestamp requested ?
             var timestampType = ds.timeSection[ds.selectedSection]
 
@@ -3134,11 +3161,14 @@ class MainActivity : AppCompatActivity(),
                 // add time at the beginning of the newText
                 var timeStr = ""
                 if (timestampType != TIMESTAMP.OFF) {
-                    var timeFormat = "HH:mm"
-                    if (timestampType == TIMESTAMP.HHMMSS) {
-                        timeFormat = "HH:mm:ss"
+                    if (timestampType == TIMESTAMP.HHMM) {
+                        var timeFormat = "HH:mm"
+                        timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
                     }
-                    timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
+                    if (timestampType == TIMESTAMP.HHMMSS) {
+                        var timeFormat = "HH:mm:ss"
+                        timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
+                    }
                 }
                 if (combineNdx == 0) {
                     newText = timeStr + newText + "\n"
@@ -3432,6 +3462,11 @@ class MainActivity : AppCompatActivity(),
 
     // fabPlus button long click action --> a new menu with options to jump
     private fun fabPlusOnLongClick(view: View, lv: ListView?) {
+        // get out, if current folder is not authorized
+        if (!MainActivity.folderIsAuthenticated) {
+            centeredToast(this, getString(R.string.folderNotAuthorized), 3000)
+            return
+        }
         if (lv == null) {
             return
         }
@@ -4098,6 +4133,11 @@ class MainActivity : AppCompatActivity(),
 
         // SEARCH: tap icon action_search, search actions: local vs. search&replace vs. global
         if (id == R.id.action_search) {
+            // get out, if current folder is not authorized
+            if (!MainActivity.folderIsAuthenticated) {
+                centeredToast(this, getString(R.string.folderNotAuthorized), 3000)
+                return super.onOptionsItemSelected(item)
+            }
             // stop  menu '10s auto clear' mechanism
             menuItemsVisible = false
             mainMenuHandler.removeCallbacksAndMessages(null)
@@ -4272,17 +4312,18 @@ class MainActivity : AppCompatActivity(),
         }
         // SHARE: content share option
         if (id == R.id.action_Share) {
+            // get out, if current folder is not authorized
+            if (!MainActivity.folderIsAuthenticated) {
+                centeredToast(this, getString(R.string.folderNotAuthorized), 3000)
+                return super.onOptionsItemSelected(item)
+            }
             // it looks awkward, if search stays open
             if (searchView != null) {
                 searchView!!.onActionViewCollapsed()
             }
             //  provide options about what to share
             var shareBuilder: AlertDialog.Builder?
-            shareBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-            } else {
-                AlertDialog.Builder(this@MainActivity)
-            }
+            shareBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
             val items = arrayOf<CharSequence>(
                 getString(R.string.selectedItems),
                 getString(R.string.currentFolder),
@@ -4362,8 +4403,6 @@ class MainActivity : AppCompatActivity(),
     }
 
     // "Change Folder Dialog"
-    var changeFolderDialog: AlertDialog? = null
-    var changeFolderDialogIsDirty = false
     fun folderChangeDialog(item: MenuItem) {
         // it looks awkward, if search stays open
         if (searchView != null) {
@@ -4389,9 +4428,25 @@ class MainActivity : AppCompatActivity(),
         var lastClickTime = System.currentTimeMillis()
         var lastSelectedSection = ds.selectedSection
         // add a radio button list containing all the folder names from DataStore
-        val array = ds.namesSection.toTypedArray()
+        val charSequences: MutableList<CharSequence> = ArrayList()
+        // change text color to yellow on black for protected folders
+        for (pos in ds.namesSection.indices) {
+            var spanStr = SpannableString(ds.namesSection[pos])
+            if (ds.timeSection[pos] == TIMESTAMP.AUTH) {
+                spanStr.setSpan(
+                    ForegroundColorSpan(
+                        ContextCompat.getColor(
+                            this,
+                            R.color.yellow
+                        )
+                    ), 0, spanStr.length, 0
+                )
+            }
+            charSequences.add(spanStr)
+        }
+        val folderNamesArray = charSequences.toTypedArray()
         changeFolderBuilder.setSingleChoiceItems(
-            array,
+            folderNamesArray,
             ds.selectedSection,
             DialogInterface.OnClickListener { dialog, which ->
                 // the current file selection is temporary, unless we confirm with OK
@@ -4401,7 +4456,7 @@ class MainActivity : AppCompatActivity(),
                 val deltaTime = nowTime - lastClickTime
                 if (deltaTime < 700 && lastSelectedSection == which) {
                     // now the folder selection becomes permanent
-                    switchToFolderByNumber(selectedSectionTemp)
+                    switchToFolderByNumber(ds.selectedSection, selectedSectionTemp)
                     dialog.cancel()
                 }
                 lastSelectedSection = which
@@ -4412,13 +4467,13 @@ class MainActivity : AppCompatActivity(),
             R.string.ok,
             DialogInterface.OnClickListener { dialog, which ->
                 // reset dirty flag
-                changeFolderDialogIsDirty = false
+                MainActivity.changeFolderDialogIsDirty = false
                 // now the folder selection becomes permanent
-                switchToFolderByNumber(selectedSectionTemp)
+                switchToFolderByNumber(ds.selectedSection, selectedSectionTemp)
                 dialog.cancel()
             })
         // CHANGE FOLDER selection Cancel
-        if (changeFolderDialogIsDirty == false) {
+        if (MainActivity.changeFolderDialogIsDirty == false) {
             changeFolderBuilder.setNegativeButton(
                 R.string.back,
                 DialogInterface.OnClickListener { dialog, which ->
@@ -4429,15 +4484,17 @@ class MainActivity : AppCompatActivity(),
         changeFolderBuilder.setNeutralButton(
             R.string.next,
             DialogInterface.OnClickListener { dialog, which ->
-                folderMoreDialog(changeFolderBuilder.context, selectedSectionTemp, item)
+                if (item != null) {
+                    folderMoreDialog(changeFolderBuilder.context, selectedSectionTemp, item)
+                }
             })
         // CHANGE FOLDER create dialog
-        changeFolderDialog = changeFolderBuilder.create()
-        val listView = changeFolderDialog?.getListView()
+        MainActivity.changeFolderDialog = changeFolderBuilder.create()
+        val listView = MainActivity.changeFolderDialog?.getListView()
         listView?.divider = ColorDrawable(Color.GRAY)
         listView?.dividerHeight = 2
         // CHANGE FOLDER finally show change folder dialog
-        changeFolderDialog?.show()
+        MainActivity.changeFolderDialog?.show()
     }
 
     // follow up dialog to "Change Folder Dialog" with options for one folder
@@ -4452,7 +4509,7 @@ class MainActivity : AppCompatActivity(),
             getString(R.string.removeFolder),                          // 4 Remove
             getString(R.string.moveFolderTop),                     // 5 Move top
             getString(R.string.moveFolderBottom),                  // 6 Move top
-            getString(R.string.useTimestamp),                       // 7 Timestamp
+            getString(R.string.moreSetting),                       // 7 Folder setting
             "",                                // 8 empty ITEM as separator
             getString(R.string.searchFolders),              // 9 search folders
             getString(R.string.newFolder)                       // 10 New
@@ -4473,9 +4530,9 @@ class MainActivity : AppCompatActivity(),
                 // MORE FOLDER OPTIONS: open folder
                 if (which == 0) {
                     // reset dirty flag
-                    changeFolderDialogIsDirty = false
+                    MainActivity.changeFolderDialogIsDirty = false
                     // now the folder selection becomes permanent
-                    switchToFolderByNumber(selectedSectionTemp)
+                    switchToFolderByNumber(ds.selectedSection, selectedSectionTemp)
                 }
                 //  MORE FILE OPTIONS: Export folder to PDF or RTF
                 if (which == 1) {
@@ -4573,7 +4630,7 @@ class MainActivity : AppCompatActivity(),
                                 return@OnClickListener
                             }
                             // no back button in change folder dialog
-                            changeFolderDialogIsDirty = true
+                            MainActivity.changeFolderDialogIsDirty = true
                             // reset global search results
                             if (fabBack != null) {
                                 fabBack!!.visibility = INVISIBLE
@@ -4630,7 +4687,7 @@ class MainActivity : AppCompatActivity(),
                                 fabBack!!.tag = fbt
                             }
                             // no back button in change folder dialog
-                            changeFolderDialogIsDirty = true
+                            MainActivity.changeFolderDialogIsDirty = true
                             // cleanup
                             ds.dataSection[selectedSectionTemp] = ""
                             ds.selectedSection = selectedSectionTemp
@@ -4669,7 +4726,7 @@ class MainActivity : AppCompatActivity(),
                                 getString(R.string.noUndo),
                                 {
                                     // no back button in change folder dialog
-                                    changeFolderDialogIsDirty = true
+                                    MainActivity.changeFolderDialogIsDirty = true
                                     // reset global search results
                                     if (fabBack != null) {
                                         fabBack!!.visibility = INVISIBLE
@@ -4716,7 +4773,7 @@ class MainActivity : AppCompatActivity(),
                         return@OnClickListener
                     }
                     // force no back button in change folder dialog
-                    changeFolderDialogIsDirty = true
+                    MainActivity.changeFolderDialogIsDirty = true
                     // temporarily save current folder
                     val nameTmp = ds.namesSection[selectedSectionTemp]
                     val dataTmp = ds.dataSection[selectedSectionTemp]
@@ -4748,7 +4805,7 @@ class MainActivity : AppCompatActivity(),
                         return@OnClickListener
                     }
                     // force no back button in change folder dialog
-                    changeFolderDialogIsDirty = true
+                    MainActivity.changeFolderDialogIsDirty = true
                     // temporarily save current folder
                     val nameTmp = ds.namesSection[selectedSectionTemp]
                     val dataTmp = ds.dataSection[selectedSectionTemp]
@@ -4770,38 +4827,64 @@ class MainActivity : AppCompatActivity(),
                 // MORE FOLDER OPTIONS: Timestamp setting
                 if (which == 7) {
                     val items = arrayOf<CharSequence>(
-                        getString(R.string.noTimestamp),
-                        "hh:mm",
-                        "hh:mm:ss"
+                        getString(R.string.noProperty),
+                        "auto hh:mm",
+                        "auto hh:mm:ss",
+                        getString(R.string.folderProtect)
                     )
-                    var selection = ds.timeSection[selectedSectionTemp]
+                    var newTimeSectionProp = ds.timeSection[selectedSectionTemp]
+                    var prvTimeSectionProp = ds.timeSection[selectedSectionTemp]
                     var dialog: AlertDialog?
                     var builder: AlertDialog.Builder?
-                    builder =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            AlertDialog.Builder(
-                                folderMoreBuilderContext,
-                                android.R.style.Theme_Material_Dialog
-                            )
-                        } else {
-                            AlertDialog.Builder(folderMoreBuilderContext)
-                        }
-                    builder.setTitle(R.string.timestampSetting)
+                    builder = AlertDialog.Builder(folderMoreBuilderContext, android.R.style.Theme_Material_Dialog)
+                    builder.setTitle(R.string.folderSetting)
                     builder.setSingleChoiceItems(
                         items,
-                        selection,
+                        newTimeSectionProp,
                         DialogInterface.OnClickListener { dialog, which ->
-                            selection = which
+                            newTimeSectionProp = which
                         })
                     builder.setPositiveButton(
                         "Ok",
                         // ok takes over the recently selected option
                         DialogInterface.OnClickListener { dialog, which ->
-                            // no back button in change folder dialog
-                            changeFolderDialogIsDirty = true
-                            ds.timeSection[selectedSectionTemp] = selection
-                            writeAppData(appStoragePath, ds, appName) // save data
-                            folderMoreDialog?.show()                 // show more dlg again
+                            // now there are tree scenarios: 1) 2) 3)
+                            if (newTimeSectionProp == TIMESTAMP.AUTH) {
+                                // 1) folder is about to switch to protected mode
+                                decisionBox(
+                                    this,
+                                    DECISION.YESNO,
+                                    getString(R.string.folderProtect),
+                                    getString(R.string.handleFolderProtection),
+                                    {
+                                        changeFolderProtection(newTimeSectionProp, selectedSectionTemp)
+                                        folderMoreDialog?.show()
+                                    },
+                                    {
+                                        folderMoreDialog?.show()
+                                    }
+                                )
+                            } else {
+                                if (newTimeSectionProp != TIMESTAMP.AUTH && prvTimeSectionProp == TIMESTAMP.AUTH) {
+                                    // 2) folder is about to switch from protected mode to unprotected
+                                    decisionBox(
+                                        this,
+                                        DECISION.YESNO,
+                                        getString(R.string.folderProtect),
+                                        getString(R.string.revokeFolderProtection),
+                                        {
+                                            changeFolderProtection(newTimeSectionProp, selectedSectionTemp)
+                                            folderMoreDialog?.show()
+                                        },
+                                        {
+                                            folderMoreDialog?.show()
+                                        }
+                                    )
+                                } else {
+                                    // 3) folder only deals with timestamps
+                                    changeFolderTimeStampProperty(newTimeSectionProp, selectedSectionTemp)
+                                }
+                            }
                         })
                     builder.setNegativeButton(
                         R.string.cancel,
@@ -4893,7 +4976,7 @@ class MainActivity : AppCompatActivity(),
                                 }, 100)
                                 return@OnClickListener
                             }
-                            changeFolderDialogIsDirty = true
+                            MainActivity.changeFolderDialogIsDirty = true
                             ds.dataSection.add("")
                             ds.namesSection.add(text)
                             ds.selectedSection = ds.namesSection.size - 1
@@ -4930,6 +5013,14 @@ class MainActivity : AppCompatActivity(),
         listView?.divider = ColorDrawable(Color.GRAY)
         listView?.dividerHeight = 2
         folderMoreDialog?.show( )
+    }
+
+    // folder's timestamp property is about to change
+    fun changeFolderTimeStampProperty(newTimeStampProp: Int, selectedSectionTemp: Int) {
+        MainActivity.changeFolderDialogIsDirty = true  // no back button in change folder dialog
+        ds.timeSection[selectedSectionTemp] = newTimeStampProp
+        writeAppData(appStoragePath, ds, appName)      // save data
+        folderMoreDialog?.show()                       // show more dlg again
     }
 
     // provide global search results;
@@ -5418,7 +5509,7 @@ class MainActivity : AppCompatActivity(),
                         })
                     // CHANGE FOLDER finally show change folder dialog
                     var getFolderDialog = getFolderBuilder.create()
-                    val listView = changeFolderDialog?.getListView()
+                    val listView = MainActivity.changeFolderDialog?.getListView()
                     listView?.divider = ColorDrawable(Color.GRAY)
                     listView?.dividerHeight = 2
                     getFolderDialog?.show()
@@ -7633,6 +7724,8 @@ class MainActivity : AppCompatActivity(),
         @JvmField
         var attachmentPickerDialog: AlertDialog? = null
         var folderMoreDialog: AlertDialog? = null
+        var changeFolderDialog: AlertDialog? = null // needs static, bc called from static
+        var changeFolderDialogIsDirty = false       // needs static, bc called from static
         var returningFromAppGallery = false
         var showFolderMoreDialog = false
         var returnAttachmentFromAppGallery = ""
@@ -7647,6 +7740,18 @@ class MainActivity : AppCompatActivity(),
         // app visibility status
         @JvmField
         var appIsInForeground = false
+
+        // flag indicating GrzLog folder is authenticated
+        var folderIsAuthenticated by Delegates.observable(false) { property, oldValue, newValue ->
+            // discard folder change dialog, if folder is authenticated
+            if (newValue == true) {
+                MainActivity.changeFolderDialog?.cancel()
+            }
+            // if folder is not authenticated, show change folder dialog
+            if (newValue == false) {
+                appMenu?.performIdentifierAction(R.id.action_ChangeFolder, 0)
+            }
+        }
 
         // Huawei launcher does not show lockscreen notifications generated in advance (though AOSP does), therefore build a list and show it at wakeup/screen on
         var grzlogReminderList: MutableList<String> = ArrayList()
@@ -7777,6 +7882,12 @@ class MainActivity : AppCompatActivity(),
             var hitList: MutableList<GlobalSearchHit> = ArrayList()
             // iterate all data sections of DataStore
             for (dsNdx in ds.dataSection.indices) {
+
+                // global search is not allowed in protected folders
+                if (ds.timeSection[dsNdx] == TIMESTAMP.AUTH) {
+                    continue
+                }
+
                 // text from DataStore folder
                 var sectionText = ds.dataSection[dsNdx]
                 // take show order into account
@@ -7835,10 +7946,95 @@ class MainActivity : AppCompatActivity(),
             }
         }
 
+        // authentication
+        private fun changeFolderProtection(newTimeStampProp: Int, selectedSectionTemp: Int) {
+            // build a prompt info structure
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("GrzLog Authentication")
+                .setSubtitle("Log in using system credential")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                .build()
+            // exec the actual prompt process
+            val biometricPrompt = BiometricPrompt(contextMainActivity, ContextCompat.getMainExecutor(contextMainActivity),
+                // setup a few callbacks
+                object : BiometricPrompt.AuthenticationCallback() {
+                    // error handling: usually CANCEL auth
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        showMessage("Authentication error: $errString")
+                    }
+                    // SUCCESS: auth did work
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        // handle authentication success
+                        showMessage("Authentication succeeded!")
+                        MainActivity.changeFolderDialogIsDirty = true // no back button in change folder dialog
+                        ds.timeSection[selectedSectionTemp] = newTimeStampProp
+                        writeAppData(appStoragePath, ds, appName)     // save data
+                        folderMoreDialog?.show()                      // show more dlg again
+                    }
+                    // failure: usually there is no system auth available
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                        showMessage("Authentication failed.")
+                    }
+                })
+            // exec auth
+            biometricPrompt.authenticate(promptInfo)
+        }
+        private fun showBiometricPromptAndOpenFolder(prvFolderNumber: Int, newFolderNumber: Int, highLightPos: Int = -1) {
+            // build a prompt info structure
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("GrzLog Authentication")
+                .setSubtitle("Log in using system credential")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                .build()
+            // exec the actual prompt process
+            val biometricPrompt = BiometricPrompt(contextMainActivity, ContextCompat.getMainExecutor(contextMainActivity),
+                // setup a few callbacks
+                object : BiometricPrompt.AuthenticationCallback() {
+                    // error handling: usually CANCEL auth
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        showMessage("Authentication error: $errString")
+                        // revoke folder access auth
+                        MainActivity.folderIsAuthenticated = false
+                        // in case, the previously active folder is unprotected, grant auth to it
+                        if (prvFolderNumber != -1 && ds.timeSection[prvFolderNumber] != TIMESTAMP.AUTH) {
+                            MainActivity.folderIsAuthenticated = true
+                        }
+                    }
+                    // SUCCESS: auth did work
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        // handle authentication success
+                        showMessage("Authentication succeeded!")
+                        MainActivity.folderIsAuthenticated = true
+                        openFolder(newFolderNumber, highLightPos)
+                    }
+                    // failure: usually there is no system auth available
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                        showMessage("Authentication failed.")
+                        // revoke folder access auth
+                        MainActivity.folderIsAuthenticated = false
+                        // in case, the previously active folder is unprotected, grant auth to it
+                        if (prvFolderNumber != -1 && ds.timeSection[prvFolderNumber] != TIMESTAMP.AUTH) {
+                            MainActivity.folderIsAuthenticated = true
+                        }
+                    }
+                })
+            // exec auth
+            biometricPrompt.authenticate(promptInfo)
+        }
+        private fun showMessage(message: String) {
+            Toast.makeText(contextMainActivity, message, Toast.LENGTH_SHORT).show()
+        }
+
         // switch to a folder helpers
-        fun switchToFolderByNumber(number: Int, highLightPos: Int = -1) {
+        fun switchToFolderByNumber(prvFolderNumber: Int, newFolderNumber: Int, highLightPos: Int = -1) {
             // sanity check
-            if (number < 0 || number >= ds.dataSection.size) {
+            if (newFolderNumber < 0 || newFolderNumber >= ds.dataSection.size) {
                 if (fabBack != null) {
                     fabBack!!.visibility = INVISIBLE
                     val fbt = FabBackTag("", ArrayList(), -1, "")
@@ -7852,15 +8048,43 @@ class MainActivity : AppCompatActivity(),
             ds.undoText = ""
             ds.undoAction = ACTION.UNDEFINED
             showMenuItemUndo()
-            // full infra to switch to a DataStore folder
+            // reset auth flag for folder, if folder number is about to change
+            if (ds.selectedSection != newFolderNumber) {
+                MainActivity.folderIsAuthenticated = false
+            }
+            // only auth folder access, if protected folder is not already authenticated
+            if (ds.timeSection[newFolderNumber] == TIMESTAMP.AUTH && !MainActivity.folderIsAuthenticated) {
+                // authenticate before opening a protected folder
+                showBiometricPromptAndOpenFolder(prvFolderNumber, newFolderNumber, highLightPos)
+            } else {
+                // open unprotected folder
+                MainActivity.folderIsAuthenticated = true
+                openFolder(newFolderNumber, highLightPos)
+            }
+        }
+        fun switchToFolderByName(name: String, scrollPos: Int = -1) {
+            var prvFolderNumber = ds.selectedSection
+            var newFolderNumber = -1
+            val folderList = ds.namesSection.toTypedArray()
+            for (i in folderList.indices) {
+                if (folderList[i].equals(name)) {
+                    newFolderNumber = i
+                    break
+                }
+            }
+            switchToFolderByNumber(prvFolderNumber, newFolderNumber, scrollPos)
+        }
+        // full infra to open a DataStore folder
+        fun openFolder(number: Int, highLightPos: Int) {
             ds.selectedSection = number
             writeAppData(appStoragePath, ds, appName)
             val dsText = ds.dataSection[ds.selectedSection]
             lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)
-            lvMain.adapter = LvAdapter(contextMainActivity, lvMain. arrayList)
+            lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList)
             lvMain.listView!!.adapter = lvMain.adapter
             contextMainActivity.title = ds.namesSection[ds.selectedSection]
-            var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList.size - 1
+            var scrollPos =
+                if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList.size - 1
             // if presenting a global search hit, place it somehow vertically centered
             if (highLightPos != -1) {
                 scrollPos = Math.max(0, highLightPos - 8)
@@ -7868,7 +8092,7 @@ class MainActivity : AppCompatActivity(),
             // just scroll ListView
             lvMain.scrollToItemPos(scrollPos)
             // temporary highlight item
-            if (highLightPos != -1) {
+            if (highLightPos != -1 && lvMain.arrayList.size > 0) {
                 lvMain.arrayList[highLightPos].setHighLighted(true)
                 // revoke temp. highlighting after timeout
                 Handler().postDelayed({
@@ -7876,17 +8100,6 @@ class MainActivity : AppCompatActivity(),
                     lvMain.adapter!!.notifyDataSetChanged()
                 }, 3000)
             }
-        }
-        fun switchToFolderByName(name: String, scrollPos: Int = -1) {
-            var folderNumber = -1
-            val folderList = ds.namesSection.toTypedArray()
-            for (i in folderList.indices) {
-                if (folderList[i].equals(name)) {
-                    folderNumber = i
-                    break
-                }
-            }
-            switchToFolderByNumber(folderNumber, scrollPos)
         }
 
         //
@@ -9193,17 +9406,22 @@ class DataStore : Serializable {
         UNDEFINED, REVERTEDIT, REVERTDELETE, REVERTINSERT, REVERTADD, REVERTMULTIEDIT
     }
 
-    // timestamp
+    // timestamp type and folder protection
     internal object TIMESTAMP {
         const val OFF = 0
         const val HHMM = 1
         const val HHMMSS = 2
+        const val AUTH = 3
     }
 
     var namesSection: MutableList<String> = ArrayList()
     @JvmField
     var dataSection: MutableList<String> = ArrayList()
     var tagSection: MutableList<Int> = ArrayList()
+    // note:
+    // a) timeSection covers auto timestamp behaviour (off, auto hh:mm, auto hh:mm:ss) and folder protection
+    // b) folder protection excludes timestamps
+    // c) timestamps exclude folder protection
     var timeSection: MutableList<Int> = ArrayList()
     var selectedSection = 0
     var undoSection = ""
