@@ -3874,17 +3874,23 @@ class MainActivity : AppCompatActivity(),
         // adapter refresh
         lvMain.adapter!!.notifyDataSetChanged()
         // show arrow keys in app menu
-        val itemUp = appMenu!!.findItem(R.id.action_searchUp)
+        val itemUp = appMenu!!.findItem(R.id.action_searchUp) as MenuItem
         itemUp.isVisible = true
-        val itemDown = appMenu!!.findItem(R.id.action_searchDown)
+        val itemDown = appMenu!!.findItem(R.id.action_searchDown) as MenuItem
         itemDown.isVisible = true
         // jump to search hits: to keep it easy, ALWAYS start from top
         if (lvMain.showOrder == SHOW_ORDER.TOP) {
             lvMain.searchNdx = -1
-            onOptionsItemSelected(itemDown)
+            // delayed action: needed for pixel 5 sdk 35 -- not needed Emu sdk35 and system < sdk35
+            Handler().postDelayed({
+                onOptionsItemSelected(itemDown)
+            }, 100)
         } else {
             lvMain.searchNdx = lvMain.searchHitListFolder.size
-            onOptionsItemSelected(itemUp)
+            // delayed action: needed for pixel 5 sdk 35 -- not needed Emu sdk35 and system < sdk35
+            Handler().postDelayed({
+                onOptionsItemSelected(itemUp)
+            }, 100)
         }
         // quit folder search
         searchView!!.onActionViewCollapsed()
