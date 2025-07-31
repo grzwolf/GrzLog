@@ -1311,13 +1311,10 @@ public class SettingsActivity :
                         errorCounter++
                         errorNote = " errors: " + errorCounter + "(10)"
                     } else {
-                        // if upload speed resumes to normal, decrease error count
-                        if (errorCounter > 0) {
-                            errorCounter--
-                        } else {
-                            // if there are no errors anymore, don't show them
-                            errorNote = ""
-                        }
+                        // if upload speed resumes to normal, fully reset error count
+                        errorCounter = 0
+                        // if there are no errors anymore, don't show them
+                        errorNote = ""
                     }
                     // empirical value of 10 errors are allowed, then get off
                     if (errorCounter > 10) {

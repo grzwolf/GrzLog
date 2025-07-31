@@ -124,7 +124,7 @@ class HelpActivity : AppCompatActivity() {
         "   Reset\n" +
         "       Reset app preferences (data are not touched)\n\n" +
         "   Quit active services\n" +
-        "       If a backup or a gdrive upload seems to hang, stop them from here\n\n" +
+        "       If a backup or a GDrive upload seems to hang, stop them from here\n\n" +
         "c) tap Loupe -> dialog with three options\n" +
         "       search in current folder\n" +
         "              type search phrase + Enter" +
