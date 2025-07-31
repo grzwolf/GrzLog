@@ -69,6 +69,7 @@ android {
 dependencies {
     implementation "androidx.biometric:biometric:1.1.0"
     implementation 'androidx.biometric:biometric:1.2.0-alpha05'
+    // keep for now 1.8.0, otherwise need to compile against version 36
     implementation "androidx.browser:browser:1.8.0"
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
@@ -79,7 +80,9 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     implementation "androidx.core:core-ktx:1.16.0"
+    // keep for now $kotlin_version, otherwise build fails
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    // keep for now 2.8.7, otherwise build fails
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7'
     implementation 'com.github.bumptech.glide:glide:4.13.2'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.13.2'
@@ -88,7 +91,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services:12.0.1'
     // in app update from GitHub
     implementation 'com.android.volley:volley:1.2.1'
-    // app life cycle observer
+    // app life cycle observer: keep for now 2.8.7, otherwise build fails
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
 }
 repositories {
