@@ -292,18 +292,15 @@ class MainActivity : AppCompatActivity(),
         // read complete GrzLog.ser into DataStore
         ds = readAppData(appStoragePath)
 
-        // listview scroll position
-        var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else Math.max(lvMain.arrayList.size - 1, 0)
-
         // only check for folder protection, if protected folder is not already open
         MainActivity.folderIsAuthenticated = false
         if (ds.timeSection[ds.selectedSection] == TIMESTAMP.AUTH) {
             // authenticate before opening a protected folder: MainActivity.folderIsAuthenticated will be set inside the prompt
-            showBiometricPromptAndOpenFolder(-1, ds.selectedSection, scrollPos)
+            showBiometricPromptAndOpenFolder(-1, ds.selectedSection, -1)
         } else {
             // open unprotected folder
             MainActivity.folderIsAuthenticated = true
-            openFolder(ds.selectedSection, scrollPos)
+            openFolder(ds.selectedSection, -1)
         }
 
         // onCreate shall clear any undo data + set two ds tags to 0 (first and last deleted item positions)
@@ -8089,13 +8086,13 @@ class MainActivity : AppCompatActivity(),
             lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList)
             lvMain.listView!!.adapter = lvMain.adapter
             contextMainActivity.title = ds.namesSection[ds.selectedSection]
-            var scrollPos =
-                if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList.size - 1
+            // 'normal' scroll to position in listview
+            var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else Math.max(lvMain.arrayList.size - 1, 0)
             // if presenting a global search hit, place it somehow vertically centered
             if (highLightPos != -1) {
                 scrollPos = Math.max(0, highLightPos - 8)
             }
-            // just scroll ListView
+            // now scroll the ListView
             lvMain.scrollToItemPos(scrollPos)
             // temporary highlight item
             if (highLightPos != -1 && lvMain.arrayList.size > 0) {
