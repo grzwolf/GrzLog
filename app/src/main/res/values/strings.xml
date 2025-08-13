@@ -238,7 +238,6 @@
     <string name="ToggleLineAsHeader">Toggle line as header</string>
     <string name="ToggleLineAsText">Toggle line as text</string>
     <string name="LineOrHeader">Switch now?</string>
-    <string name="searchFolders">Search all folders</string>
     <string name="chooseSearchHit">Choose a search hit</string>
     <string name="searchHitList">" and search hits list"</string>
     <string name="nothingFound">No search hits found</string>
@@ -370,6 +369,7 @@
     <string name="folderProtect">Folder protection</string>
     <string name="handleFolderProtection">Open folder requires system authorization.</string>
     <string name="revokeFolderProtection">Folder protection will be revoked.</string>
+    <string name="noGlobalSearchFromProtectedFolder">Global search is not allowed from a protected folder. Start over from an unprotected folder.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

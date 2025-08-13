@@ -237,7 +237,6 @@
     <string name="ToggleLineAsHeader">Wechseln Zeile als Überschrift</string>
     <string name="ToggleLineAsText">Wechseln Zeile als Text</string>
     <string name="LineOrHeader">Jetzt wechseln?</string>
-    <string name="searchFolders">Suchen in Ordnern</string>
     <string name="chooseSearchHit">Treffer auswählen</string>
     <string name="searchHitList">" und Suchtreffer Liste"</string>
     <string name="nothingFound">Nichts gefunden</string>
@@ -369,6 +368,7 @@
     <string name="folderProtect">Ordnerschutz</string>
     <string name="handleFolderProtection">Ordner öffnen erfordert System Authorisierung.</string>
     <string name="revokeFolderProtection">Ordnerschutz wird entfernt.</string>
+    <string name="noGlobalSearchFromProtectedFolder">Globale Suche ist nicht erlaubt aus einem geschützten Ordner. Bitte vorher auf einen ungeschützten Ordner wechseln.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

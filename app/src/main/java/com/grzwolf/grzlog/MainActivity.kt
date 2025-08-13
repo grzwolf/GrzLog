@@ -492,7 +492,7 @@ class MainActivity : AppCompatActivity(),
                         fabBack!!.visibility = INVISIBLE
                         // switch simply back to previous folder
                         if (fbt.folderName.isNotEmpty()) {
-                            switchToFolderByName(fbt.folderName)
+                            switchToFolderByName(fbt.folderName, false)
                         }
                         // plus jump back to the search hit list dialog
                         if (fbt.searchHitListGlobal.size > 0) {
@@ -1246,7 +1246,7 @@ class MainActivity : AppCompatActivity(),
                                         fabBack!!.tag = fbt
                                         fabBack!!.visibility = VISIBLE
                                     }
-                                    switchToFolderByName(folderName)
+                                    switchToFolderByName(folderName, false)
                                 },
                                 null
                             )
@@ -1350,7 +1350,7 @@ class MainActivity : AppCompatActivity(),
                                             fabBack!!.tag = fbt
                                             fabBack!!.visibility = VISIBLE
                                         }
-                                        switchToFolderByName(folderName)
+                                        switchToFolderByName(folderName, false)
                                     },
                                     null
                                 )
@@ -4160,23 +4160,39 @@ class MainActivity : AppCompatActivity(),
             var runnable1 = Runnable {
                 folderSearchReplace(false, false)
             }
-            // search all GrzLog
+            // search all GrzLog folders - but not, if current folder is protected
             var runnable2 = Runnable {
-                // hide menu items
-                showMenuItems(false)
-                // execute global search
-                val fbt = fabBack!!.tag as FabBackTag
-                if (fbt.searchHitListGlobal.size > 0) {
-                    decisionBox(
-                        this,
-                        DECISION.YESNO,
-                        getString(R.string.searchResultsAvailable),
-                        getString(R.string.useExistingResults) + " " + fbt.searchPhrase,
-                        { prepareGlobalSearch(fbt.searchHitListGlobal, fbt.searchPhrase) },
-                        { prepareGlobalSearch(ArrayList(), "") }
+                // if current folder is protected, do not exec global search from here
+                if (ds.timeSection[ds.selectedSection] == TIMESTAMP.AUTH) {
+                    okBox(
+                        this@MainActivity,
+                        getString(R.string.note),
+                        getString(R.string.noGlobalSearchFromProtectedFolder)
                     )
+                    // simply return to main activity
+                    showMenuItems(false)
+                    searchView!!.setQuery(searchViewQuery, false)
+                    searchViewQuery = ""
+                    title = ds.namesSection[ds.selectedSection]
+                    fabPlus.button?.background?.setAlpha(130)
+                    fabPlus.button?.show()
                 } else {
-                    prepareGlobalSearch(ArrayList(), "")
+                    // hide menu items
+                    showMenuItems(false)
+                    // execute global search
+                    val fbt = fabBack!!.tag as FabBackTag
+                    if (fbt.searchHitListGlobal.size > 0) {
+                        decisionBox(
+                            this,
+                            DECISION.YESNO,
+                            getString(R.string.searchResultsAvailable),
+                            getString(R.string.useExistingResults) + " " + fbt.searchPhrase,
+                            { prepareGlobalSearch(fbt.searchHitListGlobal, fbt.searchPhrase) },
+                            { prepareGlobalSearch(ArrayList(), "") }
+                        )
+                    } else {
+                        prepareGlobalSearch(ArrayList(), "")
+                    }
                 }
             }
             var runnableClose = Runnable {
@@ -4459,7 +4475,7 @@ class MainActivity : AppCompatActivity(),
                 val deltaTime = nowTime - lastClickTime
                 if (deltaTime < 700 && lastSelectedSection == which) {
                     // now the folder selection becomes permanent
-                    switchToFolderByNumber(ds.selectedSection, selectedSectionTemp)
+                    switchToFolderByNumber(ds.selectedSection, selectedSectionTemp, true)
                     dialog.cancel()
                 }
                 lastSelectedSection = which
@@ -4472,7 +4488,7 @@ class MainActivity : AppCompatActivity(),
                 // reset dirty flag
                 MainActivity.changeFolderDialogIsDirty = false
                 // now the folder selection becomes permanent
-                switchToFolderByNumber(ds.selectedSection, selectedSectionTemp)
+                switchToFolderByNumber(ds.selectedSection, selectedSectionTemp, true)
                 dialog.cancel()
             })
         // CHANGE FOLDER selection Cancel
@@ -4514,8 +4530,7 @@ class MainActivity : AppCompatActivity(),
             getString(R.string.moveFolderBottom),                  // 6 Move top
             getString(R.string.moreSetting),                       // 7 Folder setting
             "",                                // 8 empty ITEM as separator
-            getString(R.string.searchFolders),              // 9 search folders
-            getString(R.string.newFolder)                       // 10 New
+            getString(R.string.newFolder)                       // 9 New
         )
         var folderMoreBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             AlertDialog.Builder(
@@ -4535,7 +4550,7 @@ class MainActivity : AppCompatActivity(),
                     // reset dirty flag
                     MainActivity.changeFolderDialogIsDirty = false
                     // now the folder selection becomes permanent
-                    switchToFolderByNumber(ds.selectedSection, selectedSectionTemp)
+                    switchToFolderByNumber(ds.selectedSection, selectedSectionTemp, true)
                 }
                 //  MORE FILE OPTIONS: Export folder to PDF or RTF
                 if (which == 1) {
@@ -4904,25 +4919,8 @@ class MainActivity : AppCompatActivity(),
                         folderMoreDialog?.show()
                     }, 100)
                 }
-                // MORE FOLDER OPTIONS: search all folders
-                if (which == 9) {
-                    // does fabBack has got useful data
-                    val fbt = fabBack!!.tag as FabBackTag
-                    if (fbt.searchHitListGlobal.size > 0) {
-                        decisionBox(
-                            this,
-                            DECISION.YESNO,
-                            getString(R.string.searchResultsAvailable),
-                            getString(R.string.useExistingResults) + " " + fbt.searchPhrase,
-                            { prepareGlobalSearch(fbt.searchHitListGlobal, fbt.searchPhrase) },
-                            { prepareGlobalSearch(ArrayList(), "") }
-                        )
-                    } else {
-                        prepareGlobalSearch(ArrayList(), "")
-                    }
-                }
                 //  MORE FILE OPTIONS: New
-                if (which == 10) {
+                if (which == 9) {
                     // reject add item
                     if (ds.namesSection.size >= DataStore.SECTIONS_COUNT) {
                         var builder: AlertDialog.Builder? = null
@@ -5070,7 +5068,6 @@ class MainActivity : AppCompatActivity(),
                 }, 50)
             }
             inputBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
-                folderMoreDialog?.show()
             }
             inputBuilderDialog = inputBuilder.create()
             val listView = folderMoreDialog?.getListView()
@@ -7847,7 +7844,7 @@ class MainActivity : AppCompatActivity(),
                     }, 100)
                     return@setPositiveButton
                 }
-                // make sure, MainActivity is is active (doesn't harm, if MainActivity is already active )
+                // make sure, MainActivity is active (doesn't harm, if MainActivity is already active )
                 val mainIntent = Intent(contextMainActivity, MainActivity::class.java)
                 contextMainActivity.startActivity(mainIntent)
                 // allow to jump back to search hit list dialog
@@ -7858,7 +7855,7 @@ class MainActivity : AppCompatActivity(),
                 }
                 // switch to the selected search hit in its folder
                 var folderName = searchHitListGlobal[hitsNdx].folderName
-                switchToFolderByName(folderName, searchHitListGlobal[hitsNdx].lineNdx)
+                switchToFolderByName(folderName, false, searchHitListGlobal[hitsNdx].lineNdx)
             }
             jumpFolderBuilder.setNegativeButton(R.string.close) { dialog, which ->
                 // allow to jump back to search hit list dialog
@@ -8035,7 +8032,11 @@ class MainActivity : AppCompatActivity(),
         }
 
         // switch to a folder helpers
-        fun switchToFolderByNumber(prvFolderNumber: Int, newFolderNumber: Int, highLightPos: Int = -1) {
+        //   prvFolderNumber - previous folder number
+        //   newFolderNumber - new selected  folder number
+        //   checkReAuth     - re authorization needed (not needed, if jumping back and forth in global search hits)
+        //   highLightPos    - a global search hit shall be placed somehow vertically centered
+        fun switchToFolderByNumber(prvFolderNumber: Int, newFolderNumber: Int, checkReAuth: Boolean, highLightPos: Int = -1) {
             // sanity check
             if (newFolderNumber < 0 || newFolderNumber >= ds.dataSection.size) {
                 if (fabBack != null) {
@@ -8052,20 +8053,22 @@ class MainActivity : AppCompatActivity(),
             ds.undoAction = ACTION.UNDEFINED
             showMenuItemUndo()
             // reset auth flag for folder, if folder number is about to change
-            if (ds.selectedSection != newFolderNumber) {
+            if (ds.selectedSection != newFolderNumber && checkReAuth) {
                 MainActivity.folderIsAuthenticated = false
             }
             // only auth folder access, if protected folder is not already authenticated
-            if (ds.timeSection[newFolderNumber] == TIMESTAMP.AUTH && !MainActivity.folderIsAuthenticated) {
+            if (ds.timeSection[newFolderNumber] == TIMESTAMP.AUTH && !MainActivity.folderIsAuthenticated && checkReAuth) {
                 // authenticate before opening a protected folder
                 showBiometricPromptAndOpenFolder(prvFolderNumber, newFolderNumber, highLightPos)
             } else {
                 // open unprotected folder
-                MainActivity.folderIsAuthenticated = true
+                if (checkReAuth) {
+                    MainActivity.folderIsAuthenticated = true
+                }
                 openFolder(newFolderNumber, highLightPos)
             }
         }
-        fun switchToFolderByName(name: String, scrollPos: Int = -1) {
+        fun switchToFolderByName(name: String, checkReAuth: Boolean, scrollPos: Int = -1) {
             var prvFolderNumber = ds.selectedSection
             var newFolderNumber = -1
             val folderList = ds.namesSection.toTypedArray()
@@ -8075,7 +8078,7 @@ class MainActivity : AppCompatActivity(),
                     break
                 }
             }
-            switchToFolderByNumber(prvFolderNumber, newFolderNumber, scrollPos)
+            switchToFolderByNumber(prvFolderNumber, newFolderNumber, checkReAuth, scrollPos)
         }
         // full infra to open a DataStore folder
         fun openFolder(number: Int, highLightPos: Int) {
@@ -8090,6 +8093,7 @@ class MainActivity : AppCompatActivity(),
             var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else Math.max(lvMain.arrayList.size - 1, 0)
             // if presenting a global search hit, place it somehow vertically centered
             if (highLightPos != -1) {
+                fabBack!!.visibility = VISIBLE
                 scrollPos = Math.max(0, highLightPos - 8)
             }
             // now scroll the ListView
