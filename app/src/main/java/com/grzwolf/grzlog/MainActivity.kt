@@ -4795,19 +4795,23 @@ class MainActivity : AppCompatActivity(),
                     // temporarily save current folder
                     val nameTmp = ds.namesSection[selectedSectionTemp]
                     val dataTmp = ds.dataSection[selectedSectionTemp]
-                    // all folders from selectedSectionTemp - 1 till 0 move 1 lovel down
+                    val timeTmp = ds.timeSection[selectedSectionTemp]
+                    // all folders from selectedSectionTemp - 1 till 0 move 1 level down
                     for (i in selectedSectionTemp downTo 1 step 1) {
                         ds.namesSection[i] = ds.namesSection[i-1]
                         ds.dataSection[i] = ds.dataSection[i-1]
+                        ds.timeSection[i] = ds.timeSection[i-1]
                     }
                     // temporarily saved current folder goes to top
                     ds.namesSection[0] = nameTmp
                     ds.dataSection[0] = dataTmp
+                    ds.timeSection[0] = timeTmp
                     // current folder went to top, so does the folder selection index
                     ds.selectedSection = 0
                     // make change permanent
                     writeAppData(appStoragePath, ds, appName)
                     reReadAppFileData = true
+                    MainActivity.folderIndexIsUnreliable = true
                     onOptionsItemSelected(item)
                 }
                 //  MORE FOLDER OPTIONS: Move folder to bottom of list
@@ -4827,19 +4831,23 @@ class MainActivity : AppCompatActivity(),
                     // temporarily save current folder
                     val nameTmp = ds.namesSection[selectedSectionTemp]
                     val dataTmp = ds.dataSection[selectedSectionTemp]
-                    // all folders from selectedSectionTemp till bottom move 1 lovel up
+                    val timeTmp = ds.timeSection[selectedSectionTemp]
+                    // all folders from selectedSectionTemp till bottom move 1 level up
                     for (i in selectedSectionTemp..ds.namesSection.size - 2 step 1) {
                         ds.namesSection[i] = ds.namesSection[i+1]
                         ds.dataSection[i] = ds.dataSection[i+1]
+                        ds.timeSection[i] = ds.timeSection[i+1]
                     }
                     // temporarily saved current folder goes to bottom
                     ds.namesSection[ds.namesSection.size - 1] = nameTmp
                     ds.dataSection[ds.namesSection.size - 1] = dataTmp
+                    ds.timeSection[ds.namesSection.size - 1] = timeTmp
                     // current folder went to bottom, so does the folder selection index
                     ds.selectedSection = ds.namesSection.size - 1
                     // make change permanent
                     writeAppData(appStoragePath, ds, appName)
                     reReadAppFileData = true
+                    MainActivity.folderIndexIsUnreliable = true
                     onOptionsItemSelected(item)
                 }
                 // MORE FOLDER OPTIONS: Timestamp setting
@@ -7725,7 +7733,7 @@ class MainActivity : AppCompatActivity(),
         var attachmentPickerDialog: AlertDialog? = null
         var folderMoreDialog: AlertDialog? = null
         var changeFolderDialog: AlertDialog? = null // needs static, bc called from static
-        var changeFolderDialogIsDirty = false       // needs static, bc called from static
+        var changeFolderDialogIsDirty = false       // controls appearance of back button in folder dlg
         var returningFromAppGallery = false
         var showFolderMoreDialog = false
         var returnAttachmentFromAppGallery = ""
@@ -7740,6 +7748,9 @@ class MainActivity : AppCompatActivity(),
         // app visibility status
         @JvmField
         var appIsInForeground = false
+
+        // if a folder index was moved, it might happen multiple times, so its index is unreliable
+        var folderIndexIsUnreliable = false
 
         // flag indicating GrzLog folder is authenticated
         var folderIsAuthenticated by Delegates.observable(false) { property, oldValue, newValue ->
@@ -8052,9 +8063,10 @@ class MainActivity : AppCompatActivity(),
             ds.undoText = ""
             ds.undoAction = ACTION.UNDEFINED
             showMenuItemUndo()
-            // reset auth flag for folder, if folder number is about to change
-            if (ds.selectedSection != newFolderNumber && checkReAuth) {
+            // reset auth flag for folder, if folder number is about to change OR folder index might be fishy
+            if (ds.selectedSection != newFolderNumber || MainActivity.folderIndexIsUnreliable && checkReAuth) {
                 MainActivity.folderIsAuthenticated = false
+                MainActivity.folderIndexIsUnreliable = false
             }
             // only auth folder access, if protected folder is not already authenticated
             if (ds.timeSection[newFolderNumber] == TIMESTAMP.AUTH && !MainActivity.folderIsAuthenticated && checkReAuth) {
