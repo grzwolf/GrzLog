@@ -99,7 +99,7 @@
     <string name="removeFolder">Entfernen</string>
     <string name="moveFolderTop">An Anfang der Liste</string>
     <string name="moveFolderBottom">An Ende der Liste</string>
-    <string name="newFolder">Neuer Ordner</string>
+    <string name="newFolder">Neuen Ordner erzeugen</string>
     <string name="export">Export</string>
     <string name="whatTodoWithFolder">Was soll geschehen mit Ordner: \'</string>
     <string name="changeFolderName">Ordnername ändern</string>
@@ -369,6 +369,8 @@
     <string name="handleFolderProtection">Ordner öffnen erfordert System Authorisierung.</string>
     <string name="revokeFolderProtection">Ordnerschutz wird entfernt.</string>
     <string name="noGlobalSearchFromProtectedFolder">Globale Suche ist nicht erlaubt aus einem geschützten Ordner. Bitte vorher auf einen ungeschützten Ordner wechseln.</string>
+    <string name="openProtectedFolderBeforeDeletion">Ein geschützter Order muß geöffnent sein, bevor er gelöscht werden kann.</string>
+    <string name="openProtectedFolderBeforeAccess">Ein geschützter Order muß geöffnent sein, bevor auf ihn zugegriffen werden kann.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

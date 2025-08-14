@@ -4554,17 +4554,19 @@ class MainActivity : AppCompatActivity(),
                 }
                 //  MORE FILE OPTIONS: Export folder to PDF or RTF
                 if (which == 1) {
+                    if (ds.timeSection[selectedSectionTemp] == TIMESTAMP.AUTH && selectedSectionTemp != ds.selectedSection) {
+                        // a protected folder must be open to allow to export it
+                        okBox(
+                            this@MainActivity,
+                            getString(R.string.note),
+                            getString(R.string.openProtectedFolderBeforeAccess),
+                            {folderMoreDialog?.show()}
+                        )
+                        return@OnClickListener
+                    }
                     // EXPORT FOLDER to PDF or RTF
                     var exportBuilder: AlertDialog.Builder?
-                    exportBuilder =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            AlertDialog.Builder(
-                                this@MainActivity,
-                                android.R.style.Theme_Material_Dialog
-                            )
-                        } else {
-                            AlertDialog.Builder(this@MainActivity)
-                        }
+                    exportBuilder = AlertDialog.Builder(folderMoreBuilderContext, android.R.style.Theme_Material_Dialog)
                     var tmpExportSelection = 0
                     exportBuilder.setTitle(R.string.exportFolder)
                     exportBuilder.setSingleChoiceItems(
@@ -4608,6 +4610,16 @@ class MainActivity : AppCompatActivity(),
                 }
                 // MORE FOLDER OPTIONS: Rename
                 if (which == 2) {
+                    if (ds.timeSection[selectedSectionTemp] == TIMESTAMP.AUTH && selectedSectionTemp != ds.selectedSection) {
+                        // a protected folder must be open to allow to rename it
+                        okBox(
+                            this@MainActivity,
+                            getString(R.string.note),
+                            getString(R.string.openProtectedFolderBeforeAccess),
+                            {folderMoreDialog?.show()}
+                        )
+                        return@OnClickListener
+                    }
                     // folder name rename dialog
                     val input = EditText(folderMoreBuilderContext)
                     input.inputType = InputType.TYPE_CLASS_TEXT
@@ -4617,15 +4629,7 @@ class MainActivity : AppCompatActivity(),
                     )
                     showEditTextContextMenu(input, false) // suppress edit context menu
                     var renameBuilder: AlertDialog.Builder? = null
-                    renameBuilder =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            AlertDialog.Builder(
-                                folderMoreBuilderContext,
-                                android.R.style.Theme_Material_Dialog
-                            )
-                        } else {
-                            AlertDialog.Builder(folderMoreBuilderContext)
-                        }
+                    renameBuilder = AlertDialog.Builder(folderMoreBuilderContext, android.R.style.Theme_Material_Dialog)
                     renameBuilder.setTitle(R.string.changeFolderName)
                     renameBuilder.setView(input)
                     // folder name rename ok
@@ -4684,16 +4688,18 @@ class MainActivity : AppCompatActivity(),
                 }
                 // MORE FOLDER OPTIONS: Clear folder content
                 if (which == 3) {
+                    if (ds.timeSection[selectedSectionTemp] == TIMESTAMP.AUTH && selectedSectionTemp != ds.selectedSection) {
+                        // a protected folder must be open to allow to clear its content
+                        okBox(
+                            this@MainActivity,
+                            getString(R.string.note),
+                            getString(R.string.openProtectedFolderBeforeDeletion),
+                            {folderMoreDialog?.show()}
+                        )
+                        return@OnClickListener
+                    }
                     var builder: AlertDialog.Builder? = null
-                    builder =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            AlertDialog.Builder(
-                                folderMoreBuilderContext,
-                                android.R.style.Theme_Material_Dialog
-                            )
-                        } else {
-                            AlertDialog.Builder(folderMoreBuilderContext)
-                        }
+                    builder = AlertDialog.Builder(folderMoreBuilderContext, android.R.style.Theme_Material_Dialog)
                     builder.setTitle(getString(R.string.clearFolderData) + itemText + "' ?")
                     builder.setPositiveButton(
                         R.string.ok,
@@ -4723,16 +4729,18 @@ class MainActivity : AppCompatActivity(),
                 }
                 //  MORE FOLDER OPTIONS: Remove folder
                 if (which == 4) {
+                    if (ds.timeSection[selectedSectionTemp] == TIMESTAMP.AUTH && selectedSectionTemp != ds.selectedSection) {
+                        // a protected folder must be open to allow to remove it
+                        okBox(
+                            this@MainActivity,
+                            getString(R.string.note),
+                            getString(R.string.openProtectedFolderBeforeDeletion),
+                            {folderMoreDialog?.show()}
+                        )
+                        return@OnClickListener
+                    }
                     var builder: AlertDialog.Builder? = null
-                    builder =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            AlertDialog.Builder(
-                                folderMoreBuilderContext,
-                                android.R.style.Theme_Material_Dialog
-                            )
-                        } else {
-                            AlertDialog.Builder(folderMoreBuilderContext)
-                        }
+                    builder = AlertDialog.Builder(folderMoreBuilderContext, android.R.style.Theme_Material_Dialog)
                     builder.setTitle(getString(R.string.deleteFolder) + " '" + itemText + "' ?")
                     builder.setPositiveButton(
                         R.string.ok,
@@ -4852,6 +4860,16 @@ class MainActivity : AppCompatActivity(),
                 }
                 // MORE FOLDER OPTIONS: Timestamp setting
                 if (which == 7) {
+                    if (ds.timeSection[selectedSectionTemp] == TIMESTAMP.AUTH && selectedSectionTemp != ds.selectedSection) {
+                        // a protected folder must be open to access it
+                        okBox(
+                            this@MainActivity,
+                            getString(R.string.note),
+                            getString(R.string.openProtectedFolderBeforeAccess),
+                            {folderMoreDialog?.show()}
+                        )
+                        return@OnClickListener
+                    }
                     val items = arrayOf<CharSequence>(
                         getString(R.string.noProperty),
                         "auto hh:mm",
@@ -4932,15 +4950,7 @@ class MainActivity : AppCompatActivity(),
                     // reject add item
                     if (ds.namesSection.size >= DataStore.SECTIONS_COUNT) {
                         var builder: AlertDialog.Builder? = null
-                        builder =
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                AlertDialog.Builder(
-                                    folderMoreBuilderContext,
-                                    android.R.style.Theme_Material_Dialog
-                                )
-                            } else {
-                                AlertDialog.Builder(folderMoreBuilderContext)
-                            }
+                        builder = AlertDialog.Builder(folderMoreBuilderContext, android.R.style.Theme_Material_Dialog)
                         builder.setTitle(R.string.note)
                         builder.setMessage(getString(R.string.folderLimit) + DataStore.SECTIONS_COUNT + getString(R.string.folders))
                         builder.setIcon(android.R.drawable.ic_dialog_alert)
@@ -4956,15 +4966,7 @@ class MainActivity : AppCompatActivity(),
                     input.setText(R.string.folder, TextView.BufferType.SPANNABLE)
                     showEditTextContextMenu(input, false)
                     var addBuilder: AlertDialog.Builder?
-                    addBuilder =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            AlertDialog.Builder(
-                                folderMoreBuilderContext,
-                                android.R.style.Theme_Material_Dialog
-                            )
-                        } else {
-                            AlertDialog.Builder(folderMoreBuilderContext)
-                        }
+                    addBuilder = AlertDialog.Builder(folderMoreBuilderContext, android.R.style.Theme_Material_Dialog)
                     addBuilder.setTitle(R.string.folderNewName)
                     addBuilder.setView(input)
                     addBuilder.setPositiveButton(
