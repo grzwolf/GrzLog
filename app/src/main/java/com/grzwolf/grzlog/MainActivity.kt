@@ -8065,8 +8065,11 @@ class MainActivity : AppCompatActivity(),
             ds.undoText = ""
             ds.undoAction = ACTION.UNDEFINED
             showMenuItemUndo()
-            // reset auth flag for folder, if folder number is about to change OR folder index might be fishy
-            if (ds.selectedSection != newFolderNumber || MainActivity.folderIndexIsUnreliable && checkReAuth) {
+            // reset auth flag for folder:
+            //   1) if folder number is about to change
+            //   2) if folder index/number might be fishy (only happens after moving a folder in the appearance list)
+            //   3) if folder re auth is requested AND 1) OR 2) is true
+            if ( (ds.selectedSection != newFolderNumber || MainActivity.folderIndexIsUnreliable) && checkReAuth) {
                 MainActivity.folderIsAuthenticated = false
                 MainActivity.folderIndexIsUnreliable = false
             }
