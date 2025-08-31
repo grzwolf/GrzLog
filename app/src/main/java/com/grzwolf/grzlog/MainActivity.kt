@@ -2813,7 +2813,7 @@ class MainActivity : AppCompatActivity(),
             }
         })
 
-        // this happens, when returning from 'fabPlusInput more' dialog with BACK button: more dlg cannot not alter input text
+        // this happens, when returning from 'fabPlusInput more' dialog with BACK button: more dlg cannot alter input text
         val test = fabPlus.inputAlertView!!.text.toString()
         if (fabPlus.inputAlertText == test) {
             if (fabPlus.inputAlertText!!.length > 0 && fabPlus.attachmentUri!!.length == 0) {
@@ -5483,15 +5483,27 @@ class MainActivity : AppCompatActivity(),
                 }
                 8 -> { // link to a GrzLog folder
                     var getFolderBuilder: AlertDialog.Builder? = null
-                    getFolderBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-                    } else {
-                        AlertDialog.Builder(this@MainActivity)
-                    }
+                    getFolderBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
                     getFolderBuilder.setTitle(R.string.selectFolder)
                     var selectedSectionTemp = ds.selectedSection
                     // add a radio button list containing all the folder names from DataStore
-                    val folderList = ds.namesSection.toTypedArray()
+                    val charSequences: MutableList<CharSequence> = ArrayList()
+                    // change text color to yellow on black for protected folders
+                    for (pos in ds.namesSection.indices) {
+                        var spanStr = SpannableString(ds.namesSection[pos])
+                        if (ds.timeSection[pos] == TIMESTAMP.AUTH) {
+                            spanStr.setSpan(
+                                ForegroundColorSpan(
+                                    ContextCompat.getColor(
+                                        this,
+                                        R.color.yellow
+                                    )
+                                ), 0, spanStr.length, 0
+                            )
+                        }
+                        charSequences.add(spanStr)
+                    }
+                    val folderList = charSequences.toTypedArray()
                     getFolderBuilder.setSingleChoiceItems(
                         folderList,
                         ds.selectedSection,
@@ -5506,7 +5518,7 @@ class MainActivity : AppCompatActivity(),
                             fabPlus.pickAttachment = true
                             fabPlus.attachmentUri = "folder/" + folderList[selectedSectionTemp]
                             fabPlus.attachmentUriUri = null
-                            fabPlus.attachmentName = "[" + getString(R.string.folder) + "]"
+                            fabPlus.attachmentName = " [" + folderList[selectedSectionTemp] + "]"
                             dialog.dismiss()
                             fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                             dialog.cancel()
