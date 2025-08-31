@@ -1246,7 +1246,8 @@ class MainActivity : AppCompatActivity(),
                                         fabBack!!.tag = fbt
                                         fabBack!!.visibility = VISIBLE
                                     }
-                                    switchToFolderByName(folderName, false)
+                                    dontShowChangeFolder = true // suppress change folder dialog
+                                    switchToFolderByName(folderName, true)
                                 },
                                 null
                             )
@@ -1350,7 +1351,8 @@ class MainActivity : AppCompatActivity(),
                                             fabBack!!.tag = fbt
                                             fabBack!!.visibility = VISIBLE
                                         }
-                                        switchToFolderByName(folderName, false)
+                                        dontShowChangeFolder = true // suppress change folder dialog
+                                        switchToFolderByName(folderName, true)
                                     },
                                     null
                                 )
@@ -7754,6 +7756,10 @@ class MainActivity : AppCompatActivity(),
         // if a folder index was moved, it might happen multiple times, so its index is unreliable
         var folderIndexIsUnreliable = false
 
+        // flag to suppress the change folder dialog: TRUE after following a folder attachment
+        // why this? showing the 'change folder dialog' deletes the back button data
+        var dontShowChangeFolder = false
+
         // flag indicating GrzLog folder is authenticated
         var folderIsAuthenticated by Delegates.observable(false) { property, oldValue, newValue ->
             // discard folder change dialog, if folder is authenticated
@@ -7762,7 +7768,11 @@ class MainActivity : AppCompatActivity(),
             }
             // if folder is not authenticated, show change folder dialog
             if (newValue == false) {
-                appMenu?.performIdentifierAction(R.id.action_ChangeFolder, 0)
+                // the 'normal' use case is to show the change folder dialog
+                if (!dontShowChangeFolder) {
+                    appMenu?.performIdentifierAction(R.id.action_ChangeFolder, 0)
+                }
+                dontShowChangeFolder = false
             }
         }
 
@@ -8078,7 +8088,7 @@ class MainActivity : AppCompatActivity(),
                 // authenticate before opening a protected folder
                 showBiometricPromptAndOpenFolder(prvFolderNumber, newFolderNumber, highLightPos)
             } else {
-                // open unprotected folder
+                // opening folder doesn't need auth
                 if (checkReAuth) {
                     MainActivity.folderIsAuthenticated = true
                 }
