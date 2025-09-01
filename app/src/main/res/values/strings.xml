@@ -374,6 +374,7 @@
     <string name="openProtectedFolderBeforeAccess">A protected folder must be open, before accessing it.</string>
     <string name="folder_not_found">Folder not found</string>
     <string name="fix_it_by_edit_existing_attachment">Fix: \'Edit line\' -> \'ATTACHMENT\' -> \'Edit existing attachment\'.</string>
+    <string name="quitSearch">Quit search</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

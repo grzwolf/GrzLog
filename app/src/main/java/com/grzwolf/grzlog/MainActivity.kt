@@ -2546,6 +2546,8 @@ class MainActivity : AppCompatActivity(),
             itemOpt,
             "",
             getString(R.string.deleteFromList),
+            "",
+            getString(R.string.quitSearch),
         )
         builder.setItems(options, object : DialogInterface.OnClickListener {
             override fun onClick(dialog: DialogInterface, item: Int) {
@@ -2589,6 +2591,12 @@ class MainActivity : AppCompatActivity(),
                             { whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId) }
                         )
                     }
+                    7 -> { // separator
+                        whatToDoWithSearchHits(adapterView, itemView, itemPosition, itemId)
+                    }
+                    8 -> { // fully quit current folder search w/o going thru normal return logic
+                        quitCurrentFolderSearch()
+                    }
                 }
             }
         })
@@ -2605,6 +2613,47 @@ class MainActivity : AppCompatActivity(),
         listView.dividerHeight = 2
         dialog.show()
         dialog.setCanceledOnTouchOutside(false)
+    }
+
+    // quit current folder search:
+    fun quitCurrentFolderSearch() {
+        menuSearchVisible = false
+        //
+        searchView!!.setQuery(searchViewQuery, false)
+        searchViewQuery = ""
+        // control visibility of menu items
+        showMenuItems(false)
+        // remove all previous jump to remains
+        if (jumpToPhrase.length > 0) {
+            jumpToPhrase = ""
+            lvMain.unselectSearchHits()
+            lvMain.searchHitListFolder.clear()
+        }
+        // allow to unselect all search hits in arraylist
+        if (lvMain.searchHitListFolder.size > 0) {
+            // ask for decision
+            decisionBox(
+                this@MainActivity,
+                DECISION.YESNO,
+                getString(R.string.unselectSearchHits),
+                getString(R.string.continueQuestion),
+                {
+                    lvMain.unselectSearchHits()
+                    lvMain.searchHitListFolder.clear()
+                },
+                null
+            )
+        }
+        // show normal app title
+        title = ds.namesSection[ds.selectedSection]
+        // show fabPlus
+        fabPlus.button?.background?.setAlpha(130)
+        fabPlus.button?.show()
+        // hide keyboard
+        hideKeyboard()
+        // hide search view icon
+        var searchviewMenuItem = appMenu!!.findItem(R.id.action_search_view)
+        searchviewMenuItem!!.isVisible = false
     }
 
     // delete previously marked, either selected = (type 0) or search hits = (type 1) ListView items
@@ -3762,45 +3811,9 @@ class MainActivity : AppCompatActivity(),
                 searchView!!.setQuery(searchViewQuery, false)
             }
         }
-        // search action closes
+        // current folder search action closes
         searchView!!.setOnCloseListener { // close search query
-            menuSearchVisible = false
-            //
-            searchView!!.setQuery(searchViewQuery, false)
-            searchViewQuery = ""
-            // control visibility of menu items
-            showMenuItems(false)
-            // remove all previous jump to remains
-            if (jumpToPhrase.length > 0) {
-                jumpToPhrase = ""
-                lvMain.unselectSearchHits()
-                lvMain.searchHitListFolder.clear()
-            }
-            // allow to unselect all search hits in arraylist
-            if (lvMain.searchHitListFolder.size > 0) {
-                // ask for decision
-                decisionBox(
-                    this@MainActivity,
-                    DECISION.YESNO,
-                    getString(R.string.unselectSearchHits),
-                    getString(R.string.continueQuestion),
-                    {
-                        lvMain.unselectSearchHits()
-                        lvMain.searchHitListFolder.clear()
-                    },
-                    null
-                )
-            }
-            // show normal app title
-            title = ds.namesSection[ds.selectedSection]
-            // show fabPlus
-            fabPlus.button?.background?.setAlpha(130)
-            fabPlus.button?.show()
-            // hide keyboard
-            hideKeyboard()
-            // hide search view icon
-            var searchviewMenuItem = appMenu!!.findItem(R.id.action_search_view)
-            searchviewMenuItem!!.isVisible = false
+            quitCurrentFolderSearch()
             false
         }
         // search action begins

@@ -373,6 +373,7 @@
     <string name="openProtectedFolderBeforeAccess">Ein geschützter Order muß geöffnent sein, bevor auf ihn zugegriffen werden kann.</string>
     <string name="folder_not_found">Ordner nicht gefunden</string>
     <string name="fix_it_by_edit_existing_attachment">Reparatur: \'Zeile editieren\' -> \'Anhang\' -> \'Edit Dateianhang\'.</string>
+    <string name="quitSearch">Suche beenden</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
