@@ -8079,7 +8079,9 @@ class MainActivity : AppCompatActivity(),
                     val fbt = FabBackTag("", ArrayList(), -1, "")
                     fabBack!!.tag = fbt
                 }
-                centeredToast(contextMainActivity, "Index out of range", 3000)
+                okBox(contextMainActivity,
+                    contextMainActivity.getString(R.string.folder_not_found),
+                    contextMainActivity.getString(R.string.fix_it_by_edit_existing_attachment))
                 return
             }
             // switch folder always cancels undo

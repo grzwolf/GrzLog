@@ -372,6 +372,8 @@
     <string name="noGlobalSearchFromProtectedFolder">Global search is not allowed from a protected folder. Start over from an unprotected folder.</string>
     <string name="openProtectedFolderBeforeDeletion">A protected folder must be open, before its deletion.</string>
     <string name="openProtectedFolderBeforeAccess">A protected folder must be open, before accessing it.</string>
+    <string name="folder_not_found">Folder not found</string>
+    <string name="fix_it_by_edit_existing_attachment">Fix: \'Edit line\' -> \'ATTACHMENT\' -> \'Edit existing attachment\'.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
