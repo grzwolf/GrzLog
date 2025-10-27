@@ -122,6 +122,13 @@
             app:summaryOn="@string/EditRow"
             app:title="@string/clickSearchHitToEdit" />
 
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="encryptProtectedFolders"
+            app:summaryOff="@string/noEncrypt"
+            app:summaryOn="@string/yesEncrypt"
+            app:title="@string/encryptProtectedFolders" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/BackupRestore">

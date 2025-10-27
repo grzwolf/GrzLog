@@ -37,7 +37,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
 import androidx.core.content.FileProvider
 import androidx.preference.PreferenceManager
@@ -48,8 +47,8 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.SimpleTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
+import com.grzwolf.grzlog.DataStore.TIMESTAMP
 import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
-import com.grzwolf.grzlog.MainActivity.Companion.returnAttachmentFromAppGallery
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
@@ -431,14 +430,32 @@ private fun convertAppFileTextToDataStore(text: String): DataStore {
     for (i in parts.indices) {
         // check for begin of a new folder
         val key = "[[$ndx]]"
-        if (parts[i] == key) {
-            // we need to reject the first match and add the folder to DataStore at the next match
-            if (ndx > 0) {
-                dataStore.dataSection.add(collector)
+        if (parts[i].endsWith(key)) {
+            // could be like this
+            if (parts[i] == key) {
+                // need to reject the first match and add the folder to DataStore at the next match
+                if (ndx > 0) {
+                    dataStore.dataSection.add(collector)
+                }
+                ndx++
+                collector = ""
+                continue
             }
-            ndx++
-            collector = ""
-            continue
+            // it may happen, key is found at the end of parts[i] with leading data from the previous folder
+            if (parts[i] != key) {
+                // remove key from parts
+                parts[i] = parts[i].dropLast(key.length)
+                // add remaining data to collector
+                collector += parts[i] + "\n"
+                // add collector to dataStore, if index is not 0 ,aka 1st folder
+                if (ndx > 0) {
+                    dataStore.dataSection.add(collector)
+                }
+                // go ahead
+                ndx++
+                collector = ""
+                continue
+            }
         } else {
             // remove spaces from line ends
             var currLine = trimEndAll(parts[i])
@@ -506,13 +523,49 @@ internal fun convertDataStoreToAppFileText(ds: DataStore): String {
         }
         txt += "timestamp" + i + ":" + ds.timeSection.get(i) + "\n"
     }
-    // folder text data
-    for (i in 0 until DataStore.SECTIONS_COUNT) {
-        if (i >= ds.dataSection.size) {
-            break
+    // protected folders have the option to get encrypted
+    val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+    var encryptProtectedFolders = sharedPref.getBoolean("encryptProtectedFolders", false)
+    // distinguish between encryption AND no encryption
+    if (encryptProtectedFolders) {
+        // encrypt DataStore.dataSection aka folder
+        var keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+        for (i in ds.dataSection.indices) {
+            if (i >= ds.dataSection.size) {
+                break
+            }
+            // folder header
+            txt += "[[" + i + "]]\n"
+            // only encrypt protected folders
+            if (ds.timeSection[i] == TIMESTAMP.AUTH) {
+                // chunks is a list of Strings with each String a bit shorter as crypt accepts
+                var chunks: MutableList<String> = ArrayList()
+                val chunkSize = 100
+                chunks = ds.dataSection[i].chunked(chunkSize).toMutableList()
+                // encrypt chunks
+                for (j in chunks.indices) {
+                    chunks[j] = keyManager.encryptString(chunks[j])
+                }
+                // add chunks to folder with white space delimiter
+                for (j in chunks.indices) {
+                    txt += chunks[j] + " "
+                }
+                // remove last white space, it would cause an empty String while decryption
+                txt = txt.dropLast(1)
+            } else {
+                // keep not protected folders as plain text
+                txt += ds.dataSection[i]
+            }
         }
-        txt += "[[" + i + "]]\n"
-        txt += ds.dataSection[i]
+    } else {
+        // all folders as plain text data
+        for (i in 0 until DataStore.SECTIONS_COUNT) {
+            if (i >= ds.dataSection.size) {
+                break
+            }
+            txt += "[[" + i + "]]\n"
+            txt += ds.dataSection[i]
+        }
     }
     return txt
 }

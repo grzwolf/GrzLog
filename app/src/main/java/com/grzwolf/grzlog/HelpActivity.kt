@@ -97,13 +97,16 @@ class HelpActivity : AppCompatActivity() {
         "       Ask whether to autofill skipped dates\n" +
         "       Click on selection: copy to clipboard OR show attachment\n" +
         "       Click on search hit: edit line OR show attachment\n" +
+        "       Encrypt protected folders\n" +
         "   Backup and Restore\n" +
         "       Backup File Information\n" +
+        "              Note: folders in Backup Files are encrypted, if encryption is selected\n" +
         "       Backup mode\n" +
         "              fully automated in background\n" +
         "              run backup manually\n" +
         "       Backup outdated reminder (gray if automated)\n" +
         "       Backup execution in background OR foreground (gray if automated)\n" +
+        "              Note: folders in Backup Files are encrypted, if encryption is selected\n" +
         "       Backup Data now --> to /Download (gray if automated)\n" +
         "       Restore Data <-- from /Download\n" +
         "       Import backup from a file list\n" +

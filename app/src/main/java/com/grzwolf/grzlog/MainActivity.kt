@@ -30,6 +30,7 @@ import android.provider.Settings
 import android.text.*
 import android.text.style.*
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.*
 import android.view.View.*
 import android.view.inputmethod.InputMethodManager
@@ -300,7 +301,7 @@ class MainActivity : AppCompatActivity(),
         } else {
             // open unprotected folder
             MainActivity.folderIsAuthenticated = true
-            openFolder(ds.selectedSection, -1)
+            openFolder(-1, ds.selectedSection, -1)
         }
 
         // onCreate shall clear any undo data + set two ds tags to 0 (first and last deleted item positions)
@@ -569,9 +570,9 @@ class MainActivity : AppCompatActivity(),
     override fun onPause() {
         // restore from backup MUST not generate the simple txt-backup (would override local txt backup)
         if (!returningFromRestore) {
-            // simple text backup file in app path folder, ONLY USAGE in readAppData(): if GrzLog.ser is corrupted OR not existing
-            val storagePathApp = getExternalFilesDir(null)!!.absolutePath
-            createTxtBackup(this@MainActivity, storagePathApp, ds)
+            // simple text backup file in download folder, ONLY USAGE in readAppData(): if GrzLog.ser is corrupted OR not existing
+            val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            createTxtBackup(this@MainActivity, downloadDir, ds)
         }
         super.onPause()
     }
@@ -3690,75 +3691,6 @@ class MainActivity : AppCompatActivity(),
         optionsDialog?.show()
     }
 
-    // DataStore serialization read: return value is under no circumstances null
-    private fun readAppData(storagePath: String): DataStore {
-        var dataStore: DataStore? = null
-        val appName = applicationInfo.loadLabel(packageManager).toString()
-        val file = File(storagePath, "$appName.ser")
-        if (file.exists()) {
-            try {
-                val fis = FileInputStream(file)
-                val ois = ObjectInputStream(fis)
-                dataStore = ois.readObject() as DataStore
-                ois.close()
-                fis.close()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            } catch (ex: ClassNotFoundException) {
-                ex.printStackTrace()
-            }
-        }
-        //
-        // In case GrzLog.ser does not exist
-        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        // supposed to happen:
-        //        a) install after previously running GrzLog0.0.1 or any "grzlog" legacy app
-        //        b) any change to DataStore and de-serialization afterwards will fail
-        // Fix: restore GrzLog.ser from GrzLog.txt: 1) local GrzLog.txt  2) /Download GrzLog.txt
-        //
-        if (dataStore == null) {
-            var restoreSuccess = false
-            // note
-            centeredToast(this, getString(R.string.tryingTxtAppData), 3000)
-            // TRY #1: upgrade from app storage path *log*.txt etc --> GrzLog.ser
-            dataStore = upgradeFromLegacy(storagePath, true)
-            // try to get data from a legacy backup
-            if (dataStore == null) {
-                // note
-                centeredToast(this, getString(R.string.tryingTxtBackupData), 3000)
-                // TRY #2: upgrade from legacy backup in Downloads *log*.txt etc --> GrzLog.ser
-                val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                dataStore = upgradeFromLegacy(downloadDir, false)
-                // finally give up ...
-                if (dataStore == null) {
-                    // finally give up and create an empty DataStore
-                    dataStore = DataStore()
-                    dataStore.namesSection.add(getString(R.string.folder))
-                    dataStore.dataSection.add("")
-                    dataStore.tagSection = mutableListOf(-1, -1)
-                    dataStore.timeSection.add(TIMESTAMP.HHMM)
-                    dataStore.selectedSection = 0
-                    okBox(this, getString(R.string.note), getString(R.string.noAppDataFound))
-                } else {
-                    restoreSuccess = true
-                }
-            } else {
-                restoreSuccess = true
-            }
-            // somehow success
-            if (restoreSuccess && dataStore != null) {
-                // make simple text backup file in app path folder, ONLY USAGE in readAppData(): if GrzLog.ser is corrupted OR not existing
-                val storagePathApp = getExternalFilesDir(null)!!.absolutePath
-                createTxtBackup(this@MainActivity, storagePathApp, dataStore)
-                // did somehow work
-                okBox(this, getString(R.string.success), getString(R.string.appDataWereRestored))
-            }
-            // save the DataStore to GrzLog.ser
-            writeAppData(appStoragePath, dataStore, appName)
-        }
-        return dataStore
-    }
-
     // region action bar
     //
     // action bar
@@ -4528,7 +4460,11 @@ class MainActivity : AppCompatActivity(),
         listView?.divider = ColorDrawable(Color.GRAY)
         listView?.dividerHeight = 2
         // CHANGE FOLDER finally show change folder dialog
-        MainActivity.changeFolderDialog?.show()
+        try {
+            MainActivity.changeFolderDialog?.show()
+        } catch (ex: Exception) {
+            // not nice, but no further handling needed
+        }
     }
 
     // follow up dialog to "Change Folder Dialog" with options for one folder
@@ -4677,6 +4613,8 @@ class MainActivity : AppCompatActivity(),
                             ds.namesSection[selectedSectionTemp] = text.toString()
                             ds.selectedSection = selectedSectionTemp
                             writeAppData(appStoragePath, ds, appName)
+                            ds.clear()
+                            ds = readAppData(appStoragePath)
                             // update app title bar
                             title = ds.namesSection[ds.selectedSection]
                             // close parent dialog
@@ -4731,6 +4669,8 @@ class MainActivity : AppCompatActivity(),
                             ds.dataSection[selectedSectionTemp] = ""
                             ds.selectedSection = selectedSectionTemp
                             writeAppData(appStoragePath, ds, appName)
+                            ds.clear()
+                            ds = readAppData(appStoragePath)
                             // close parent dialog
                             changeFolderDialog!!.cancel()
                             // restart with resume()
@@ -4788,6 +4728,8 @@ class MainActivity : AppCompatActivity(),
                                     }
                                     // save data
                                     writeAppData(appStoragePath, ds, appName)
+                                    ds.clear()
+                                    ds = readAppData(appStoragePath)
                                     // close parent dialog
                                     changeFolderDialog!!.cancel()
                                     // restart with resume()
@@ -4833,6 +4775,8 @@ class MainActivity : AppCompatActivity(),
                     ds.selectedSection = 0
                     // make change permanent
                     writeAppData(appStoragePath, ds, appName)
+                    ds.clear()
+                    ds = readAppData(appStoragePath)
                     reReadAppFileData = true
                     MainActivity.folderIndexIsUnreliable = true
                     onOptionsItemSelected(item)
@@ -4869,6 +4813,8 @@ class MainActivity : AppCompatActivity(),
                     ds.selectedSection = ds.namesSection.size - 1
                     // make change permanent
                     writeAppData(appStoragePath, ds, appName)
+                    ds.clear()
+                    ds = readAppData(appStoragePath)
                     reReadAppFileData = true
                     MainActivity.folderIndexIsUnreliable = true
                     onOptionsItemSelected(item)
@@ -5009,6 +4955,8 @@ class MainActivity : AppCompatActivity(),
                             ds.timeSection.add(ds.selectedSection, TIMESTAMP.OFF)
                             ds.tagSection = mutableListOf(-1, -1)
                             writeAppData(appStoragePath, ds, appName)
+                            ds.clear()
+                            ds = readAppData(appStoragePath)
                             reReadAppFileData = true
                             onResume()
                         })
@@ -5046,6 +4994,8 @@ class MainActivity : AppCompatActivity(),
         MainActivity.changeFolderDialogIsDirty = true  // no back button in change folder dialog
         ds.timeSection[selectedSectionTemp] = newTimeStampProp
         writeAppData(appStoragePath, ds, appName)      // save data
+        ds.clear()
+        ds = readAppData(appStoragePath)
         folderMoreDialog?.show()                       // show more dlg again
     }
 
@@ -7789,7 +7739,11 @@ class MainActivity : AppCompatActivity(),
         var folderIsAuthenticated by Delegates.observable(false) { property, oldValue, newValue ->
             // discard folder change dialog, if folder is authenticated
             if (newValue == true) {
-                MainActivity.changeFolderDialog?.cancel()
+                try {
+                    MainActivity.changeFolderDialog?.cancel()
+                } catch (ex: Exception) {
+                    // not nice, but no further handling needed
+                }
             }
             // if folder is not authenticated, show change folder dialog
             if (newValue == false) {
@@ -7884,9 +7838,17 @@ class MainActivity : AppCompatActivity(),
                 }
             )
             jumpFolderBuilder.setPositiveButton(R.string.jump) { dialog, which ->
-                // sanity check
+                // index sanity check
                 if (hitsNdx in 0 until hits.size == false) {
                     centeredToast(context, contextMainActivity.getString(R.string.chooseSearchHit), 3000)
+                    Handler().postDelayed({
+                        jumpToSearchHitInFolderDialog(context, searchHitListGlobal, listNdx, searchText)
+                    }, 100)
+                    return@setPositiveButton
+                }
+                // don't jump to protected folders
+                if (searchHitListGlobal[hitsNdx].folderName.equals("protected")) {
+                    centeredToast(context, contextMainActivity.getString(R.string.forbidden), 3000)
                     Handler().postDelayed({
                         jumpToSearchHitInFolderDialog(context, searchHitListGlobal, listNdx, searchText)
                     }, 100)
@@ -7930,12 +7892,6 @@ class MainActivity : AppCompatActivity(),
             var hitList: MutableList<GlobalSearchHit> = ArrayList()
             // iterate all data sections of DataStore
             for (dsNdx in ds.dataSection.indices) {
-
-                // global search is not allowed in protected folders
-                if (ds.timeSection[dsNdx] == TIMESTAMP.AUTH) {
-                    continue
-                }
-
                 // text from DataStore folder
                 var sectionText = ds.dataSection[dsNdx]
                 // take show order into account
@@ -7978,7 +7934,13 @@ class MainActivity : AppCompatActivity(),
                             startIndex = searchTextStart + searchText.length
                             searchTextStart = inspectStr.indexOf(searchText, startIndex, ignoreCase = true)
                         }
-                        hitList.add(GlobalSearchHit(spanCombined, i, folderName))
+                        if (ds.timeSection[dsNdx] == TIMESTAMP.AUTH) {
+                            // global search is not allowed in protected folders
+                            hitList.add(GlobalSearchHit(SpannableString("protected"), i, "protected"))
+                        } else {
+                            // searchable folder
+                            hitList.add(GlobalSearchHit(spanCombined, i, folderName))
+                        }
                     }
                 }
             }
@@ -8019,6 +7981,8 @@ class MainActivity : AppCompatActivity(),
                         MainActivity.changeFolderDialogIsDirty = true // no back button in change folder dialog
                         ds.timeSection[selectedSectionTemp] = newTimeStampProp
                         writeAppData(appStoragePath, ds, appName)     // save data
+                        ds.clear()
+                        ds = readAppData(appStoragePath)
                         folderMoreDialog?.show()                      // show more dlg again
                     }
                     // failure: usually there is no system auth available
@@ -8058,7 +8022,7 @@ class MainActivity : AppCompatActivity(),
                         // handle authentication success
                         showMessage("Authentication succeeded!")
                         MainActivity.folderIsAuthenticated = true
-                        openFolder(newFolderNumber, highLightPos)
+                        openFolder(prvFolderNumber, newFolderNumber, highLightPos)
                     }
                     // failure: usually there is no system auth available
                     override fun onAuthenticationFailed() {
@@ -8119,7 +8083,7 @@ class MainActivity : AppCompatActivity(),
                 if (checkReAuth) {
                     MainActivity.folderIsAuthenticated = true
                 }
-                openFolder(newFolderNumber, highLightPos)
+                openFolder(prvFolderNumber, newFolderNumber, highLightPos)
             }
         }
         fun switchToFolderByName(name: String, checkReAuth: Boolean, scrollPos: Int = -1) {
@@ -8135,9 +8099,15 @@ class MainActivity : AppCompatActivity(),
             switchToFolderByNumber(prvFolderNumber, newFolderNumber, checkReAuth, scrollPos)
         }
         // full infra to open a DataStore folder
-        fun openFolder(number: Int, highLightPos: Int) {
-            ds.selectedSection = number
-            writeAppData(appStoragePath, ds, appName)
+        fun openFolder(prvFolderNumber: Int, newFolderNumber: Int, highLightPos: Int) {
+            // new active folder
+            ds.selectedSection = newFolderNumber
+            // write such info to disk an re read data from disk
+            if (prvFolderNumber != -1 && prvFolderNumber != newFolderNumber ) {
+                writeAppData(appStoragePath, ds, appName)
+                ds.clear()
+                ds = readAppData(appStoragePath)
+            }
             val dsText = ds.dataSection[ds.selectedSection]
             lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)
             lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList)
@@ -8285,7 +8255,9 @@ class MainActivity : AppCompatActivity(),
                         // write DataStore to app file
                         var appPath = File(appAttachmentsPath).parent
                         if (appPath != null) {
-                            writeAppData(appPath.toString(), ds, appName)
+                            writeAppData(appStoragePath, ds, appName)
+                            ds.clear()
+                            ds = readAppData(appStoragePath)
                         }
                         // get number of orphaned files and fill list with orphans
                         for (j in fileUsed.indices) {
@@ -8332,13 +8304,172 @@ class MainActivity : AppCompatActivity(),
             )
         }
 
-        // DataStore serialization write
-        fun writeAppData(storagePath: String, data: DataStore?, appName: String) {
+        // DataStore serialization read: return value is under no circumstances null
+        private fun readAppData(storagePath: String): DataStore {
+            var dataStore: DataStore? = null
+            val appName =
+                contextMainActivity.applicationInfo.loadLabel(contextMainActivity.packageManager)
+                    .toString()
+            val file = File(storagePath, "$appName.ser")
+            if (file.exists()) {
+                try {
+                    val fis = FileInputStream(file)
+                    val ois = ObjectInputStream(fis)
+                    dataStore = ois.readObject() as DataStore
+                    ois.close()
+                    fis.close()
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                } catch (ex: ClassNotFoundException) {
+                    ex.printStackTrace()
+                }
+            }
+            //
+            // In case GrzLog.ser does not exist
+            // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            // supposed to happen:
+            //        a) install after previously running GrzLog0.0.1 or any "grzlog" legacy app
+            //        b) any change to DataStore and de-serialization afterwards will fail
+            // Fix: restore GrzLog.ser from GrzLog.txt: 1) local GrzLog.txt  2) /Download GrzLog.txt
+            //
+            if (dataStore == null) {
+                var restoreSuccess = false
+                // note
+                centeredToast(
+                    contextMainActivity,
+                    contextMainActivity.getString(R.string.tryingTxtAppData),
+                    3000
+                )
+                // TRY #1: upgrade from app storage path *log*.txt etc --> GrzLog.ser
+                dataStore = upgradeFromLegacy(storagePath, true)
+                // try to get data from a legacy backup
+                if (dataStore == null) {
+                    // note
+                    centeredToast(
+                        contextMainActivity,
+                        contextMainActivity.getString(R.string.tryingTxtBackupData),
+                        3000
+                    )
+                    // TRY #2: upgrade from legacy backup in Downloads *log*.txt etc --> GrzLog.ser
+                    val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    dataStore = upgradeFromLegacy(downloadDir, false)
+                    // finally give up ...
+                    if (dataStore == null) {
+                        // finally give up and create an empty DataStore
+                        dataStore = DataStore()
+                        dataStore.namesSection.add(contextMainActivity.getString(R.string.folder))
+                        dataStore.dataSection.add("")
+                        dataStore.tagSection = mutableListOf(-1, -1)
+                        dataStore.timeSection.add(TIMESTAMP.HHMM)
+                        dataStore.selectedSection = 0
+                        okBox(
+                            contextMainActivity,
+                            contextMainActivity.getString(R.string.note),
+                            contextMainActivity.getString(R.string.noAppDataFound)
+                        )
+                    } else {
+                        restoreSuccess = true
+                    }
+                } else {
+                    restoreSuccess = true
+                }
+                // somehow success
+                if (restoreSuccess && dataStore != null) {
+                    // make simple text backup file in download folder, ONLY USAGE in readAppData(): if GrzLog.ser is corrupted OR not existing
+                    val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    createTxtBackup(contextMainActivity, downloadDir, dataStore)
+                    // did somehow work
+                    okBox(
+                        contextMainActivity,
+                        contextMainActivity.getString(R.string.success),
+                        contextMainActivity.getString(R.string.appDataWereRestored)
+                    )
+                }
+                // save the DataStore to GrzLog.ser
+                //      Keep in mind: legacy backups are no way encrypted.
+                //                    So keep folders as clear texts.
+                writeAppData(appStoragePath, dataStore, appName, false)
+            }
+
+            // decrypt DataStore.dataSection aka folder
+            var keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+            for (i in dataStore.dataSection.indices) {
+                // only decrypt protected folders
+                if (dataStore.timeSection[i] == TIMESTAMP.AUTH) {
+
+                    // encrypted chunks are delimited by a white space
+                    var chunks: MutableList<String> =
+                        dataStore.dataSection[i].split(" ").toMutableList()
+
+                    // chunk might not be encrypted:
+                    //    a) happens if 'set folder protection' was set
+                    //       and encryption/decryption was not yet available.
+                    //       Which is the case by switch from <= v45 ---> >= v46
+                    //    b) always happens, if encrypt/decrypt is turned off from Settings
+                    //       for a protected folder
+                    if (!keyManager.isStringEncrypted(chunks[0])) {
+                        // ... so better not continue decrypting
+                        continue
+                    }
+
+                    // reset folder data
+                    dataStore.dataSection[i] = ""
+                    // decrypt chunks into folder
+                    for (j in chunks.indices) {
+                        if (chunks[j].length > 0) {
+                            dataStore.dataSection[i] += keyManager.decryptString(chunks[j])
+                        } else {
+                            Log.e("GrzLog readAppData", "chunk length 0")
+                        }
+                    }
+                }
+            }
+
+            return dataStore
+        }
+
+        // DataStore serialization write to disk
+        fun writeAppData(storagePath: String, dataStore: DataStore, appName: String, doEncrypt: Boolean = true) {
+
+            if (doEncrypt) {
+                // protected folders have the option to encrypt/decrypt
+                val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+                var encryptProtectedFolders =
+                    sharedPref.getBoolean("encryptProtectedFolders", false)
+
+                // encrypt DataStore.dataSection aka folder
+                if (encryptProtectedFolders) {
+                    var keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+                    for (i in dataStore.dataSection.indices) {
+                        // only encrypt protected folders
+                        if (dataStore.timeSection[i] == TIMESTAMP.AUTH) {
+                            // chunks is a list of Strings with each String a bit shorter as crypt accepts
+                            var chunks: MutableList<String> = ArrayList()
+                            val chunkSize = 100
+                            chunks = dataStore.dataSection[i].chunked(chunkSize).toMutableList()
+                            // encrypt chunks
+                            for (j in chunks.indices) {
+                                chunks[j] = keyManager.encryptString(chunks[j])
+                            }
+                            // reset folder data
+                            dataStore.dataSection[i] = ""
+                            // add chunks to folder with white space delimiter
+                            for (j in chunks.indices) {
+                                dataStore.dataSection[i] += chunks[j] + " "
+                            }
+                            // remove last white space, it would cause an empty String while decryption
+                            dataStore.dataSection[i] = dataStore.dataSection[i].dropLast(1)
+                        }
+                    }
+                }
+            }
+
+            // write to disk
             try {
                 val file = File(storagePath, "$appName.ser")
                 val fos = FileOutputStream(file)
                 val oos = ObjectOutputStream(fos)
-                oos.writeObject(data)
+                oos.writeObject(dataStore)
                 oos.close()
                 fos.close()
             } catch (e: IOException) {

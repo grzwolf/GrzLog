@@ -56,6 +56,40 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
         }
     }
 
+    // checks whether a given String is encrypted with the app's private key
+    fun isStringEncrypted(textToCheck: String): Boolean {
+        try {
+            val privateKeyEntry = keyStore.getEntry(alias, null) as KeyStore.PrivateKeyEntry
+            val privateKey = privateKeyEntry.privateKey
+
+            val output = Cipher.getInstance("RSA/ECB/PKCS1Padding")
+            output.init(Cipher.DECRYPT_MODE, privateKey)
+
+            val cipherText: String = textToCheck
+            val cipherInputStream = CipherInputStream(
+                ByteArrayInputStream(Base64.decode(cipherText, Base64.DEFAULT)), output
+            )
+            val values = ArrayList<Byte>()
+            var nextByte: Int
+            while ((cipherInputStream.read().also { nextByte = it }) != -1) {
+                values.add(nextByte.toByte())
+            }
+
+            val bytes = ByteArray(values.size)
+            for (i in bytes.indices) {
+                bytes[i] = values[i]
+            }
+
+            val finalText = String(bytes, 0, bytes.size, charset("UTF-8"))
+            return true
+
+        } catch (e: java.lang.Exception) {
+            Log.e(tag, Log.getStackTraceString(e))
+            return false
+        }
+    }
+
+    // encrypt the given String with the app's public key
     fun encryptString(initialText: String): String {
         try {
             val privateKeyEntry = keyStore.getEntry(alias, null) as KeyStore.PrivateKeyEntry
@@ -81,6 +115,7 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
         }
     }
 
+    // decrypt the given String with the app's private key
     fun decryptString(cryptText: String): String {
         try {
             val privateKeyEntry = keyStore.getEntry(alias, null) as KeyStore.PrivateKeyEntry

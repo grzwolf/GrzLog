@@ -76,6 +76,9 @@ public class SettingsActivity :
         if (s == "AppAtStartCheckUpdateFlag") {
             MainActivity.reReadAppFileData = true
         }
+        if (s == "encryptProtectedFolders") {
+            MainActivity.reReadAppFileData = true
+        }
     }
 
     override fun onStart() {

@@ -374,6 +374,10 @@
     <string name="folder_not_found">Ordner nicht gefunden</string>
     <string name="fix_it_by_edit_existing_attachment">Reparatur: \'Zeile editieren\' -> \'Anhang\' -> \'Edit Dateianhang\'.</string>
     <string name="quitSearch">Suche beenden</string>
+    <string name="encryptProtectedFolders">Geschützte Ordner verschlüsseln</string>
+    <string name="noEncrypt">keine Verschlüsselung</string>
+    <string name="yesEncrypt">Verschlüsselung aktiv</string>
+    <string name="forbidden">verboten</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
