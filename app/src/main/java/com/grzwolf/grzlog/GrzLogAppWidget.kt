@@ -70,7 +70,7 @@ class GrzLogAppWidget : AppWidgetProvider() {
             // single click event: prepare dealing with main activity
             val intentDlg = Intent(context, MainActivity::class.java)
             intentDlg.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            // if user sigle clicks widget, the input dialog inside mainactivity shall immediately open: provide flag in shared preferences
+            // if user single clicks widget, the input dialog inside mainactivity shall immediately open: provide flag in shared preferences
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(context)
             val spe = sharedPref.edit()
             spe.putBoolean("clickFabPlus", true)

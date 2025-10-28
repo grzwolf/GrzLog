@@ -104,7 +104,7 @@ public class SettingsActivity :
             else        -> {
                              if (theme == "tmpdaynight") {
                                  // supposed to fix too bright dialogs after a MagicOS 8 update
-                                 // --> MainAcvtivity will override such theme after being back there
+                                 // --> MainActivity will override such theme after being back there
                                  setTheme(R.style.ThemeOverlay_AppCompat_DayNight)
                              } else {
                                  setTheme(R.style.ThemeOverlay_AppCompat_Dark)
@@ -296,7 +296,7 @@ public class SettingsActivity :
             themePreference!!.summary = getString(R.string.currentTheme) + sharedPref.getString(getString(R.string.chosenTheme), "?")
             themePreference!!.setOnPreferenceChangeListener { preference, newValue ->
                 if (preference is ListPreference) {
-                    // note: prefrence gets automatically updated after leaving setOnPreferenceChangeListener
+                    // note: preference gets automatically updated after leaving setOnPreferenceChangeListener
                     val index = preference.findIndexOfValue(newValue.toString())
                     val entry = preference.entries.get(index)
                     val entryvalue = preference.entryValues.get(index)
@@ -839,7 +839,7 @@ public class SettingsActivity :
                 true
             }
 
-            // action after rescale iamges in app gallery
+            // action after rescale images in app gallery
             val rescaleImages = findPreference("RescaleImages") as Preference?
             rescaleImages!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 // special handling for images to offer a GrzLog global downscaling option
@@ -948,7 +948,7 @@ public class SettingsActivity :
             brightDlgPref!!.onPreferenceClickListener =
                 Preference.OnPreferenceClickListener {
                     // temporary set some other theme to fix potential MagicOS update bug
-                    // --> MainAcvtivity will override such theme after being back there
+                    // --> MainActivity will override such theme after being back there
                     val spe = sharedPref.edit()
                     spe.putString(getString(R.string.chosenTheme), "tmpdaynight")
                     spe.apply()

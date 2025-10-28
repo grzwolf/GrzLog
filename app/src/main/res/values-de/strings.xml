@@ -364,7 +364,7 @@
     <string name="tmpDayNightSummary">Klick hier, falls Dialoge weiß auf hell erscheinen</string>
     <string name="search_replace_selection"><![CDATA[Suchen & Ersetzen]]></string>
     <string name="authenticate">Authorisierung</string>
-    <string name="folderNotAuthorized">Aktueller Ordner ist nicht authorisiert</string>
+    <string name="folderNotAuthorized">Aktueller Ordner ist nicht autorisiert</string>
     <string name="folderProtect">Ordnerschutz</string>
     <string name="handleFolderProtection">Ordner öffnen erfordert System Authorisierung.</string>
     <string name="revokeFolderProtection">Ordnerschutz wird entfernt.</string>

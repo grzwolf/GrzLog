@@ -6876,7 +6876,7 @@ class MainActivity : AppCompatActivity(),
         // loop
         val len = parts.size
         for (i in 0 until len) {
-            // heeader: a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR 9.toChar()
+            // header: a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR 9.toChar()
             if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i].toString()) || parts[i].toString().startsWith(9.toChar())) {
                 // no spaces at end of the row - ONLY in timestamp part, NOT in any other part
                 parts[i] = trimEndAll(parts[i]!!)
@@ -9535,7 +9535,7 @@ internal class LvAdapter : BaseAdapter {
                 tv.text = spanStr
             }
         }
-        // www links in item text: change color & underline !!reuse: text and spanStr as above, bc. of the pontentially added " "
+        // www links in item text: change color & underline !!reuse: text and spanStr as above, bc. of the potentially added " "
         var urls: ArrayList<String>? = getAllLinksFromString(text.toString())
         if (urls != null && urls.size > 0) {
             for (url in urls) {

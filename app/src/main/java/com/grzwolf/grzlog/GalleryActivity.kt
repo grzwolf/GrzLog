@@ -552,7 +552,7 @@ class GalleryActivity : AppCompatActivity() {
             Thread {
                 val appImagesPath = applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/"
                 val fileList: Array<File> = File(appImagesPath).listFiles()
-                pw.absCount = fileList.size.toFloat() * 3 // keeps progrese more agile
+                pw.absCount = fileList.size.toFloat() * 3 // keeps progress more agile
                 pw.absFakeCount = fileList.size.toFloat() // count to show in pw
                 val listGrzThumbNail = getFolderFiles(this, appImagesPath, sortByDate, fileList, pw)
                 try {
