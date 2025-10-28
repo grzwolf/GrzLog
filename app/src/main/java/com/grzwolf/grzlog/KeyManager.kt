@@ -52,7 +52,7 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
                 generator.generateKeyPair()
             }
         } catch (e: java.lang.Exception) {
-            Log.e(tag, Log.getStackTraceString(e))
+            centeredToast(context, context.getString(R.string.no_encryption_available), 3000)
         }
     }
 
@@ -84,7 +84,6 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
             return true
 
         } catch (e: java.lang.Exception) {
-            Log.e(tag, Log.getStackTraceString(e))
             return false
         }
     }
@@ -110,8 +109,8 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
             return crypted
 
         } catch (e: java.lang.Exception) {
-            Log.e(tag, Log.getStackTraceString(e))
-            return "encrypt failed"
+            centeredToast(context, context.getString(R.string.encryption_failed), 3000)
+            return initialText
         }
     }
 
@@ -143,8 +142,8 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
             return finalText
 
         } catch (e: java.lang.Exception) {
-            Log.e(tag, Log.getStackTraceString(e))
-            return "decrypt failed"
+            centeredToast(context, context.getString(R.string.decryption_failed), 3000)
+            return cryptText
         }
     }
 }

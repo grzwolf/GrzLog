@@ -378,6 +378,9 @@
     <string name="noEncrypt">keine Verschlüsselung</string>
     <string name="yesEncrypt">Verschlüsselung aktiv</string>
     <string name="forbidden">verboten</string>
+    <string name="no_encryption_available">Verschlüsselung nicht verfügbar</string>
+    <string name="encryption_failed">Fehler Verschlüsselung</string>
+    <string name="decryption_failed">Fehler Entschlüsselung</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

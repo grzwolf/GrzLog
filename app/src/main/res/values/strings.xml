@@ -379,6 +379,9 @@
     <string name="yesEncrypt">encryption active</string>
     <string name="noEncrypt">no encryption</string>
     <string name="forbidden">forbidden</string>
+    <string name="no_encryption_available">no encryption available</string>
+    <string name="encryption_failed">encryption failed</string>
+    <string name="decryption_failed">decryption failed</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
