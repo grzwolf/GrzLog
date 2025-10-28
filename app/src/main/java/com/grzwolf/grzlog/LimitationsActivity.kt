@@ -13,7 +13,7 @@ class LimitationsActivity : AppCompatActivity() {
     val text =
         "GrzLog limitations\n" +
         "==================\n" +
-        "\nFloation keyboard (like Gboard pen input)\n" +
+        "\nFloating keyboard (like Gboard pen input)\n" +
         "is not supported. 'Pen input' must be disabled.\n\n" +
         "Folder protection w/o encryption is weak.\n" +
         "Protected folders could be encrypted in Settings.\n\n" +
