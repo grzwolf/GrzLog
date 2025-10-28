@@ -12,7 +12,7 @@ android {
 
         // the one & only places to change the app version name and code version
         versionCode 1        // playstore relevant - increase it to prevent a downgrade
-        versionName "1.1.46" // user relevant
+        versionName "1.1.47" // user relevant
 
         //
         def buildTime = new Date()
