@@ -62,6 +62,7 @@ import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
@@ -161,7 +162,11 @@ fun createZipArchive(
         // need to make sure, a real backup is not interrupted
         val file = File("$outFolder/$zipName" + "_part")
         val dest = FileOutputStream(file)
-        val out = ZipOutputStream(BufferedOutputStream(dest))
+        val zipOut = ZipOutputStream(BufferedOutputStream(dest))
+        // performance gain: most relevant data are jpg/mp4/pdf --> no need to compress
+        if (!PreferenceManager.getDefaultSharedPreferences(contextMainActivity).getBoolean("backupCompression", false)) {
+            zipOut.setLevel(Deflater.NO_COMPRESSION)
+        }
         val data = ByteArray(BUFFER)
         val subDir = File(srcFolder)
         val subdirList = subDir.list()
@@ -207,11 +212,11 @@ fun createZipArchive(
                     val entry = ZipEntry(sd + "/" + files[i])
                     val fi = File(srcFolder + "/" + sd + "/" + files[i])
                     entry.time = fi.lastModified()
-                    out.putNextEntry(entry)
+                    zipOut.putNextEntry(entry)
                     var count: Int
                     while (origin!!.read(data, 0, BUFFER).also { count = it } != -1) {
-                        out.write(data, 0, count)
-                        out.flush()
+                        zipOut.write(data, 0, count)
+                        zipOut.flush()
                     }
                     fis.close()
                 }
@@ -220,18 +225,18 @@ fun createZipArchive(
                 origin = BufferedInputStream(fis, BUFFER)
                 val entry = ZipEntry(sd)
                 entry.time = f.lastModified()
-                out.putNextEntry(entry)
+                zipOut.putNextEntry(entry)
                 var count: Int
                 while (origin!!.read(data, 0, BUFFER).also { count = it } != -1) {
-                    out.write(data, 0, count)
-                    out.flush()
+                    zipOut.write(data, 0, count)
+                    zipOut.flush()
                 }
                 fis.close()
             }
         }
         origin!!.close()
-        out.flush()
-        out.close()
+        zipOut.flush()
+        zipOut.close()
         // the very last step is a hopefully quick file rename
         try {
             val src = File("$outFolder/$zipName" + "_part")

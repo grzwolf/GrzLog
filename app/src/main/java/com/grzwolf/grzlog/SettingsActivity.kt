@@ -1059,11 +1059,15 @@ public class SettingsActivity :
                         context.getString(R.string.ZIPcreated) + " = " + context.getString(R.string.success),
                         "$zipName + GrzLog.txt"
                     )
-                    // update last backup time stamp
+                    // update last backup summary
                     val file = File("$outFolder/$zipName")
                     if (file.exists()) {
                         val lastModDate = Date(file.lastModified())
-                        backupInfo!!.summary = file.toString() + infoText + lastModDate.toString()
+                        backupInfo!!.summary = file.toString() + "\n" +
+                                               lastModDate.toString() + "\n" +
+                                               bytesToHumanReadableSize(file.length().toDouble())
+                    } else {
+                        backupInfo!!.summary = context.getString(R.string.noBackupExisting)
                     }
                 } else {
                     okBox(

@@ -108,6 +108,7 @@ class HelpActivity : AppCompatActivity() {
         "       Backup execution in background OR foreground (gray if automated)\n" +
         "              Note: folders in Backup Files are encrypted, if encryption is selected\n" +
         "       Backup Data now --> to /Download (gray if automated)\n" +
+        "       Backup compression\n" +
         "       Restore Data <-- from /Download\n" +
         "       Import backup from a file list\n" +
         "       Export Backup to Google Drive (needs log in to Google account)\n" +

@@ -381,6 +381,9 @@
     <string name="no_encryption_available">Verschlüsselung nicht verfügbar</string>
     <string name="encryption_failed">Fehler Verschlüsselung</string>
     <string name="decryption_failed">Fehler Entschlüsselung</string>
+    <string name="backupCompression">Backup Komprimierung</string>
+    <string name="bak_larger_faster">schnell, aber größere Datei</string>
+    <string name="bak_smaller_slower">kleinere Datei, aber langsamer</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

@@ -382,6 +382,9 @@
     <string name="no_encryption_available">no encryption available</string>
     <string name="encryption_failed">encryption failed</string>
     <string name="decryption_failed">decryption failed</string>
+    <string name="backupCompression">Backup compression</string>
+    <string name="bak_larger_faster">fast, but larger file</string>
+    <string name="bak_smaller_slower">smaller file, but slower</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
