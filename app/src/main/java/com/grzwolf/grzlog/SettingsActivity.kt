@@ -708,6 +708,13 @@ public class SettingsActivity :
                         DialogInterface.OnClickListener { dialog, which ->
                             // backup DataStore to text file in Downloads as a measure of last resort after a data crash
                             createTxtBackup(appContext!!, downloadDir, MainActivity.ds)
+                            // backup DataStore to text file in app folder: optimal for rel <--> dbg switches
+                            //    1) make unencrypted backup
+                            //    2) switch build variant --> 1st start won't find data, which is normal
+                            //    3) import from file list the bak from 1)
+                            //    4) readAppData(..) from GrzLog.ser doesn't wotk, which is normal due to serialisation diffs
+                            //    5) readAppData((..) --> upgradeFromLegacy(..) works well with GrzLog.txt
+                            createTxtBackup(appContext!!, MainActivity.appStoragePath, MainActivity.ds)
                             // ensure GrzLog.ser is up to date
                             MainActivity.writeAppData(MainActivity.appStoragePath, MainActivity.ds, MainActivity.appName)
                             // data export into the zip is the real backup

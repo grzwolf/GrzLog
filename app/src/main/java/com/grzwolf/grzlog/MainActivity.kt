@@ -8333,6 +8333,18 @@ class MainActivity : AppCompatActivity(),
             )
         }
 
+        // if storagePath contains something else than GrzLog.ser --> delete it
+        // - "GrzLog.txt" may exist after "Backup now" + "Restore from files", it gets outdated over time
+        // - sometimes an empty .ser may exist
+        private fun deleteAppStorageGarbageFiles() {
+            val files = File(appStoragePath).listFiles()?.filter { it.isFile }
+            files?.forEach { file ->
+                if (file.name != "GrzLog.ser") {
+                    file.delete()
+                }
+            }
+        }
+
         // DataStore serialization read: return value is under no circumstances null
         private fun readAppData(storagePath: String): DataStore {
             var dataStore: DataStore? = null
@@ -8401,6 +8413,7 @@ class MainActivity : AppCompatActivity(),
                     }
                 } else {
                     restoreSuccess = true
+                    deleteAppStorageGarbageFiles()
                 }
                 // somehow success
                 if (restoreSuccess && dataStore != null) {
@@ -8418,6 +8431,8 @@ class MainActivity : AppCompatActivity(),
                 //      Keep in mind: legacy backups are no way encrypted.
                 //                    So keep folders as clear texts.
                 writeAppData(appStoragePath, dataStore, appName, false)
+            } else {
+                deleteAppStorageGarbageFiles()
             }
 
             // decrypt DataStore.dataSection aka folder
