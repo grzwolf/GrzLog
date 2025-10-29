@@ -44,11 +44,13 @@ tools:context="com.grzwolf.grzlog.MainActivity">
     android:visibility="invisible"
     android:tint="@android:color/white"/>
 
+<!-- paddingBottom API36 30dp -->
 <ListView
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintLeft_toLeftOf="parent"
     app:layout_constraintRight_toRightOf="parent"
     android:paddingTop="?attr/actionBarSize"
+    android:paddingBottom="30dp"
     android:id="@+id/lvMain"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"/>

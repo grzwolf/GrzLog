@@ -85,6 +85,7 @@ import java.util.*
 import java.util.regex.Pattern
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.core.view.WindowInsetsControllerCompat
 import kotlin.properties.Delegates
 
 
@@ -286,6 +287,34 @@ class MainActivity : AppCompatActivity(),
         fabPlus.button = findViewById(R.id.fabPlus)
         fabBack = findViewById(R.id.fabBack)
         fabBack!!.tag = FabBackTag("", ArrayList(), -1, "")
+
+        // API 36: set the icon/text colors in the status bar and nav bar
+        when (theme) {
+            "Dark"     -> {
+                              WindowInsetsControllerCompat(
+                                  window,
+                                  window.decorView).isAppearanceLightStatusBars = false
+                              WindowInsetsControllerCompat(
+                                  window,
+                                  window.decorView).isAppearanceLightNavigationBars = false
+                           }
+            "Light"     -> {
+                              WindowInsetsControllerCompat(
+                                  window,
+                                  window.decorView).isAppearanceLightStatusBars = true
+                              WindowInsetsControllerCompat(
+                                  window,
+                                  window.decorView).isAppearanceLightNavigationBars = true
+            }
+        }
+        // API 36: set inset for all what comes below status bar = padding to avoid overlap
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            window.decorView.setOnApplyWindowInsetsListener { view, insets ->
+               val statusBarInsets = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+               view.setPadding(0, statusBarInsets.top, 0, 0)
+               insets
+            }
+        }
 
         // prevents onPause / onResume to make a text bak: reset flag in onCreate
         returningFromRestore = false

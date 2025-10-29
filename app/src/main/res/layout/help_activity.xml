@@ -3,12 +3,15 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <!-- marginTop API36 100dp, API 35 2dp  -->
+    <!-- marginBottom API36 30dp -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginStart="2dp"
         android:layout_marginLeft="2dp"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="100dp"
+        android:layout_marginBottom="30dp"
         android:layout_marginRight="2dp"
         android:fillViewport="true">
 

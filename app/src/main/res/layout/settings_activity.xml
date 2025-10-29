@@ -2,8 +2,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- marginTop API36 100dp, API 35 none  -->
+    <!-- marginBottom API36 30dp -->
     <FrameLayout
         android:id="@+id/settings"
+        android:layout_marginTop="100dp"
+        android:layout_marginBottom="30dp"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 </LinearLayout>

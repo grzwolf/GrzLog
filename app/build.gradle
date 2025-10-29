@@ -2,13 +2,13 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 35
+    compileSdkVersion 36
 
     def buildNum = 0
     defaultConfig {
         applicationId "com.grzwolf.grzlog"
         minSdkVersion 29
-        targetSdkVersion 35
+        targetSdkVersion 36
 
         // the one & only places to change the app version name and code version
         versionCode 1        // playstore relevant - increase it to prevent a downgrade

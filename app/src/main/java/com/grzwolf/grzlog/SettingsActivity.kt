@@ -28,6 +28,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.FileProvider
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
@@ -102,17 +103,35 @@ public class SettingsActivity :
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
         var theme = sharedPref.getString(getString(R.string.chosenTheme), "Dark")
         when (theme) {
-            "Dark"      -> setTheme(R.style.ThemeOverlay_AppCompat_Dark)
-            "Light"     -> setTheme(R.style.ThemeOverlay_AppCompat_Light)
+            "Dark"     -> {
+                setTheme(R.style.ThemeOverlay_AppCompat_Dark)
+                // API 36: set the icon/text colors in the status bar and nav bar
+                WindowInsetsControllerCompat(
+                    window,
+                    window.decorView).isAppearanceLightStatusBars = false
+                WindowInsetsControllerCompat(
+                    window,
+                    window.decorView).isAppearanceLightNavigationBars = false
+            }
+            "Light"     -> {
+                setTheme(R.style.ThemeOverlay_AppCompat_Light)
+                // API 36: set the icon/text colors in the status bar and nav bar
+                WindowInsetsControllerCompat(
+                    window,
+                    window.decorView).isAppearanceLightStatusBars = true
+                WindowInsetsControllerCompat(
+                    window,
+                    window.decorView).isAppearanceLightNavigationBars = true
+            }
             else        -> {
-                             if (theme == "tmpdaynight") {
-                                 // supposed to fix too bright dialogs after a MagicOS 8 update
-                                 // --> MainActivity will override such theme after being back there
-                                 setTheme(R.style.ThemeOverlay_AppCompat_DayNight)
-                             } else {
-                                 setTheme(R.style.ThemeOverlay_AppCompat_Dark)
-                             }
-                           }
+                if (theme == "tmpdaynight") {
+                    // supposed to fix too bright dialogs after a MagicOS 8 update
+                    // --> MainActivity will override such theme after being back there
+                    setTheme(R.style.ThemeOverlay_AppCompat_DayNight)
+                } else {
+                    setTheme(R.style.ThemeOverlay_AppCompat_Dark)
+                }
+            }
         }
         super.onCreate(savedInstanceState)
 
