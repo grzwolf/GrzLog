@@ -8142,6 +8142,13 @@ class MainActivity : AppCompatActivity(),
             lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList)
             lvMain.listView!!.adapter = lvMain.adapter
             contextMainActivity.title = ds.namesSection[ds.selectedSection]
+            // protected folders title appearance
+            val toolbar: Toolbar = contextMainActivity.findViewById<Toolbar>(R.id.toolbar)
+            if (ds.timeSection[ds.selectedSection] == TIMESTAMP.AUTH) {
+                toolbar.setTitleTextColor(Color.YELLOW)
+            } else {
+                toolbar.setTitleTextColor(Color.WHITE)
+            }
             // 'normal' scroll to position in listview
             var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else Math.max(lvMain.arrayList.size - 1, 0)
             // if presenting a global search hit, place it somehow vertically centered
