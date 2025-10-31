@@ -715,8 +715,25 @@ public class SettingsActivity :
                             //    4) readAppData(..) from GrzLog.ser doesn't wotk, which is normal due to serialisation diffs
                             //    5) readAppData((..) --> upgradeFromLegacy(..) works well with GrzLog.txt
                             createTxtBackup(appContext!!, MainActivity.appStoragePath, MainActivity.ds)
-                            // ensure GrzLog.ser is up to date
-                            MainActivity.writeAppData(MainActivity.appStoragePath, MainActivity.ds, MainActivity.appName)
+                            // ensure GrzLog.ser is up to date in terms of encrypted data
+                            //    Q: Why make a copy of MainActivity.ds?
+                            //    A: MainActivity.writeAppData encrypts data if set so,
+                            //       its parameter is a reference --> do not modify MainActivity.ds !!
+                            //       That's why a deep copy of MainActivity.ds is needed here.
+                            var dsCopy: DataStore = DataStore()
+                            MainActivity.ds.namesSection.forEach() {
+                                dsCopy.namesSection.add(it)
+                            }
+                            MainActivity.ds.timeSection.forEach() {
+                                dsCopy.timeSection.add(it)
+                            }
+                            MainActivity.ds.dataSection.forEach() {
+                                dsCopy.dataSection.add(it)
+                            }
+                            dsCopy.selectedSection = MainActivity.ds.selectedSection
+                            // usually MainActivity.writeAppData is followed by MainActivity.readAppData
+                            //   and refresh lvMain.arrayList, this is not needed here
+                            MainActivity.writeAppData(MainActivity.appStoragePath, dsCopy, MainActivity.appName)
                             // data export into the zip is the real backup
                             val appPath = appContext!!.getExternalFilesDir(null)!!.absolutePath
                             val maxProgressCount = countFiles(File(appPath))
