@@ -4403,6 +4403,10 @@ class MainActivity : AppCompatActivity(),
         if (searchView != null) {
             searchView!!.onActionViewCollapsed()
         }
+        // deactivate pending toolbar options
+        showMenuItems(false)
+        menuItemsVisible = false
+        mainMenuHandler.removeCallbacksAndMessages(null)
         // reset visibility of the folder switch back button
         if (fabBack != null) {
             fabBack!!.visibility = INVISIBLE
