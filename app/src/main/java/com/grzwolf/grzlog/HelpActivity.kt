@@ -98,6 +98,9 @@ class HelpActivity : AppCompatActivity() {
         "       Click on selection: copy to clipboard OR show attachment\n" +
         "       Click on search hit: edit line OR show attachment\n" +
         "       Encrypt protected folders\n" +
+        "              protected & encrypted folder title is yellow\n" +
+        "              protected & not encrypted folder title is magenta\n" +
+        "              not protected & not encrypted folder title is white\n" +
         "   Backup and Restore\n" +
         "       Backup File Information\n" +
         "              Note: folders in Backup Files are encrypted, if encryption is selected\n" +

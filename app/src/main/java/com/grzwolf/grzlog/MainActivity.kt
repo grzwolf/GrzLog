@@ -8166,10 +8166,15 @@ class MainActivity : AppCompatActivity(),
             contextMainActivity.title = ds.namesSection[ds.selectedSection]
             // protected folders title appearance
             val toolbar: Toolbar = contextMainActivity.findViewById<Toolbar>(R.id.toolbar)
+            toolbar.setTitleTextColor(Color.WHITE)
             if (ds.timeSection[ds.selectedSection] == TIMESTAMP.AUTH) {
-                toolbar.setTitleTextColor(Color.YELLOW)
-            } else {
-                toolbar.setTitleTextColor(Color.WHITE)
+                val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+                var encryptProtectedFolders = sharedPref.getBoolean("encryptProtectedFolders", false)
+                if (encryptProtectedFolders) {
+                    toolbar.setTitleTextColor(Color.YELLOW)
+                } else {
+                    toolbar.setTitleTextColor(Color.MAGENTA)
+                }
             }
             // 'normal' scroll to position in listview
             var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else Math.max(lvMain.arrayList.size - 1, 0)
