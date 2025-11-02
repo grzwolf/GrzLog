@@ -1743,3 +1743,21 @@ class SpeedMeter {
         txUptoNow = TrafficStats.getTotalTxBytes()
     }
 }
+
+// kudos: https://www.baeldung.com/kotlin/string-extract-numeric-value
+fun extractNumbersUsingLoop(str: String): List<Int> {
+    val numbers = mutableListOf<Int>()
+    val currentNumber = StringBuilder()
+    for (char in str) {
+        if (char.isDigit()) {
+            currentNumber.append(char)
+        } else if (currentNumber.isNotEmpty()) {
+            numbers.add(currentNumber.toString().toInt())
+            currentNumber.clear()
+        }
+    }
+    if (currentNumber.isNotEmpty()) {
+        numbers.add(currentNumber.toString().toInt())
+    }
+    return numbers
+}

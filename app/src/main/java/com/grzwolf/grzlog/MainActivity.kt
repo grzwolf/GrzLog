@@ -223,6 +223,13 @@ class MainActivity : AppCompatActivity(),
             spe.apply()
         }
 
+        // if installed version is < v1.1.50, there is a high chance, that data are PUB/PRV encrypted
+        //    this is needed, just in case a downgrade was done
+        appVersionMain = extractNumbersUsingLoop(getString(R.string.app_version))[2]
+        if (appVersionMain < 50) {
+            sharedPref.edit().remove("checkPUBPRV").commit()
+        }
+
         // standard
         super.onCreate(savedInstanceState)
         window.setBackgroundDrawable(null) // black screen at start or returning from settings
@@ -7734,6 +7741,8 @@ class MainActivity : AppCompatActivity(),
         @JvmField
         // app name
         var appName = ""
+        // app version main number
+        var appVersionMain = 0
         // app has a menu bar: Search, Folder, Share, Settings
         var appMenu: Menu? = null
         // app external storage location
@@ -8529,7 +8538,7 @@ class MainActivity : AppCompatActivity(),
         fun writeAppData(storagePath: String, dataStore: DataStore, appName: String, doEncrypt: Boolean = true) {
 
             var sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
-            var checkPUBPRV = false
+            var checkPUBPRV = sharedPref.getBoolean("checkPUBPRV", true)
 
             // mostly standard --> true
             if (doEncrypt) {
@@ -8539,8 +8548,6 @@ class MainActivity : AppCompatActivity(),
 
                 // encrypt DataStore.dataSection aka folder
                 if (encryptProtectedFolders) {
-                    // so far, we assume PUBPRV is still active
-                    checkPUBPRV = true
                     var keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
                     // loop all folders
                     for (i in dataStore.dataSection.indices) {
@@ -8561,11 +8568,13 @@ class MainActivity : AppCompatActivity(),
                 oos.writeObject(dataStore)
                 oos.close()
                 fos.close()
-                // after the 1st full write operation with encryption, we can be sure PUBPRV is now gone
+                // after the 1st full write operation with >= v1.1.50, we can be sure PUBPRV is now gone
                 if (checkPUBPRV) {
-                    val spe = sharedPref.edit()
-                    spe.putBoolean("checkPUBPRV", false)
-                    spe.apply()
+                    if (appVersionMain >= 50) {
+                        val spe = sharedPref.edit()
+                        spe.putBoolean("checkPUBPRV", false)
+                        spe.apply()
+                    }
                 }
             } catch (e: IOException) {
                 e.printStackTrace()

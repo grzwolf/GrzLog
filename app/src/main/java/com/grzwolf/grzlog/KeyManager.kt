@@ -211,7 +211,6 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
                 Base64.DEFAULT
             ) + ":" + Base64.encodeToString(iv, Base64.DEFAULT)
         } catch (e: java.lang.Exception) {
-            centeredToast(context, context.getString(R.string.encryption_failed) + " GCM", 3000)
             return ""
         }
     }
