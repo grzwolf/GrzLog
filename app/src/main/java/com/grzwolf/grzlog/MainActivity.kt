@@ -209,6 +209,20 @@ class MainActivity : AppCompatActivity(),
         // make context static
         contextMainActivity = this
 
+        // check existence of app's password
+        appPwdPub = sharedPref.getString("app_pwd", "")!!
+        if (appPwdPub.isEmpty()) {
+            // generate a unique pwd
+            var keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+            var appPwdClear = keyManager.generateRandomPassword(16)
+            // encrypt pwd with app's public key
+            appPwdPub = keyManager.encryptPwdPub(appPwdClear)
+            // save encrypted pwd in prefs
+            val spe = sharedPref.edit()
+            spe.putString("app_pwd", appPwdPub)
+            spe.apply()
+        }
+
         // standard
         super.onCreate(savedInstanceState)
         window.setBackgroundDrawable(null) // black screen at start or returning from settings
@@ -7797,6 +7811,10 @@ class MainActivity : AppCompatActivity(),
         var temporaryBackground = false
 
         @JvmField
+        // the app's password encrypted with app's public key
+        var appPwdPub = ""
+
+        @JvmField
         // flag indicating a GrzLog update is available
         var grzlogUpdateAvailable = false
 
@@ -8359,9 +8377,7 @@ class MainActivity : AppCompatActivity(),
         // DataStore serialization read: return value is under no circumstances null
         private fun readAppData(storagePath: String): DataStore {
             var dataStore: DataStore? = null
-            val appName =
-                contextMainActivity.applicationInfo.loadLabel(contextMainActivity.packageManager)
-                    .toString()
+            val appName = contextMainActivity.applicationInfo.loadLabel(contextMainActivity.packageManager).toString()
             val file = File(storagePath, "$appName.ser")
             if (file.exists()) {
                 try {
@@ -8446,35 +8462,56 @@ class MainActivity : AppCompatActivity(),
                 deleteAppStorageGarbageFiles()
             }
 
+            // prepare check outdated PUBPRV
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+            var checkPUBPRV = sharedPref.getBoolean("checkPUBPRV", true)
+
             // decrypt DataStore.dataSection aka folder
             var keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
             for (i in dataStore.dataSection.indices) {
                 // only decrypt protected folders
                 if (dataStore.timeSection[i] == TIMESTAMP.AUTH) {
-
-                    // encrypted chunks are delimited by a white space
-                    var chunks: MutableList<String> =
-                        dataStore.dataSection[i].split(" ").toMutableList()
-
-                    // chunk might not be encrypted:
-                    //    a) happens if 'set folder protection' was set
-                    //       and encryption/decryption was not yet available.
-                    //       Which is the case by switch from <= v45 ---> >= v46
-                    //    b) always happens, if encrypt/decrypt is turned off from Settings
-                    //       for a protected folder
-                    if (!keyManager.isStringEncrypted(chunks[0])) {
-                        // ... so better not continue decrypting
-                        continue
-                    }
-
-                    // reset folder data
-                    dataStore.dataSection[i] = ""
-                    // decrypt chunks into folder
-                    for (j in chunks.indices) {
-                        if (chunks[j].length > 0) {
-                            dataStore.dataSection[i] += keyManager.decryptString(chunks[j])
-                        } else {
-                            Log.e("GrzLog readAppData", "chunk length 0")
+                    // 1)  check for GCM
+                    // 2a) if not empty, update dataStore.dataSection             --> done
+                    // 2b) if empty, check for PUBPRV
+                    // 3a) if not empty, update dataStore.dataSection with chunks --> done
+                    // 3b) if empty --> no encryption at all                      --> done
+                    var clearData = keyManager.decryptGCM(dataStore.dataSection[i], keyManager.decryptPwdPrv(appPwdPub))
+                    if (clearData.isNotEmpty()) {
+                        dataStore.dataSection[i] = clearData
+                    } else {
+                        // only check outdated PUBPRV until 1st full encrypted write folders is done
+                        if (checkPUBPRV) {
+                            // although outdated, we need to check for PUBPRV:
+                            //    this case catches the update from v49 PUBPRV  --> v50 GCM
+                            //    encrypted chunks are delimited by a white space
+                            var chunks: MutableList<String> = dataStore.dataSection[i].split(" ").toMutableList()
+                            if (keyManager.isEncryptedWithPub(chunks[0])) {
+                                // reset folder data
+                                dataStore.dataSection[i] = ""
+                                // decrypt chunks into folder
+                                for (j in chunks.indices) {
+                                    if (chunks[j].length > 0) {
+                                        dataStore.dataSection[i] += keyManager.decryptPub(chunks[j])
+                                    } else {
+                                        Log.e("GrzLog readAppData", "chunk length 0")
+                                    }
+                                }
+                            } else {
+                                // data are not encrypted at all:
+                                //    happens if 'set folder protection' was set
+                                //    and encryption/decryption was not yet available.
+                                //    Which is the case by switch from <= v45 ---> >= v46
+                                continue
+                            }
+                        } else{
+                            // data are not encrypted at all:
+                            //    a) happens if 'set folder protection' was set
+                            //       and encryption/decryption was not yet available.
+                            //       Which is the case by switch from <= v45 ---> >= v46
+                            //    b) always happens, if encrypt/decrypt is turned off from Settings
+                            //       AND a manual backup was forced
+                            continue
                         }
                     }
                 }
@@ -8486,34 +8523,26 @@ class MainActivity : AppCompatActivity(),
         // DataStore serialization write to disk
         fun writeAppData(storagePath: String, dataStore: DataStore, appName: String, doEncrypt: Boolean = true) {
 
+            var sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+            var checkPUBPRV = false
+
+            // mostly standard --> true
             if (doEncrypt) {
+
                 // protected folders have the option to encrypt/decrypt
-                val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
-                var encryptProtectedFolders =
-                    sharedPref.getBoolean("encryptProtectedFolders", false)
+                var encryptProtectedFolders = sharedPref.getBoolean("encryptProtectedFolders", false)
 
                 // encrypt DataStore.dataSection aka folder
                 if (encryptProtectedFolders) {
+                    // so far, we assume PUBPRV is still active
+                    checkPUBPRV = true
                     var keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+                    // loop all folders
                     for (i in dataStore.dataSection.indices) {
                         // only encrypt protected folders
                         if (dataStore.timeSection[i] == TIMESTAMP.AUTH) {
-                            // chunks is a list of Strings with each String a bit shorter as crypt accepts
-                            var chunks: MutableList<String> = ArrayList()
-                            val chunkSize = 100
-                            chunks = dataStore.dataSection[i].chunked(chunkSize).toMutableList()
-                            // encrypt chunks
-                            for (j in chunks.indices) {
-                                chunks[j] = keyManager.encryptString(chunks[j])
-                            }
-                            // reset folder data
-                            dataStore.dataSection[i] = ""
-                            // add chunks to folder with white space delimiter
-                            for (j in chunks.indices) {
-                                dataStore.dataSection[i] += chunks[j] + " "
-                            }
-                            // remove last white space, it would cause an empty String while decryption
-                            dataStore.dataSection[i] = dataStore.dataSection[i].dropLast(1)
+                            var tmp = keyManager.encryptGCM(dataStore.dataSection[i], keyManager.decryptPwdPrv(appPwdPub))
+                            dataStore.dataSection[i] = tmp
                         }
                     }
                 }
@@ -8527,6 +8556,12 @@ class MainActivity : AppCompatActivity(),
                 oos.writeObject(dataStore)
                 oos.close()
                 fos.close()
+                // after the 1st full write operation with encryption, we can be sure PUBPRV is now gone
+                if (checkPUBPRV) {
+                    val spe = sharedPref.edit()
+                    spe.putBoolean("checkPUBPRV", false)
+                    spe.apply()
+                }
             } catch (e: IOException) {
                 e.printStackTrace()
             }

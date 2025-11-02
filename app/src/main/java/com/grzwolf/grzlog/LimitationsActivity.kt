@@ -16,10 +16,9 @@ class LimitationsActivity : AppCompatActivity() {
         "\nFloating keyboard (like Gboard pen input)\n" +
         "is not supported. 'Pen input' must be disabled.\n\n" +
         "Folder protection w/o encryption is weak.\n" +
-        "Protected folders could be encrypted in Settings.\n" +
-        "Note: Encryption of large folders will cause slower app performance.\n\n" +
+        "Protected folders could be encrypted in Settings.\n\n" +
         "Note: Backup Files GrzLog.zip and GrzLog.txt contain encrypted folders, if protection & encryption are selected\n" +
-        "!! Disable folder encryption, before restoring a Backup on another phone !!\n"
+        "!! Disable folder encryption & execute a manual backup before restoring a Backup on another phone !!\n"
 
     override fun onStart() {
         super.onStart()

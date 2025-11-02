@@ -44,6 +44,7 @@ import com.android.volley.VolleyError
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
+import com.grzwolf.grzlog.MainActivity.Companion.appPwdPub
 import com.grzwolf.grzlog.MainActivity.Companion.appStoragePath
 import com.grzwolf.grzlog.MainActivity.Companion.ds
 import com.grzwolf.grzlog.MainActivity.Companion.writeAppData
@@ -927,10 +928,15 @@ public class SettingsActivity :
                     builder.setPositiveButton(
                         R.string.yes,
                         DialogInterface.OnClickListener { dialog, which ->
+                            // keep the app's own password
+                            var appPwdPub = sharedPref.getString("app_pwd", "")!!
                             // clear all shared preferences
                             try {
                                 val spe = sharedPref.edit()
                                 spe.clear()
+                                spe.apply()
+                                // restore the app's own pwd
+                                spe.putString("app_pwd", appPwdPub)
                                 spe.apply()
                             } catch (e: Exception) {
                             }

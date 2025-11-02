@@ -48,6 +48,7 @@ import com.bumptech.glide.request.target.SimpleTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import com.grzwolf.grzlog.DataStore.TIMESTAMP
+import com.grzwolf.grzlog.MainActivity.Companion.appPwdPub
 import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
 import java.io.*
 import java.net.HttpURLConnection
@@ -543,20 +544,7 @@ internal fun convertDataStoreToAppFileText(ds: DataStore): String {
             txt += "[[" + i + "]]\n"
             // only encrypt protected folders
             if (ds.timeSection[i] == TIMESTAMP.AUTH) {
-                // chunks is a list of Strings with each String a bit shorter as crypt accepts
-                var chunks: MutableList<String> = ArrayList()
-                val chunkSize = 100
-                chunks = ds.dataSection[i].chunked(chunkSize).toMutableList()
-                // encrypt chunks
-                for (j in chunks.indices) {
-                    chunks[j] = keyManager.encryptString(chunks[j])
-                }
-                // add chunks to folder with white space delimiter
-                for (j in chunks.indices) {
-                    txt += chunks[j] + " "
-                }
-                // remove last white space, it would cause an empty String while decryption
-                txt = txt.dropLast(1)
+                txt += keyManager.encryptGCM(ds.dataSection[i], keyManager.decryptPwdPrv(appPwdPub))
             } else {
                 // keep not protected folders as plain text
                 txt += ds.dataSection[i]
