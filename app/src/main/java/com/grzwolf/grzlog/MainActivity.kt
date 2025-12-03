@@ -2471,7 +2471,9 @@ class MainActivity : AppCompatActivity(),
                 var replaceList: MutableList<Hit> = ArrayList()
                 // visible screen
                 val widthWnd: Int = contextMainActivity.resources.displayMetrics.widthPixels
-                val heightWnd: Int = contextMainActivity.resources.displayMetrics.heightPixels
+                val heightWnd: Int = contextMainActivity.resources.displayMetrics.heightPixels -
+                                     MainActivity.statusBarInset.top -
+                                     MainActivity.navigationBarInset.bottom
                 // a 'replace phrase in choiceItems' AlertDialog.Builder
                 val builder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
                 builder.setTitle(getString(R.string.mark_items_to_replace) +
