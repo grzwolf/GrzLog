@@ -995,6 +995,8 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
         if (mimeExt.equals("gif", ignoreCase = true)) {
             selfClose = false
         }
+        // navigation bar height
+        var navigationBarHeight = MainActivity.navigationBarInset.bottom
         // get image original dimensions
         var bmpWidth = resource.intrinsicWidth
         var bmpHeight = resource.intrinsicHeight
@@ -1026,7 +1028,9 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
         }
         // max allowed dialog dimensions based on display
         val widthMax = context.resources.displayMetrics.widthPixels
-        var heightMax = context.resources.displayMetrics.heightPixels
+        var heightMax = context.resources.displayMetrics.heightPixels -
+                        MainActivity.navigationBarInset.bottom -
+                        MainActivity.statusBarInset.top
         // would be a reasonable image height
         var wantImgHeight = widthMax / aspectRatio
         // temporarily set dialog layout and get its height back (as expected it's identical to heightMax)
@@ -1037,12 +1041,9 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
         var ivHeight = imageView.layoutParams.height
         val titHeight = titleTv.layoutParams.height
         val txtHeight = textTv.layoutParams.height
-        val butHeight = closeBtn.layoutParams.height
+        val butHeight = closeBtn.layoutParams.height + 20
         var spaceTitleTextButton = (titHeight + txtHeight + butHeight) * 1.5f
-
         // calc space in pix for title, text, button, anxiety gauge
-// TBD: ok Emulator dlgHeight - ivHeight + 100 -- FAIL Pixel 5 Android 12
-//            var pixTitleTextButton = dlgHeight - ivHeight + 100
         // final image height based on dialog width and image aspect ratio with a max limit at dialog height - title, text, button
         var heightImg = Math.min((dlgHeight - spaceTitleTextButton).toFloat(), wantImgHeight).toInt()
         imageView.layoutParams.height = heightImg

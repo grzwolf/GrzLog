@@ -334,8 +334,11 @@ class MainActivity : AppCompatActivity(),
         // API 36: set inset for all what comes below status bar = padding to avoid overlap
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             window.decorView.setOnApplyWindowInsetsListener { view, insets ->
-               val statusBarInsets = insets.getInsets(WindowInsetsCompat.Type.statusBars())
-               view.setPadding(0, statusBarInsets.top, 0, 0)
+               statusBarInset = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+               navigationBarInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+               captionBarInset = insets.getInsets(WindowInsetsCompat.Type.captionBar())
+               systemBarInset = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+               view.setPadding(0, statusBarInset.top, 0, 0)
                insets
             }
         }
@@ -7820,6 +7823,12 @@ class MainActivity : AppCompatActivity(),
         // app visibility status
         @JvmField
         var appIsInForeground = false
+
+        // API 36: get insets for UI bars
+        lateinit var statusBarInset : Insets
+        lateinit var navigationBarInset : Insets
+        lateinit var captionBarInset : Insets
+        lateinit var systemBarInset : Insets
 
         // if a folder index was moved, it might happen multiple times, so its index is unreliable
         var folderIndexIsUnreliable = false
