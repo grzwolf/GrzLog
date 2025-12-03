@@ -43,6 +43,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.appcompat.widget.Toolbar
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.requestPermissions
 import androidx.core.app.NotificationCompat
@@ -52,6 +54,7 @@ import androidx.core.graphics.BlendModeColorFilterCompat
 import androidx.core.graphics.BlendModeCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
@@ -83,9 +86,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.regex.Pattern
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.core.view.WindowInsetsControllerCompat
 import kotlin.properties.Delegates
 
 
@@ -141,6 +141,9 @@ class MainActivity : AppCompatActivity(),
         const val TXT     = 6
         const val ZIP     = 7
     }
+
+    // time when onPause is called
+    var onPauseStartTime: Long = -1
 
     // mimic clipboard inside app
     var shareBody: String? = ""
@@ -618,6 +621,20 @@ class MainActivity : AppCompatActivity(),
 
     // activity_lifecycle.png: onPause() is called, whenever the app goes into background
     override fun onPause() {
+        // secure protected folders
+        if (ds.timeSection[ds.selectedSection] == TIMESTAMP.AUTH) {
+            // time when onPause is called
+            onPauseStartTime = System.currentTimeMillis()
+            // hide folder content
+            Handler().postDelayed({
+                window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+            }, 2000)
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+            centeredToast(this, "Pause", 3000)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                setRecentsScreenshotEnabled(false)
+            }
+        }
         // restore from backup MUST not generate the simple txt-backup (would override local txt backup)
         if (!returningFromRestore) {
             // simple text backup file in download folder, ONLY USAGE in readAppData(): if GrzLog.ser is corrupted OR not existing
@@ -629,6 +646,12 @@ class MainActivity : AppCompatActivity(),
 
     // activity_lifecycle.png: onResume is called, even when coming back from settings via "Android Back Button"
     override fun onResume() {
+        // show folder content
+        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(true)
+        }
+
         // continue with onCreate(..), if flag reReadAppFileData is true --> needed for changing the theme
         if (reReadAppFileData) {
             reReadAppFileData = false
@@ -774,6 +797,20 @@ class MainActivity : AppCompatActivity(),
         if (MainActivity.showAppReminders) {
             showGrzLogReminder()
         }
+
+        // treat protected folders timeout auth
+        if (ds.timeSection[ds.selectedSection] == TIMESTAMP.AUTH) {
+            // if time when onPause was called > 5 min
+            if (System.currentTimeMillis() - onPauseStartTime > 300000 ) {
+                // clear folder content
+                lvMain.adapter = LvAdapter(this@MainActivity, lvMain.makeArrayList("", lvMain.showOrder))
+                lvMain.listView!!.adapter = lvMain.adapter!!
+                // exec folder auth
+                showBiometricPromptAndOpenFolder(ds.selectedSection, ds.selectedSection, -1)
+            }
+        }
+        onPauseStartTime = -1
+
     }
 
     // life cycle observer knows, if app is in foreground or not
