@@ -1544,6 +1544,52 @@ class MainActivity : AppCompatActivity(),
         val tail = text.substring(text.length - boundary, text.length - 1)
         return lead + mid + tail
     }
+    fun shortenedTextPixels(text: String, maxPixels: Int) : String {
+        // simple return
+        var tv: TextView = TextView(this)
+        tv.setText(text)
+        tv.measure(0, 0)
+        var width = tv.measuredWidth
+        if (width < maxPixels) {
+            return text
+        }
+        // the upcoming middle part of the shortened string
+        val mid = " ... "
+        tv = TextView(this)
+        tv.setText(mid)
+        tv.measure(0, 0)
+        val midWidth = tv.measuredWidth
+        // calc the boundary length of lead & tail
+        var boundary = maxPixels / 2 - midWidth
+        // build the lead part of the shortened string
+        var len = 10
+        var lead = text.substring(0, len)
+        tv = TextView(this)
+        tv.setText(lead)
+        tv.measure(0, 0)
+        while (tv.measuredWidth < boundary) {
+            len++
+            lead = text.substring(0, len)
+            tv = TextView(this)
+            tv.setText(lead)
+            tv.measure(0, 0)
+        }
+        // build the tail part of the shortened string
+        len = 10
+        var tail = text.substring(text.length - len, text.length)
+        tv = TextView(this)
+        tv.setText(tail)
+        tv.measure(0, 0)
+        while (tv.measuredWidth < boundary) {
+            len++
+            tail = text.substring(text.length - len, text.length)
+            tv = TextView(this)
+            tv.setText(tail)
+            tv.measure(0, 0)
+        }
+        // return the now shortened string
+        return lead + mid + tail
+    }
 
     // after list reload, calc jump to position: correction needed, if item is at bottom position
     fun calcJumpToPosition(itemPos: Int) : Int {
@@ -2346,6 +2392,14 @@ class MainActivity : AppCompatActivity(),
         return rangeStr
     }
 
+    // https://stackoverflow.com/questions/28071349/the-specified-child-already-has-a-parent-you-must-call-removeview-on-the-chil
+    // usage: myView.removeSelf()
+    fun View?.removeSelf() {
+        this ?: return
+        val parentView = parent as? ViewGroup ?: return
+        parentView.removeView(this)
+    }
+
     // Search & Replace inside the active folder
     //    Applies to:
     //      a) whole folder with no pre selection
@@ -2469,18 +2523,89 @@ class MainActivity : AppCompatActivity(),
                 hideKeyboard(rText)
                 // upcoming list of choiceItems to replace
                 var replaceList: MutableList<Hit> = ArrayList()
-                // visible screen
+                // a 'replace phrase in choiceItems' AlertDialog.Builder
+                val builder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+                // visible screen dimensions
                 val widthWnd: Int = contextMainActivity.resources.displayMetrics.widthPixels
                 val heightWnd: Int = contextMainActivity.resources.displayMetrics.heightPixels -
                                      MainActivity.statusBarInset.top -
                                      MainActivity.navigationBarInset.bottom
-                // a 'replace phrase in choiceItems' AlertDialog.Builder
-                val builder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
-                builder.setTitle(getString(R.string.mark_items_to_replace) +
-                        searchText +
-                        getString(R.string.with) +
-                        replaceText +
-                        "'")
+                // title text consists of 4 text lines
+                var ss1 = SpannableString(getString(R.string.mark_items_to_replace) + "\n")
+                ss1.setSpan(
+                    ForegroundColorSpan(
+                        ContextCompat.getColor(
+                            this,
+                            R.color.white
+                        )
+                    ), 0, ss1.length, 0
+                )
+                ss1.setSpan(RelativeSizeSpan(1.3f), 0, ss1.length, 0)
+                var shortenedText = shortenedTextPixels(searchText, widthWnd - 200)
+                var ss2 = SpannableString("'" + shortenedText + "'\n")
+                ss2.setSpan(
+                    ForegroundColorSpan(
+                        ContextCompat.getColor(
+                            this,
+                            R.color.yellow
+                        )
+                    ), 1, ss2.length-1, 0
+                )
+                ss2.setSpan(
+                    BackgroundColorSpan(
+                        ContextCompat.getColor(
+                            this,
+                            R.color.lightseagreen
+                        )
+                    ), 1, ss2.length-1, 0
+                )
+                var ss3 = SpannableString(getString(R.string.with) + "\n")
+                ss3.setSpan(
+                    ForegroundColorSpan(
+                        ContextCompat.getColor(
+                            this,
+                            R.color.white
+                        )
+                    ), 0, ss3.length, 0
+                )
+                shortenedText = shortenedTextPixels(replaceText, widthWnd - 200)
+                var ss4 = SpannableString("'" + shortenedText + "'")
+                ss4.setSpan(
+                    ForegroundColorSpan(
+                        ContextCompat.getColor(
+                            this,
+                            R.color.yellow
+                        )
+                    ), 1, ss4.length-1, 0
+                )
+                ss4.setSpan(
+                    BackgroundColorSpan(
+                        ContextCompat.getColor(
+                            this,
+                            R.color.lightseagreen
+                        )
+                    ), 1, ss4.length-1, 0
+                )
+                var titleText = SpannableStringBuilder()
+                titleText.append(ss1)
+                titleText.append(ss2)
+                titleText.append(ss3)
+                titleText.append(ss4)
+                // custom title allows 4 lines of text
+                val customTextView = TextView(builder.context)
+                customTextView.textSize = 16.0f
+                customTextView.setText(titleText)
+                customTextView.inputType = InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                customTextView.setSingleLine(false)
+                customTextView.gravity = Gravity.LEFT or Gravity.TOP
+                customTextView.removeSelf()
+                builder.setCustomTitle(customTextView)
+                // final height of dlg in pixels
+                var dlgFinalHeight = 0
+                // final height of embedded listview in pixels
+                var listViewFinalHeight = 0
+                // final height of dlg's title in pixels
+                var titleTextLinesHeight = 0
                 // relying on Builder's internal listView selection status didn't work: use this bool array
                 var checkedItems = BooleanArray(choiceItems.size)
                 builder.setMultiChoiceItems(choiceItems.toTypedArray(), checkedItems,
@@ -2493,12 +2618,18 @@ class MainActivity : AppCompatActivity(),
                         dialog.dismiss()
                         // restart dialog with updated 'Replace' button status
                         Handler().postDelayed({
-                            val listView = (dialog as AlertDialog?)?.listView
+                            customTextView.removeSelf()
                             var dlg = builder.create()
-                            dlg.setOnShowListener { dlg.listView.smoothScrollToPosition(lastVisiblePos) }
+                            dlg.setOnShowListener {
+                                dlg.listView.smoothScrollToPosition(lastVisiblePos)
+                                // final dialog layout dimensions
+                                val listView = (dlg as AlertDialog?)?.listView
+                                listView!!.bottom += 100
+                                listView!!.setPadding(0, 100, 0, 100)
+                                listView!!.layout(0, 0, listView!!.width, listViewFinalHeight)
+                                dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, dlgFinalHeight))
+                            }
                             dlg.show()
-                            var lvHeight = listviewHeight(listView!!)
-                            dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 + lvHeight))
                             dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
                             dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
                             var anySelection = false
@@ -2542,14 +2673,14 @@ class MainActivity : AppCompatActivity(),
                     // finally do the replacement job
                     replacePhraseInItems(replaceText, searchText, replaceList)
                 }
-                // cancel selection status / replacement dialog
+                // cancel selection status + quit replacement dialog
                 builder.setPositiveButton(R.string.cancel) { dialog, which ->
                     // hide all other menu items
                     showMenuItems(false)
                     // get out of old dialog
                     dialog.dismiss()
                 }
-                // toggle selection status of search choiceItems
+                // toggle selection status of search & replace choiceItems
                 builder.setNeutralButton(getString(R.string.toggle_selection)) { dialog, which ->
                     val listView = (dialog as AlertDialog?)?.listView
                     listView?.let {
@@ -2566,11 +2697,18 @@ class MainActivity : AppCompatActivity(),
                         dialog.dismiss()
                         // restart toggle dialog after toggling is done to show new status
                         Handler().postDelayed({
+                            customTextView.removeSelf()
                             var dlg = builder.create()
-                            dlg.setOnShowListener { dlg.listView.smoothScrollToPosition(lastVisiblePos) }
+                            dlg.setOnShowListener {
+                                dlg.listView.smoothScrollToPosition(lastVisiblePos)
+                                // final dialog layout dimensions
+                                val listView = (dlg as AlertDialog?)?.listView
+                                listView!!.bottom += 100
+                                listView!!.setPadding(0, 100, 0, 100)
+                                listView!!.layout(0, 0, listView!!.width, listViewFinalHeight)
+                                dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, dlgFinalHeight))
+                            }
                             dlg.show()
-                            var lvHeight = listviewHeight(listView!!)
-                            dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 + lvHeight))
                             dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
                             dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
                             var anySelection = false
@@ -2587,11 +2725,23 @@ class MainActivity : AppCompatActivity(),
                     }
                 }
                 var dlg = builder.create()
-                dlg.setOnShowListener { dlg.listView.smoothScrollToPosition(0) }
+                dlg.setOnShowListener {
+                    // scroll listview
+                    dlg.listView.smoothScrollToPosition(0)
+                    // final dialog layout dimensions
+                    var alertTitle = builder.context.getResources().getIdentifier("alertTitle", "id", "android")
+                    dlg.findViewById<TextView>(alertTitle)?.let {
+                        titleTextLinesHeight = it.lineHeight
+                    }
+                    val listView = (dlg as AlertDialog?)?.listView
+                    listView!!.bottom += 100
+                    listView!!.setPadding(0, 100, 0, 100)
+                    listViewFinalHeight = listviewHeight(listView!!) + 200
+                    listView!!.layout(0, 0, listView!!.width, listViewFinalHeight)
+                    dlgFinalHeight = 100 + 3*titleTextLinesHeight + (1.3f*titleTextLinesHeight).toInt() + listViewFinalHeight
+                    dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, dlgFinalHeight))
+                }
                 dlg.show()
-                val listView = (dlg as AlertDialog?)?.listView
-                var lvHeight = listviewHeight(listView!!)
-                dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, 400 + lvHeight))
                 dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
                 dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
                 dlg.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = false // 1st show = no selection

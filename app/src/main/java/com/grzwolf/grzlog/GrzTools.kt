@@ -620,6 +620,7 @@ fun dayNameOfWeek(dateStr: String?): String {
 
 // https://stackoverflow.com/questions/3361423/android-get-listview-item-height
 fun listviewHeight(list: ListView): Int {
+    // surely overdoing ...
     var height = 0
     for (i in 0 until list.count) {
         val childView = list.adapter.getView(i, null, list)
@@ -629,9 +630,9 @@ fun listviewHeight(list: ListView): Int {
         )
         height += childView.measuredHeight
     }
-    //dividers height
     height += list.dividerHeight * list.count
-    return height
+    // return whatever is larger :)
+    return Math.max(height, list.height)
 }
 
 // multipurpose AlertBuilder dialog boxes

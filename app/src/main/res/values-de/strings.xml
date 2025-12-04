@@ -298,8 +298,8 @@
     <string name="edited_items">Editierte Items</string>
     <string name="type_in_the_search_phrase">Eingabe Suchphrase</string>
     <string name="type_in_the_replace_phrase">Eingabe Ersetzungsphrase</string>
-    <string name="mark_items_to_replace">Zu ersetzende Eintrage selektieren \'</string>
-    <string name="with">\' mit \'</string>
+    <string name="mark_items_to_replace">Zu ersetzende Eintrage selektieren</string>
+    <string name="with">mit</string>
     <string name="search_in_folder">"Suchen in Ordner "</string>
     <string name="search_replace_in_folder"><![CDATA["Suchen & Ersetzen in Ordner "]]></string>
     <string name="search_all_grzlog_folders">Suchen in allen GrzLog Ordnern</string>
