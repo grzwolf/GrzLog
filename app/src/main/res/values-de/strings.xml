@@ -112,7 +112,8 @@
     <string name="folders">\" Ordnern.\"</string>
     <string name="folderNewName">Neuer Ordnername</string>
     <string name="makeSelection">Bitte erst eine Auswahl treffen.</string>
-    <string name="selectedItems">Ausgewählte Zeilen</string>
+    <string name="selectedItems">Ausgewählte Zeilen als Text</string>
+    <string name="selectedItemsAsPDF">Ausgewählte Zeilen als PDF</string>
     <string name="surroundingDay">Umgebender Tag</string>
     <string name="currentFolder">Aktueller Ordner</string>
     <string name="folderAsPDF">Ordner als PDF</string>
@@ -384,6 +385,7 @@
     <string name="backupCompression">Backup Komprimierung</string>
     <string name="bak_larger_faster">schnell, aber größere Datei</string>
     <string name="bak_smaller_slower">kleinere Datei, aber langsamer</string>
+    <string name="type_in_the_pdf_title">PDF Titel</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

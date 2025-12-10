@@ -113,7 +113,8 @@
     <string name="folders">\" folders.\"</string>
     <string name="folderNewName">Set new folder\'s name</string>
     <string name="makeSelection">Please first make a selection.</string>
-    <string name="selectedItems">selected items</string>
+    <string name="selectedItems">selected items as text</string>
+    <string name="selectedItemsAsPDF">selected items as PDF</string>
     <string name="surroundingDay">surrounding day</string>
     <string name="currentFolder">current folder</string>
     <string name="folderAsPDF">folder as PDF</string>
@@ -385,6 +386,7 @@
     <string name="backupCompression">Backup compression</string>
     <string name="bak_larger_faster">fast, but larger file</string>
     <string name="bak_smaller_slower">smaller file, but slower</string>
+    <string name="type_in_the_pdf_title">PDF title</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

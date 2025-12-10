@@ -4534,6 +4534,7 @@ class MainActivity : AppCompatActivity(),
             shareBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
             val items = arrayOf<CharSequence>(
                 getString(R.string.selectedItems),
+                getString(R.string.selectedItemsAsPDF),
                 getString(R.string.currentFolder),
                 getString(R.string.folderAsPDF),
                 getString(R.string.folderAsRTF)
@@ -4549,7 +4550,7 @@ class MainActivity : AppCompatActivity(),
             shareBuilder.setPositiveButton(
                 R.string.ok,
                 DialogInterface.OnClickListener { dialog, which ->
-                    // share current items selection
+                    // 0 - share current items selection
                     if (selected == 0) {
                         var itemsSelected = false
                         for (i in lvMain.arrayList.indices) {
@@ -4570,12 +4571,50 @@ class MainActivity : AppCompatActivity(),
                             return@OnClickListener
                         }
                     }
-                    // share complete folder as text
+                    // 1 - share selected items as PDF
                     if (selected == 1) {
+                        // is there a selection at all
+                        var itemsAreSelected = false
+                        for (i in lvMain.arrayList.indices) {
+                            if (lvMain.arrayList[i].isSelected()) {
+                                itemsAreSelected = true
+                                break
+                            }
+                        }
+                        if (!itemsAreSelected) {
+                            okBox(
+                                this@MainActivity,
+                                getString(R.string.note),
+                                getString(R.string.makeSelection)
+                            )
+                            return@OnClickListener
+                        }
+                        // get to know the PDF title
+                        var pdfTitleBuilder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+                        pdfTitleBuilder.setTitle(getString(R.string.type_in_the_pdf_title))
+                        var pdfTitle = EditText(contextMainActivity)
+                        pdfTitle.setText("<" + getString(R.string.type_in_the_pdf_title) + ">")
+                        pdfTitle.setSelection(0, pdfTitle.text.length)
+                        pdfTitleBuilder.setView(pdfTitle)
+                        pdfTitleBuilder.setNegativeButton(R.string.cancel) { dialog, which ->
+                            return@setNegativeButton
+                        }
+                        pdfTitleBuilder.setPositiveButton(R.string.ok) { dialog, which ->
+                            // build PDF from selected items
+                            generatePdf(pdfTitle.text.toString(), lvMain.folderSelectedItems, true, null)
+                        }
+                        pdfTitleBuilder.create().show()
+                        pdfTitle.requestFocus()
+                        showKeyboard(pdfTitle, 0, 0, 250)
+                        pdfTitle.postDelayed({ pdfTitle.selectAll() }, 500)
+                    }
+                    // 2 - share complete folder as text
+                    if (selected == 2) {
                         shareBody = lvMain.selectedFolder
                         clipboard = shareBody
                     }
-                    if (selected < 2) {
+                    // open share dialog
+                    if (selected == 2 || selected == 0) {
                         // open share options
                         val sharingIntent = Intent(Intent.ACTION_SEND)
                         sharingIntent.type = "text/plain"
@@ -4584,13 +4623,13 @@ class MainActivity : AppCompatActivity(),
                         sharingIntent.putExtra(Intent.EXTRA_TEXT, shareBody)
                         startActivity(Intent.createChooser(sharingIntent, ""))
                     }
-                    // share folder as PDF
-                    if (selected == 2) {
+                    // 3 - share folder as PDF
+                    if (selected == 3) {
                         val folderName = ds.namesSection[ds.selectedSection]
                         generatePdf(folderName, ds.dataSection[ds.selectedSection], true, null)
                     }
-                    // share folder as RTF
-                    if (selected == 3) {
+                    // 4 - share folder as RTF
+                    if (selected == 4) {
                         val folderName = ds.namesSection[ds.selectedSection]
                         generateRtf(folderName, ds.dataSection[ds.selectedSection], true, null)
                     }
