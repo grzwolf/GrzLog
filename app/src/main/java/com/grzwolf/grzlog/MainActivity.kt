@@ -3128,13 +3128,23 @@ class MainActivity : AppCompatActivity(),
                 fabPlus.inputAlertText!!.length,
                 Math.max(0, fabPlus.inputAlertTextSelStart)
             )
-            // insert fabPlus.attachmentName in current input
+            // insert fabPlus.attachmentName in current input & keep spaces
             if (fabPlus.inputAlertText!!.contains(fabPlus.attachmentName)) {
                 fabPlus.inputAlertView!!.tag = 1
                 fabPlus.inputAlertView!!.setText(fabPlus.inputAlertText)
             } else {
-                val oldText1 = fabPlus.inputAlertText!!.substring(0, fabPlus.inputAlertTextSelStart)
-                val oldText2 = fabPlus.inputAlertText!!.substring(fabPlus.inputAlertTextSelStart)
+                var oldText1 = fabPlus.inputAlertText!!.substring(0, fabPlus.inputAlertTextSelStart)
+                if (oldText1.isNotEmpty()) {
+                    if (oldText1.last() != ' ') {
+                        oldText1 += " "
+                    }
+                }
+                var oldText2 = fabPlus.inputAlertText!!.substring(fabPlus.inputAlertTextSelStart)
+                if (oldText2.isNotEmpty()) {
+                    if (oldText2.first() != ' ') {
+                        oldText2 = " " + oldText2
+                    }
+                }
                 val newText = oldText1 + fabPlus.attachmentName + oldText2
                 fabPlus.inputAlertView!!.setText(newText)
             }
