@@ -324,7 +324,7 @@
     <string name="clickHere_get_GrzLogZip">Click here to get GrzLog.zip Backup</string>
     <string name="last">", last: "</string>
     <string name="grzlog_zip_gdrive_upload_is_ongoing">GrzLog.zip: GDrive upload is ongoing</string>
-    <string name="upload_error">Backup failed</string>
+    <string name="upload_error">Check GDrive manually</string>
     <string name="scale_image">Scale Image</string>
     <string name="match_to_phone_s_screen">Match to phone\'s screen</string>
     <string name="reduces_data_storage_size">Reduces data storage size</string>

@@ -1336,6 +1336,7 @@ public class SettingsActivity :
             var errorCounter = 0
             var errorNote = ""
             var doErrorCheck = true
+            var threadSleepMs :Long = 5000
             // notification permission
             var permissionGranted = false
             if (androidx.core.app.ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -1350,8 +1351,8 @@ public class SettingsActivity :
                 }
                 // upload meter update
                 txSoFar = txMeter.getTxNow()
-                // if uploaded bytes exceed fileLength, don't check for errors anymore
-                if (txSoFar >= fileLength) {
+                // if uploaded bytes exceed 90% of fileLength, don't check for errors anymore
+                if (txSoFar >= fileLength * 0.9f) {
                     doErrorCheck = false
                 }
                 // if uploaded bytes >= 2 * fileLength, ASSUME the upload is done
@@ -1371,11 +1372,14 @@ public class SettingsActivity :
                     if (txDeltaNow < txDeltaMax * 0.1f) {
                         errorCounter++
                         errorNote = " errors: " + errorCounter + "(10)"
+                        threadSleepMs = 10000 // increase sleep time
                     } else {
                         // if upload speed resumes to normal, fully reset error count
                         errorCounter = 0
                         // if there are no errors anymore, don't show them
                         errorNote = ""
+                        // back to normal thread sleep time
+                        threadSleepMs = 5000
                     }
                     // empirical value of 10 errors are allowed, then get off
                     if (errorCounter > 10) {
@@ -1406,7 +1410,7 @@ public class SettingsActivity :
                     }
                 }
                 // relax
-                Thread.sleep(5000)
+                Thread.sleep(threadSleepMs)
             }
             return true
         }

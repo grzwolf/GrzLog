@@ -317,7 +317,7 @@
     <string name="restore_data_from_google_drive">Import Backup von Google Drive</string>
     <string name="Note">Note:</string>
     <string name="grzlog_upload_success">Backup Export auf GDrive erfolgreich</string>
-    <string name="grzlog_upload_error">Export Backup auf GDrive mißlungen</string>
+    <string name="grzlog_upload_error">Check GDrive manuell</string>
     <string name="gdrive">Upload einer Datei auf Google Drive ist sehr langsam.</string>
     <string name="switchToGdriveApp">Die GDrive App wird nun das Backup starten.</string>
     <string name="clickHere_get_GrzLogZip">Klick hier für GrzLog.zip Backup</string>
