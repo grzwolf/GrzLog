@@ -255,26 +255,30 @@ class GalleryActivity : AppCompatActivity() {
         }
         // toggle selection status of gallery items
         if (item.itemId == R.id.action_ToggleSelection) {
-            // selection count
+            // selection count & real entries
             var counter = 0
+            var entries = 0
             // loop adapter list
             for (item in adapter!!.list) {
                 item.selected = !item.selected
-                if (item.selected) {
-                    counter++
+                if (item.fileName.isNotEmpty()) {
+                    entries++
+                    if (item.selected) {
+                        counter++
+                    }
                 }
             }
             adapter!!.notifyDataSetChanged()
             updateMenuStatus()
             // warning
-            if (counter > adapter!!.list.size / 2) {
+            if (counter > entries / 2) {
                 okBox(
                     this,
                     getString(R.string.warning),
                     getString(R.string.you_selected)
                             + counter.toString()
                             + "("
-                            + adapter!!.list.size.toString()
+                            + entries.toString()
                             + ") "
                             + getString(R.string.items)
                 )
@@ -411,6 +415,10 @@ class GalleryActivity : AppCompatActivity() {
 
     // GridView adapter
     class ThumbGridAdapter(private val context: Context, var list: Array<GrzThumbNail>) : BaseAdapter() {
+        var inflater: LayoutInflater? = null
+        var cv: View? = null
+        var tv: TextView? = null
+        var iv: ImageView? = null
         var selGridItemChk: Boolean = false
         var selGridItemPos: Int = -1
         override fun getCount(): Int {
@@ -423,41 +431,43 @@ class GalleryActivity : AppCompatActivity() {
             return 0
         }
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View? {
-            val inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-            val cv = inflater.inflate(R.layout.gallery_item, null)
-            val tv = cv.findViewById(R.id.galleryText) as TextView
-            val iv = cv.findViewById(R.id.galleryImage) as ImageView
+            if (inflater == null) {
+                inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+            }
+            cv = inflater!!.inflate(R.layout.gallery_item, null)
+            tv = cv!!.findViewById(R.id.galleryText) as TextView
+            iv = cv!!.findViewById(R.id.galleryImage) as ImageView
             // item has two options: fileName == "" indicates a date entry, which needs to be shown
             if (list[position].fileName.isEmpty()) {
                 // show the date as sort of HEADER
-                tv.text = list[position].fileDate
+                tv!!.text = list[position].fileDate
                 // fileDate is not empty (it is empty in case of an item right next to an image in case of a date change)
                 if (!list[position].fileDate.isEmpty()) {
-                    iv.layoutParams.height = 80
-                    tv.setTextSize(TypedValue.COMPLEX_UNIT_SP,16f)
-                    tv.setTextColor(Color.BLACK)
-                    tv.gravity = Gravity.CENTER
-                    tv.setBackgroundColor(Color.WHITE)
+                    iv!!.layoutParams.height = 80
+                    tv!!.setTextSize(TypedValue.COMPLEX_UNIT_SP,16f)
+                    tv!!.setTextColor(Color.BLACK)
+                    tv!!.gravity = Gravity.CENTER
+                    tv!!.setBackgroundColor(Color.WHITE)
                     if (list[position].fileDate.equals(" ")) {
-                        tv.setAlpha(0f)
+                        tv!!.setAlpha(0f)
                     }
                 } else {
-                    tv.setAlpha(0f)
+                    tv!!.setAlpha(0f)
                 }
             } else {
                 // set text and thumbnail
-                tv.text = list[position].fileName + "\n" + bytesToHumanReadableSize(list[position].fileSize.toDouble())
-                iv.setImageDrawable(list[position].thumbNail)
+                tv!!.text = list[position].fileName + "\n" + bytesToHumanReadableSize(list[position].fileSize.toDouble())
+                iv!!.setImageDrawable(list[position].thumbNail)
                 // how to render an item depends on its selection status: single payload selection or multiple delete selection
                 if ((position == selGridItemPos) && selGridItemChk) {
                     // handle item as payload select status, if selGridItemChk is true
-                    cv.setBackgroundColor(Color.YELLOW)
+                    cv!!.setBackgroundColor(Color.YELLOW)
                 } else {
                     // treat multiple item selection for deletion
                     if (list[position].selected) {
-                        cv.setBackgroundColor(Color.YELLOW)
+                        cv!!.setBackgroundColor(Color.YELLOW)
                     } else {
-                        cv.setBackgroundColor(Color.WHITE)
+                        cv!!.setBackgroundColor(Color.WHITE)
                     }
                 }
             }

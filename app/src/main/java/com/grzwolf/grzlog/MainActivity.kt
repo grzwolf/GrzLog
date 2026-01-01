@@ -37,6 +37,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import android.widget.AdapterView.OnItemClickListener
 import android.widget.AdapterView.OnItemLongClickListener
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
@@ -76,6 +77,7 @@ import com.grzwolf.grzlog.DataStore.ACTION
 import com.grzwolf.grzlog.DataStore.TIMESTAMP
 import com.grzwolf.grzlog.FileUtils.Companion.getFile
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
+import com.grzwolf.grzlog.GrzLogAppWidget.Companion.lastClickTime
 import com.grzwolf.grzlog.MainActivity.GrzEditText
 import java.io.*
 import java.nio.charset.StandardCharsets
@@ -133,13 +135,14 @@ class MainActivity : AppCompatActivity(),
     // different attachments
     internal object PICK {
         const val DUMMY   = 0
-        const val IMAGE   = 1
-        const val CAPTURE = 2
-        const val VIDEO   = 3
-        const val AUDIO   = 4
-        const val PDF     = 5
-        const val TXT     = 6
-        const val ZIP     = 7
+        const val LINK    = 1 // unused due to restrictions in onActivityResult
+        const val IMAGE   = 2
+        const val CAPTURE = 3
+        const val VIDEO   = 4
+        const val AUDIO   = 5
+        const val PDF     = 6
+        const val TXT     = 7
+        const val ZIP     = 8
     }
 
     // time when onPause is called
@@ -416,6 +419,7 @@ class MainActivity : AppCompatActivity(),
             }
             // DOWN event
             if (event.action == MotionEvent.ACTION_DOWN) {
+                // select an item, if DOWN event happens in a range from x = {0 ... 200} pixels
                 lvMain.touchSelectItem = event.x < 200
                 // memorize the touch event coordinates
                 lvMain.touchEventPoint = Point(event.x.toInt(), event.y.toInt())
@@ -437,17 +441,23 @@ class MainActivity : AppCompatActivity(),
         // listview item 'double click' and 'single click'
         (lvMain.listView)?.setOnItemClickListener(OnItemClickListener { adapterView, itemView, itemPosition, itemId ->
             val DOUBLECLICK_MS: Long = 300
-            // if condition for a double click event is met, the single click handler gets disabled
+            val DEBOUNCER_MS: Long = 1000
+            // if condition for a double click event is met, the single click handler won't reached
             if (System.currentTimeMillis() - lvMain.itemLastClickTime < DOUBLECLICK_MS) {
                 lvMain.singleClickHandler.removeCallbacksAndMessages(null)
+                lvMain.itemLastClickTime = System.currentTimeMillis()
                 // what to do after double click, depends on lvMain.touchSelectItem
                 if (lvMain.touchSelectItem) {
-                    // double click with touchSelectItem shall act as 'show attachment/link'
+                    // double click with touchSelectItem shall act as 'show attachment'
                     lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
                 } else {
-                    // double click with touchSelectItem shall execute edit ListView item
+                    // double click without touchSelectItem shall execute edit ListView item
                     onLongClickEditItem(adapterView, itemView, itemPosition, itemId, true, null)
                 }
+                return@OnItemClickListener
+            }
+            // debounce single click events
+            if (System.currentTimeMillis() - lvMain.itemLastClickTime < DEBOUNCER_MS) {
                 return@OnItemClickListener
             }
             // store the time of the item's click event
@@ -477,7 +487,7 @@ class MainActivity : AppCompatActivity(),
                                 // execute the click as edit ListView item
                                 onLongClickEditItem(adapterView, itemView, itemPosition, itemId, true, null)
                             } else {
-                                // show item attachment OR www text link
+                                // show item attachment OR www text
                                 lvMainOnItemClick(adapterView, itemView, itemPosition, itemId)
                             }
                         }
@@ -515,7 +525,7 @@ class MainActivity : AppCompatActivity(),
             true
         })
 
-        // switch back to previous folder: a) after following an attachment link to a GrzLog folder b) after following a search hit into another folder
+        // switch back to previous folder: a) after following an attachment to a GrzLog folder b) after following a search hit into another folder
         (fabBack)?.setOnClickListener(View.OnClickListener { view ->
             // fabBack always cancels undo
             ds.undoSection = ""
@@ -690,7 +700,8 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.pickAttachment = true
                     fabPlus.attachmentUri = returnAttachmentFromAppGallery
                     fabPlus.attachmentUriUri = uriOri
-                    fabPlus.attachmentImageScale = false
+                    fabPlus.attachmentImageScale = false // nothing to scale
+                    fabPlus.attachmentImageLink = false  // no image link to phone gallery
                     var mime = getFileExtension(returnAttachmentFromAppGallery)
                     returnAttachmentFromAppGallery = ""
                     if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
@@ -735,8 +746,6 @@ class MainActivity : AppCompatActivity(),
                         ReturnToDialogData.function
                     )
                 }
-                // reset memorized data
-                ReturnToDialogData.reset()
             }
             super.onResume()
             return
@@ -956,7 +965,6 @@ class MainActivity : AppCompatActivity(),
         // attachment picker dialog might be open after PICK.CAPTURE
         attachmentPickerDialog?.let {
             if (it.isShowing) {
-                ReturnToDialogData.reset()
                 attachmentPickerDialog?.let { it.cancel() }
             }
         }
@@ -1004,6 +1012,7 @@ class MainActivity : AppCompatActivity(),
                         fabPlus.attachmentUri = imageUriString
                         fabPlus.attachmentUriUri = uriOri
                         fabPlus.attachmentImageScale = true // since it is a new image --> rescale it
+                        fabPlus.attachmentImageLink = false // definitely no image link here
                         fabPlus.attachmentName = getString(R.string.image)
                         fabPlus.inputAlertTextSelStart = 0  // insert position for attachment link
                         lvMain.editLongPress = false
@@ -1134,6 +1143,7 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.attachmentUri = java.lang.String.format(Locale.ENGLISH, "geo:%f,%f", location.latitude, location.longitude)
                     fabPlus.attachmentUriUri = null
                     fabPlus.attachmentImageScale = false
+                    fabPlus.attachmentImageLink = false
                     fabPlus.attachmentName = "[gps]"
                     fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 } else {
@@ -1192,12 +1202,11 @@ class MainActivity : AppCompatActivity(),
         if (itemView == null) {
             return
         }
-        // show links could be disabled via preferences
-        var showLinks = true
+        // show www links could be disabled via preferences
+        var showLinksWWW = true
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
         if (sharedPref.getBoolean("openLinks", false) == false) {
-            centeredToast(this, getString(R.string.wwwDisabled), 50)
-            showLinks = false
+            showLinksWWW = false
         }
 
         //
@@ -1361,7 +1370,7 @@ class MainActivity : AppCompatActivity(),
                 var urlWasShown = false
                 // get a list of potential urls / www-links
                 var urls: ArrayList<String>? = getAllLinksFromString(fullItemText.toString())
-                if (showLinks && urls != null && urls.size > 0) {
+                if (showLinksWWW && urls != null && urls.size > 0) {
                     // loop to only show clicked www links
                     for (url in urls) {
                         // open www link, if one of the potential urls contains at least partially, what was clicked on (!! multiple lines!!)
@@ -1455,7 +1464,7 @@ class MainActivity : AppCompatActivity(),
                         }
                     } else {
                         // specific case: no attachment but exactly one www text link, which was not clicked on
-                        if (showLinks && urls != null && urls.size == 1) {
+                        if (showLinksWWW && urls != null && urls.size == 1) {
                             centeredToast(this, urls[0], 50)
                             showAppLinkOrAttachment(this, urls[0], urls[0])
                         } else {
@@ -3077,9 +3086,9 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.inputAlertView!!.tag = null
                     return
                 }
-                // check is only needed, if an attachment link is active
+                // check is only needed, if an attachment is active
                 if (fabPlus.attachmentName.length > 0) {
-                    // check for existence of an attachment link, it might have gotten destroyed
+                    // check for existence of an attachment, it might have gotten destroyed
                     val matcher = PATTERN.UriLink.matcher(s.toString())
                     if (!matcher.find()) {
                         // attachment link is gone
@@ -3122,7 +3131,7 @@ class MainActivity : AppCompatActivity(),
             }
         }
 
-        // onActivityResult fires fabPlus.performClick(), which brings us here to handle the selected link to an attachment
+        // onActivityResult fires fabPlus.performClick(), which brings us here to handle the selected attachment
         if (fabPlus.attachmentUri!!.length != 0) {
             fabPlus.inputAlertTextSelStart = Math.min(
                 fabPlus.inputAlertText!!.length,
@@ -3147,6 +3156,10 @@ class MainActivity : AppCompatActivity(),
                 }
                 val newText = oldText1 + fabPlus.attachmentName + oldText2
                 fabPlus.inputAlertView!!.setText(newText)
+                // set selection of the attachment's literal name to be able to edit it immediately
+                var selStart = newText.indexOf('[') + 1
+                var selStop = newText.indexOf(']')
+                fabPlus.inputAlertView!!.setSelection(selStart, selStop)
             }
             showEditTextContextMenu(fabPlus.inputAlertView, false)
             if (fabPlus.attachmentName.length > 0) {
@@ -3253,7 +3266,8 @@ class MainActivity : AppCompatActivity(),
                 // fire attachment picker dlg, which finally ends at onActivityResult
                 dlg.dismiss()
                 startFilePickerDialog(attachmentAllowed, linkText.toString(), adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
-            })
+            }
+        )
 
         // fabPlus button OK
         //
@@ -3296,34 +3310,47 @@ class MainActivity : AppCompatActivity(),
                 )
             }
 
-            // search for attachment link in input
+            // search for an attachment in the input text
+            var linkedImageWasChanged = false
             val m = PATTERN.UriLink.matcher(newText)
             if (m.find()) {
                 val result = m.group()
                 val key = result.substring(1, result.length - 1)
-                // any attachment file is needed to copy app local
+                // any provided attachment file name indicates there is work to do
                 if (fabPlus.attachmentUri!!.length != 0) {
-                    // distinguish between www links and real attachments
-                    if ((fabPlus.attachmentUri!!.startsWith("/") == false) && (fabPlus.attachmentUri!!.startsWith("file") == false)) {
-                        val lnk = fabPlus.attachmentUri!!
-                        newText = newText.replace(result, "[$key::::$lnk]")
+                    // 1st) check for attachment of type "link to phone gallery"
+                    if (fabPlus.attachmentImageLink) {
+                        val appUriFileString = fabPlus.attachmentUriUri.toString()
+                        newText = newText.replace(result, "[$key::::$appUriFileString]")
+                        linkedImageWasChanged = true // set flag, because link could be renewed - which doesn't change any text
                     } else {
-                        // full filename
-                        var fn = fabPlus.attachmentUri!!
-                        // execute the file attachment copy
-                        val appUriFile = copyAttachmentToApp(
-                            this,
-                            fabPlus.attachmentUri!!,
-                            fabPlus.attachmentUriUri,
-                            fabPlus.attachmentImageScale,
-                            appStoragePath + "/Images")
-                        if (fabPlus.attachmentUri!!.endsWith(appUriFile)) {
-                            newText = newText.replace(result, "[$key::::$appUriFile]")
+                        // 2nd) distinguish between www links and real attachments
+                        if ((fabPlus.attachmentUri!!.startsWith("/") == false)
+                             && (fabPlus.attachmentUri!!.startsWith("file") == false)) {
+                            // supposed to be the www link case
+                            val lnk = fabPlus.attachmentUri!!
+                            newText = newText.replace(result, "[$key::::$lnk]")
                         } else {
-                            newText = newText.replace(result, "[$key --> $appUriFile::::$fn]")
+                            // 3rd) handle a full filename: copy an attachment into GrzLog gallery
+                            var fn = fabPlus.attachmentUri!!
+                            // execute the file attachment copy
+                            val appUriFileString = copyAttachmentToApp(
+                                this,
+                                fabPlus.attachmentUri!!,
+                                fabPlus.attachmentUriUri,
+                                fabPlus.attachmentImageScale,
+                                appStoragePath + "/Images"
+                            )
+                            if (fabPlus.attachmentUri!!.endsWith(appUriFileString)) {
+                                // success
+                                newText = newText.replace(result, "[$key::::$appUriFileString]")
+                            } else {
+                                // something did fail
+                                newText = newText.replace(result, "[$key --> $appUriFileString::::$fn]")
+                            }
+                            // silently scan app gallery data to show the recently added file
+                            getAppGalleryThumbsSilent(this, true)
                         }
-                        // silently scan app gallery data to show the recently added file
-                        getAppGalleryThumbsSilent(this, true)
                     }
                 }
                 // any inserted text could contain links after paste from clipboard BUT with no attachmentUri
@@ -3362,26 +3389,35 @@ class MainActivity : AppCompatActivity(),
             if (lvMain.editLongPress) {
                 // long press line edit
                 plusButtonInput = false
-                // oriText text is showOrder dependent
-                if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                    val botText = lvMain.toggleTextShowOrder(null, oriText).str
-                    oriParts = botText.split("\\n+".toRegex()).toTypedArray()
-                    if (oriParts.size == 0) {
-                        oriParts = arrayOf("")
-                    }
-                }
-                // specific case: one line edit & no change to text & user pushed ok
-                if (oriParts[lvMain.selectedRowNoSpacers].equals(newText) && !fabPlus.editInsertLine) {
-                    // if nothing was changed, we leave here to avoid to show the undo icon
-                    localCancel(dialog, this)
-                    centeredToast(this, getString(R.string.noChange), 3000)
-                    // return to calling function: toast would be overlapped w/o delay
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        if ((function != null) && (itemPosition != -1)) {
-                            function(adapterView!!, itemView, itemPosition, itemId, returnToSearchHits)
+                // ... but, an image link could be renewed, after permission was released --> linkedImageWasChanged
+                if (!linkedImageWasChanged) {
+                    // oriText text is showOrder dependent
+                    if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                        val botText = lvMain.toggleTextShowOrder(null, oriText).str
+                        oriParts = botText.split("\\n+".toRegex()).toTypedArray()
+                        if (oriParts.size == 0) {
+                            oriParts = arrayOf("")
                         }
-                    }, 500)
-                    return@OnClickListener
+                    }
+                    // specific case: one line edit & no change to text & user pushed ok
+                    if (oriParts[lvMain.selectedRowNoSpacers].equals(newText) && !fabPlus.editInsertLine) {
+                        // if nothing was changed, we leave here to avoid to show the undo icon
+                        localCancel(dialog, this)
+                        centeredToast(this, getString(R.string.noChange), 3000)
+                        // return to calling function: toast would be overlapped w/o delay
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            if ((function != null) && (itemPosition != -1)) {
+                                function(
+                                    adapterView!!,
+                                    itemView,
+                                    itemPosition,
+                                    itemId,
+                                    returnToSearchHits
+                                )
+                            }
+                        }, 500)
+                        return@OnClickListener
+                    }
                 }
                 // make the actual change: it's fine, if newText contains multiple \n
                 oriParts[lvMain.selectedRowNoSpacers] = newText
@@ -5391,8 +5427,13 @@ class MainActivity : AppCompatActivity(),
                     true
                 } else {
                     requestPermissions(this,
-                        arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO),
-                        PERMISSION_REQUEST_MEDIA)
+                        arrayOf(
+                            Manifest.permission.READ_MEDIA_IMAGES,
+                            Manifest.permission.READ_MEDIA_VIDEO,
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                        ),
+                        PERMISSION_REQUEST_MEDIA
+                    )
                     false
                 }
             } else {
@@ -5527,7 +5568,53 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    // file picker dlg for fabPlus
+    // register a photo picker activity launcher
+    val pickMedia = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        // callback invoked after media is selected or picker activity closed
+        if (uri != null) {
+            // get permanent read permission: releasePersistableUriPermission(uri, flag) will revoke that
+            val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            this.contentResolver.takePersistableUriPermission(uri, flag)
+            // get the real file name of a "MediaStore Picker" Uri, which only provides a confusing MediaStore ID
+            var uriString = uri.toString()
+            var idMediaStore = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
+            val imageInfo = GalleryInfo.getGalleryImageInfo(this, idMediaStore)
+            // handle the provided image link with fabPlus button
+            fabPlus.pickAttachment = true
+            fabPlus.attachmentUri = imageInfo?.name // name as to be found via Gallery, Photos, TC
+            fabPlus.attachmentUriUri = uri          // MediaStore Picker Uri
+            fabPlus.attachmentName = getString(R.string.image)
+            fabPlus.attachmentImageScale = false    // nothing to scale
+            fabPlus.attachmentImageLink = true      // image link to phone gallery
+            fabPlusOnClick(
+                ReturnToDialogData.adapterView,
+                ReturnToDialogData.itemView,
+                ReturnToDialogData.itemPosition,
+                ReturnToDialogData.itemId!!,
+                ReturnToDialogData.returnToSearchHits,
+                ReturnToDialogData.function
+            )
+        } else {
+            centeredToast(this, getString(R.string.photo_picker_no_media_selected), 5000)
+            startFilePickerDialog()
+        }
+    }
+
+    // attachment picker dlg for fabPlus
+    fun startFilePickerDialog() {
+        ReturnToDialogData.itemId?.let {
+            startFilePickerDialog(
+                ReturnToDialogData.attachmentAllowed,
+                ReturnToDialogData.linkText,
+                ReturnToDialogData.adapterView,
+                ReturnToDialogData.itemView,
+                ReturnToDialogData.itemPosition,
+                it,
+                ReturnToDialogData.returnToSearchHits,
+                ReturnToDialogData.function
+            )
+        }
+    }
     @SuppressLint("MissingPermission")
     fun startFilePickerDialog(
         attachmentAllowed: Boolean = true,
@@ -5541,17 +5628,20 @@ class MainActivity : AppCompatActivity(),
     {
         // suppress in app reminder at return from picker
         MainActivity.showAppReminders = false
+        // check image link count limit
+        var currentImageLinkCount = this.contentResolver.getPersistedUriPermissions().size
+        var childLinkImagesIsEnabled = true
         // build a dialog
         var pickerBuilder: AlertDialog.Builder?
-        pickerBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-        } else {
-            AlertDialog.Builder(this@MainActivity)
-        }
+        pickerBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         pickerBuilder.setTitle(R.string.Select)
-        // file picker dialog OPTIONS
+        // attachment picker dialog OPTIONS
         val options = arrayOf<CharSequence>(
-            getString(R.string.Image),
+            getString(R.string.ImageLink)
+                    + "  "
+                    + currentImageLinkCount.toString()
+                    + "(512)",
+            getString(R.string.ImageCopy),
             getString(R.string.ImageApp),
             getString(R.string.Camera),
             "Video",
@@ -5563,13 +5653,40 @@ class MainActivity : AppCompatActivity(),
             getString(R.string.location),
             getString(R.string.editExistingLink)
         )
+        // static memorize the return data
+        ReturnToDialogData(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+        // set ListView items
         pickerBuilder.setItems(options, DialogInterface.OnClickListener { dialog, item ->
-            // static memorize the return data
-            ReturnToDialogData(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
             // common intent
             var intent: Intent?
             when (item) {
-                0 -> { // IMAGE from Android
+                0 -> { // IMAGE link to Android gallery
+                    if (childLinkImagesIsEnabled) {
+                        if (verifyMediaPermission()) {
+                            // launch the "Android Photo Picker" and let the user choose one image
+                            pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            //
+                            // Note:
+                            // PICK.LINK & intent & onActivityResult(..) do not provide a reusable
+                            //    Uri for image linking.
+                            //
+                            // continue with pickMedia registerForActivityResult(..)
+                            return@OnClickListener
+                        } else {
+                            dialog.dismiss()
+                            startFilePickerDialog()
+                            return@OnClickListener
+                        }
+                    } else {
+                        okBox(
+                            this@MainActivity,
+                            getString(R.string.note),
+                            getString(R.string.image_link_maximum_reached),
+                            { startFilePickerDialog() }
+                        )
+                    }
+                }
+                1 -> { // IMAGE copy from Android gallery
                     if (verifyMediaPermission()) {
                         // resolves permission fail on documents, but generates issue with GooglePhoto
                         val getIntent = Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -5583,17 +5700,17 @@ class MainActivity : AppCompatActivity(),
                         startActivityForResult(chooserIntent, PICK.IMAGE)
                     } else {
                         dialog.dismiss()
-                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        startFilePickerDialog()
                         return@OnClickListener
                     }
                 }
-                1 -> { // IMAGE from GrzLog gallery
+                2 -> { // IMAGE re use from GrzLog gallery
                     // start app gallery activity, if scan process is finished - under normal conditions, it's done before someone comes here
                     if (appGalleryScanning) {
                         centeredToast(this, getString(R.string.waitForFinish), Toast.LENGTH_SHORT)
                         var pw = ProgressWindow(this, getString(R.string.waitForFinish))
                         pw.dialog?.setOnDismissListener {
-                            startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            startFilePickerDialog()
                         }
                         pw.show()
                         pw.absCount = appScanTotal.toFloat()
@@ -5622,18 +5739,19 @@ class MainActivity : AppCompatActivity(),
                     } else {
                         val galleryIntent = Intent(this, GalleryActivity::class.java)
                         startActivity(galleryIntent)
+                        return@OnClickListener
                     }
                 }
-                2 -> { // CAPTURE from camera
+                3 -> { // CAPTURE from camera
                     if (verifyCameraPermission()) {
                         capturedPhotoUri = makeCameraCaptureIntent()
                     } else {
                         dialog.dismiss()
-                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        startFilePickerDialog()
                         return@OnClickListener
                     }
                 }
-                3 -> { // VIDEO
+                4 -> { // VIDEO
                     if (verifyMediaPermission()) {
                         // resolves permission fail on documents, but generates issue with GooglePhoto
                         val getIntent = Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -5647,11 +5765,11 @@ class MainActivity : AppCompatActivity(),
                         startActivityForResult(chooserIntent, PICK.VIDEO)
                     } else {
                         dialog.dismiss()
-                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        startFilePickerDialog()
                         return@OnClickListener
                     }
                 }
-                4 -> { // AUDIO
+                5 -> { // AUDIO
                     if (verifyAudioPermission()) {
                         intent = Intent(Intent.ACTION_GET_CONTENT)
                         intent.type = "audio/*"
@@ -5659,52 +5777,29 @@ class MainActivity : AppCompatActivity(),
                         startActivityForResult(intent, PICK.AUDIO)
                     } else {
                         dialog.dismiss()
-                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        startFilePickerDialog()
                         return@OnClickListener
                     }
                 }
-                5 -> { // PDF
+                6 -> { // PDF
                     intent = Intent(Intent.ACTION_GET_CONTENT)
                     intent.type = "application/pdf"
                     intent.addCategory(Intent.CATEGORY_OPENABLE)
                     startActivityForResult(intent, PICK.PDF)
                 }
-                6 -> { // TXT
+                7 -> { // TXT
                     intent = Intent(Intent.ACTION_GET_CONTENT)
                     intent.type = "text/plain"
                     intent.addCategory(Intent.CATEGORY_OPENABLE)
                     startActivityForResult(intent, PICK.TXT)
                 }
-                7 -> { // WWW link
+                8 -> { // WWW link
                     var wwwDialog: AlertDialog? = null
                     var tv = GrzEditText(this)
+                    tv.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_UNIFORM)
                     tv.inputType = InputType.TYPE_TEXT_FLAG_MULTI_LINE
                     tv.setSingleLine(false)
                     tv.gravity = Gravity.LEFT or Gravity.TOP
-                    tv.addTextChangedListener(object : TextWatcher {
-                        // modify text input window according to text length
-                        val fontSize = tv.textSize
-                        val lineSpacingExtra = Math.max(tv.lineSpacingExtra, 25f)
-                        val lineSpacingMultiplier = tv.lineSpacingMultiplier
-                        val lineHeight = fontSize * lineSpacingMultiplier + lineSpacingExtra
-                        val heightMax = resources.displayMetrics.heightPixels * 0.50f
-                        fun setParentSize() {
-                            if (wwwDialog != null) {
-                                val wnd = (wwwDialog)?.getWindow()!!
-                                if (wnd != null) {
-                                    val corr = Math.min((tv.getLineCount() - 1) * lineHeight + 600, heightMax)
-                                    wnd.setLayout(WindowManager.LayoutParams.MATCH_PARENT, corr.toInt())
-                                }
-                            }
-                        }
-                        override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-                        }
-                        override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-                        }
-                        override fun afterTextChanged(s: Editable) {
-                            setParentSize()
-                        }
-                    })
                     var wwwBuilder: AlertDialog.Builder
                     wwwBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
                     // set theme
@@ -5728,18 +5823,21 @@ class MainActivity : AppCompatActivity(),
                         R.string.cancel,
                         DialogInterface.OnClickListener { dlg, which ->
                             dlg.dismiss()
-                            startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            startFilePickerDialog()
                             return@OnClickListener
                         })
                     wwwBuilder.setView(tv)
                     wwwDialog = wwwBuilder.create()
+                    wwwDialog.setOnShowListener {
+                        wwwDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                    }
                     wwwDialog.show()
                     wwwDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 600)
                     wwwDialog.setCanceledOnTouchOutside(false)
                     tv.requestFocus()
                     showKeyboard(tv, 0, 0, 250)
                 }
-                8 -> { // link to a GrzLog folder
+                9 -> { // link to a GrzLog folder
                     var getFolderBuilder: AlertDialog.Builder? = null
                     getFolderBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
                     getFolderBuilder.setTitle(R.string.selectFolder)
@@ -5786,7 +5884,7 @@ class MainActivity : AppCompatActivity(),
                         R.string.cancel,
                         DialogInterface.OnClickListener { dialog, which ->
                             dialog.dismiss()
-                            startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            startFilePickerDialog()
                             return@OnClickListener
                         })
                     // CHANGE FOLDER finally show change folder dialog
@@ -5796,7 +5894,7 @@ class MainActivity : AppCompatActivity(),
                     listView?.dividerHeight = 2
                     getFolderDialog?.show()
                 }
-                9 -> { // geo location
+                10 -> { // geo location
                     val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
                     locationPermissionDenied = sharedPref.getInt("locationPermissionDenied", 0)
                     var execOk : Boolean = getLastKnownLocation(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
@@ -5806,51 +5904,28 @@ class MainActivity : AppCompatActivity(),
                                 this@MainActivity,
                                 getString(R.string.note),
                                 getString(R.string.twiceDeniedPerm),
-                                { startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function) }
+                                { startFilePickerDialog() }
                             )
                         } else {
                             if (!execOk) {
-                                startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                                startFilePickerDialog()
                             }
                         }
                     } else {
                         if (!execOk) {
-                            startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            startFilePickerDialog()
                         }
                     }
                 }
-                10 -> { // edit existing link
+                11 -> { // edit existing attachment
                     // edit dialog
                     var editLinkDialog: AlertDialog? = null
                     // text editor
                     var tv = GrzEditText(this)
+                    tv.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_UNIFORM)
                     tv.inputType = InputType.TYPE_TEXT_FLAG_MULTI_LINE
                     tv.setSingleLine(false)
                     tv.gravity = Gravity.LEFT or Gravity.TOP
-                    tv.addTextChangedListener(object : TextWatcher {
-                        // modify text input window dimensions according to text length
-                        val fontSize = tv.textSize
-                        val lineSpacingExtra = Math.max(tv.lineSpacingExtra, 25f)
-                        val lineSpacingMultiplier = tv.lineSpacingMultiplier
-                        val lineHeight = fontSize * lineSpacingMultiplier + lineSpacingExtra
-                        val heightMax = resources.displayMetrics.heightPixels * 0.50f
-                        fun setParentSize() {
-                            if (editLinkDialog != null) {
-                                val wnd = (editLinkDialog)?.getWindow()!!
-                                if (wnd != null) {
-                                    val corr = Math.min((tv.getLineCount() - 1) * lineHeight + 700, heightMax)
-                                    wnd.setLayout(WindowManager.LayoutParams.MATCH_PARENT, corr.toInt())
-                                }
-                            }
-                        }
-                        override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-                        }
-                        override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-                        }
-                        override fun afterTextChanged(s: Editable) {
-                            setParentSize()
-                        }
-                    })
                     // edit builder
                     var editLinkBuilder: AlertDialog.Builder
                     editLinkBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
@@ -5911,8 +5986,10 @@ class MainActivity : AppCompatActivity(),
                     // edit builder show
                     editLinkBuilder.setView(tv)
                     editLinkDialog = editLinkBuilder.create()
+                    editLinkDialog.setOnShowListener {
+                        editLinkDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                    }
                     editLinkDialog.show()
-                    editLinkDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 700)
                     editLinkDialog.setCanceledOnTouchOutside(false)
                     tv.setText(linkText)
                     tv.requestFocus()
@@ -5920,7 +5997,7 @@ class MainActivity : AppCompatActivity(),
                     // detect cancel: Android back button OR editLinkBuilder NegativeButton
                     editLinkDialog.setOnCancelListener { dlg ->
                         // restart
-                        startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                        startFilePickerDialog()
                     }
                 }
             }
@@ -5937,61 +6014,72 @@ class MainActivity : AppCompatActivity(),
         val listView = attachmentPickerDialog!!.listView
         listView.divider = ColorDrawable(Color.GRAY)
         listView.dividerHeight = 2
-        // certain items shall be disabled, depending on the flag 'attachmentAllowed'
+        // certain items shall be disabled, depending on the flag 'attachmentAllowed' or link count limit
         listView!!.setOnHierarchyChangeListener(
             object : ViewGroup.OnHierarchyChangeListener {
                 override fun onChildViewAdded(parent: View?, child: View) {
+                    // 'attachmentAllowed' handling
                     val text = (child as AppCompatTextView).text
                     val itemIndex: Int = options.indexOf(text)
                     child.setEnabled(true)
                     if (attachmentAllowed) {
-                        if (itemIndex == 10) {
+                        if (itemIndex == 11) {
                             child.setEnabled(false)
                             child.setOnClickListener(null)
                         }
                     } else {
-                        if (itemIndex < 10) {
+                        if (itemIndex < 11) {
                             child.setEnabled(false)
                             child.setOnClickListener(null)
+                        }
+                    }
+                    // image link limit of 512 is reached --> disable it
+                    if (currentImageLinkCount >= 512) {
+                        if (itemIndex == 0) {
+                            child.setEnabled(false)
+                            childLinkImagesIsEnabled = false
                         }
                     }
                 }
                 override fun onChildViewRemoved(view: View?, view1: View?) {}
             })
+        attachmentPickerDialog?.setOnShowListener {
+            val widthWnd: Int = contextMainActivity.resources.displayMetrics.widthPixels
+            attachmentPickerDialog?.getWindow()?.setLayout(widthWnd, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
         attachmentPickerDialog?.let { it.show() }
-        listView.setScrollbarFadingEnabled(false);
+        listView.setScrollbarFadingEnabled(false)
         attachmentPickerDialog?.let { it.setCanceledOnTouchOutside(false) }
         // detect cancel: Android back button OR editLinkBuilder NegativeButton
         attachmentPickerDialog?.let {
             it.setOnCancelListener { dialog ->
-                // reset static memorize the return data
-                ReturnToDialogData.reset()
                 // back to main input
                 fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
             }
         }
     }
 
-    // startFilePickerDialog() will end up here, Manifest --> android:launchMode="singleInstance"
+    // startFilePickerDialog() ends up here (!! not for image links !!!): Manifest --> android:launchMode="singleInstance"
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        fabPlus.imageCapture = false
-        fabPlus.attachmentImageScale = false
-        var pickIsImage = false
-        if (resultCode != RESULT_OK) {
-            startFilePickerDialog(
-                true,
-                ReturnToDialogData.linkText,
-                ReturnToDialogData.adapterView,
-                ReturnToDialogData.itemView,
-                ReturnToDialogData.itemPosition,
-                ReturnToDialogData.itemId!!,
-                ReturnToDialogData.returnToSearchHits,
-                ReturnToDialogData.function
-            )
-            ReturnToDialogData.reset()
+
+        // registerForActivityResult calls onActivityResult for unknown reasons -> reject such case
+        if (requestCode > PICK.ZIP) {
             return
         }
+
+        // some init
+        fabPlus.imageCapture = false
+        fabPlus.attachmentImageScale = false
+        fabPlus.attachmentImageLink = false
+        var pickIsImageCopy = false
+        var pickIsImageLink = false
+        if (resultCode != RESULT_OK) {
+            startFilePickerDialog()
+            return
+        }
+
+        // handle requests
         if (requestCode == PICK.CAPTURE) {
             // force gallery scan
             galleryForceScan()
@@ -6002,17 +6090,7 @@ class MainActivity : AppCompatActivity(),
                 fabPlus.attachmentUri = FileUtils.getPath(this, capturedPhotoUri!!)
                 fabPlus.attachmentName = getString(R.string.capture)
             } else {
-                startFilePickerDialog(
-                    true,
-                    ReturnToDialogData.linkText,
-                    ReturnToDialogData.adapterView,
-                    ReturnToDialogData.itemView,
-                    ReturnToDialogData.itemPosition,
-                    ReturnToDialogData.itemId!!,
-                    ReturnToDialogData.returnToSearchHits,
-                    ReturnToDialogData.function
-                )
-                ReturnToDialogData.reset()
+                startFilePickerDialog()
                 return
             }
         }
@@ -6034,38 +6112,18 @@ class MainActivity : AppCompatActivity(),
                     }
                 }
                 if (uri != null) {
-                    pickIsImage = true
+                    pickIsImageCopy = true
                     fabPlus.pickAttachment = true
                     fabPlus.attachmentUri = imageUriString
                     fabPlus.attachmentUriUri = uriOri
                     fabPlus.attachmentName = getString(R.string.image)
                 } else {
-                    startFilePickerDialog(
-                        true,
-                        ReturnToDialogData.linkText,
-                        ReturnToDialogData.adapterView,
-                        ReturnToDialogData.itemView,
-                        ReturnToDialogData.itemPosition,
-                        ReturnToDialogData.itemId!!,
-                        ReturnToDialogData.returnToSearchHits,
-                        ReturnToDialogData.function
-                    )
-                    ReturnToDialogData.reset()
+                    startFilePickerDialog()
                     return
                 }
             } catch (e: Exception) {
                 centeredToast(this, e.message.toString(), 3000)
-                startFilePickerDialog(
-                    true,
-                    ReturnToDialogData.linkText,
-                    ReturnToDialogData.adapterView,
-                    ReturnToDialogData.itemView,
-                    ReturnToDialogData.itemPosition,
-                    ReturnToDialogData.itemId!!,
-                    ReturnToDialogData.returnToSearchHits,
-                    ReturnToDialogData.function
-                )
-                ReturnToDialogData.reset()
+                startFilePickerDialog()
                 return
             }
         }
@@ -6092,17 +6150,7 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.attachmentUriUri = uriOri
                     fabPlus.attachmentName = getString(R.string.video)
                 } else {
-                    startFilePickerDialog(
-                        true,
-                        ReturnToDialogData.linkText,
-                        ReturnToDialogData.adapterView,
-                        ReturnToDialogData.itemView,
-                        ReturnToDialogData.itemPosition,
-                        ReturnToDialogData.itemId!!,
-                        ReturnToDialogData.returnToSearchHits,
-                        ReturnToDialogData.function
-                    )
-                    ReturnToDialogData.reset()
+                    startFilePickerDialog()
                     return
                 }
             } catch (e: Exception) {
@@ -6113,31 +6161,12 @@ class MainActivity : AppCompatActivity(),
                         getString(R.string.androidIssue),
                         getString(R.string.useFilesPicker),
                         {
-                            startFilePickerDialog(
-                                true,
-                                ReturnToDialogData.linkText,
-                                ReturnToDialogData.adapterView,
-                                ReturnToDialogData.itemView,
-                                ReturnToDialogData.itemPosition,
-                                ReturnToDialogData.itemId!!,
-                                ReturnToDialogData.returnToSearchHits,
-                                ReturnToDialogData.function
-                            )
+                            startFilePickerDialog()
                         }
                     )
                 } else {
-                    startFilePickerDialog(
-                        true,
-                        ReturnToDialogData.linkText,
-                        ReturnToDialogData.adapterView,
-                        ReturnToDialogData.itemView,
-                        ReturnToDialogData.itemPosition,
-                        ReturnToDialogData.itemId!!,
-                        ReturnToDialogData.returnToSearchHits,
-                        ReturnToDialogData.function
-                    )
+                    startFilePickerDialog()
                 }
-                ReturnToDialogData.reset()
                 return
             }
         }
@@ -6152,17 +6181,7 @@ class MainActivity : AppCompatActivity(),
                 fabPlus.attachmentUriUri = uriOri
                 fabPlus.attachmentName = getString(R.string.audio)
             } else {
-                startFilePickerDialog(
-                    true,
-                    ReturnToDialogData.linkText,
-                    ReturnToDialogData.adapterView,
-                    ReturnToDialogData.itemView,
-                    ReturnToDialogData.itemPosition,
-                    ReturnToDialogData.itemId!!,
-                    ReturnToDialogData.returnToSearchHits,
-                    ReturnToDialogData.function
-                )
-                ReturnToDialogData.reset()
+                startFilePickerDialog()
                 return
             }
         }
@@ -6178,48 +6197,18 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.attachmentUriUri = uriOri
                     fabPlus.attachmentName = "[" + file.name + "]"
                 } else {
-                    startFilePickerDialog(
-                        true,
-                        ReturnToDialogData.linkText,
-                        ReturnToDialogData.adapterView,
-                        ReturnToDialogData.itemView,
-                        ReturnToDialogData.itemPosition,
-                        ReturnToDialogData.itemId!!,
-                        ReturnToDialogData.returnToSearchHits,
-                        ReturnToDialogData.function
-                    )
-                    ReturnToDialogData.reset()
+                    startFilePickerDialog()
                     return
                 }
             }
             catch (e: Exception) {
                 centeredToast(this, "PICK.PDF" + e.message.toString(), 3000)
-                startFilePickerDialog(
-                    true,
-                    ReturnToDialogData.linkText,
-                    ReturnToDialogData.adapterView,
-                    ReturnToDialogData.itemView,
-                    ReturnToDialogData.itemPosition,
-                    ReturnToDialogData.itemId!!,
-                    ReturnToDialogData.returnToSearchHits,
-                    ReturnToDialogData.function
-                )
-                ReturnToDialogData.reset()
+                startFilePickerDialog()
                 return
             }
             catch (e: FileNotFoundException) {
                 centeredToast(this, "PICK.PDF" + e.message.toString(), 3000)
-                startFilePickerDialog(
-                    true,
-                    ReturnToDialogData.linkText,
-                    ReturnToDialogData.adapterView,
-                    ReturnToDialogData.itemView,
-                    ReturnToDialogData.itemPosition,
-                    ReturnToDialogData.itemId!!,
-                    ReturnToDialogData.returnToSearchHits,
-                    ReturnToDialogData.function
-                )
-                ReturnToDialogData.reset()
+                startFilePickerDialog()
                 return
             }
         }
@@ -6235,103 +6224,26 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.attachmentUriUri = uriOri
                     fabPlus.attachmentName = "[" + file.name + "]"
                 } else {
-                    startFilePickerDialog(false, "", null, null, -1, -1)
-                    ReturnToDialogData(
-                        true,
-                        ReturnToDialogData.linkText,
-                        ReturnToDialogData.adapterView,
-                        ReturnToDialogData.itemView,
-                        ReturnToDialogData.itemPosition,
-                        ReturnToDialogData.itemId!!,
-                        ReturnToDialogData.returnToSearchHits,
-                        ReturnToDialogData.function
-                    )
+                    startFilePickerDialog()
                     return
                 }
             }
             catch (e: Exception) {
                 centeredToast(this, "PICK.TXT" + e.message.toString(), 3000)
-                startFilePickerDialog(
-                    true,
-                    ReturnToDialogData.linkText,
-                    ReturnToDialogData.adapterView,
-                    ReturnToDialogData.itemView,
-                    ReturnToDialogData.itemPosition,
-                    ReturnToDialogData.itemId!!,
-                    ReturnToDialogData.returnToSearchHits,
-                    ReturnToDialogData.function
-                )
-                ReturnToDialogData.reset()
+                startFilePickerDialog()
                 return
             }
             catch (e: FileNotFoundException) {
                 centeredToast(this, "PICK.TXT" + e.message.toString(), 3000)
-                startFilePickerDialog(
-                    true,
-                    ReturnToDialogData.linkText,
-                    ReturnToDialogData.adapterView,
-                    ReturnToDialogData.itemView,
-                    ReturnToDialogData.itemPosition,
-                    ReturnToDialogData.itemId!!,
-                    ReturnToDialogData.returnToSearchHits,
-                    ReturnToDialogData.function)
-                ReturnToDialogData.reset()
+                startFilePickerDialog()
                 return
             }
         }
 
-        // back to main input with the option to return there to the calling dialog
-        if (pickIsImage) {
-            // special handling for images to offer a case by case downscaling option
-            var dialog: AlertDialog? = null
-            val items = arrayOf<CharSequence>(getString(R.string.match_to_phone_s_screen))
-            var checkedItems = BooleanArray(1) { true }
-            var builder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
-            builder.setTitle(getString(R.string.scale_image))
-            builder.setMultiChoiceItems(
-                items,
-                checkedItems,
-                OnMultiChoiceClickListener { dlg, which, isChecked ->
-                    checkedItems[which] = isChecked
-                })
-            builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dlg, which ->
-                fabPlus.attachmentImageScale = checkedItems[0]
-                fabPlusOnClick(
-                    ReturnToDialogData.adapterView,
-                    ReturnToDialogData.itemView,
-                    ReturnToDialogData.itemPosition,
-                    ReturnToDialogData.itemId!!,
-                    ReturnToDialogData.returnToSearchHits,
-                    ReturnToDialogData.function
-                )
-                ReturnToDialogData.reset()
-            })
-            builder.setNegativeButton(R.string.cancel, DialogInterface.OnClickListener { dlg, which ->
-                startFilePickerDialog(
-                    true,
-                    ReturnToDialogData.linkText,
-                    ReturnToDialogData.adapterView,
-                    ReturnToDialogData.itemView,
-                    ReturnToDialogData.itemPosition,
-                    ReturnToDialogData.itemId!!,
-                    ReturnToDialogData.returnToSearchHits,
-                    ReturnToDialogData.function)
-                ReturnToDialogData.reset()
-            })
-            builder.setNeutralButton(R.string.title_activity_help, DialogInterface.OnClickListener { dlg, which ->
-                centeredToast(contextMainActivity, getString(R.string.reduces_data_storage_size), 1)
-                Handler().postDelayed({
-                    var dlgRestart = builder.create()
-                    dlgRestart.show()
-                    dlgRestart.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
-                }, 300)
-            })
-            dialog = builder.create()
-            dialog.show()
-            dialog.setCanceledOnTouchOutside(false)
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
-        } else {
-            // all picks but image
+        // back to main input with an image link to the phone gallery
+        if (pickIsImageLink) {
+            fabPlus.attachmentImageScale = false // nothing to scale
+            fabPlus.attachmentImageLink = true   // image link to phone gallery
             fabPlusOnClick(
                 ReturnToDialogData.adapterView,
                 ReturnToDialogData.itemView,
@@ -6340,7 +6252,69 @@ class MainActivity : AppCompatActivity(),
                 ReturnToDialogData.returnToSearchHits,
                 ReturnToDialogData.function
             )
-            ReturnToDialogData.reset()
+        } else {
+            // back to main input with the option to return there to the calling dialog
+            if (pickIsImageCopy) {
+                // special handling for images to offer a case by case downscaling option
+                var dialog: AlertDialog? = null
+                val items = arrayOf<CharSequence>(getString(R.string.match_to_phone_s_screen))
+                var checkedItems = BooleanArray(1) { true }
+                var builder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+                builder.setTitle(getString(R.string.scale_image))
+                builder.setMultiChoiceItems(
+                    items,
+                    checkedItems,
+                    OnMultiChoiceClickListener { dlg, which, isChecked ->
+                        checkedItems[which] = isChecked
+                    })
+                // let fapPlus handle the copy image scenario
+                builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dlg, which ->
+                    fabPlus.attachmentImageScale = checkedItems[0]
+                    fabPlusOnClick(
+                        ReturnToDialogData.adapterView,
+                        ReturnToDialogData.itemView,
+                        ReturnToDialogData.itemPosition,
+                        ReturnToDialogData.itemId!!,
+                        ReturnToDialogData.returnToSearchHits,
+                        ReturnToDialogData.function
+                    )
+                })
+                // return to the attachment picker
+                builder.setNegativeButton(
+                    R.string.cancel,
+                    DialogInterface.OnClickListener { dlg, which ->
+                        startFilePickerDialog()
+                    })
+                // provide help info
+                builder.setNeutralButton(
+                    R.string.title_activity_help,
+                    DialogInterface.OnClickListener { dlg, which ->
+                        centeredToast(
+                            contextMainActivity,
+                            getString(R.string.reduces_data_storage_size),
+                            1
+                        )
+                        Handler().postDelayed({
+                            var dlgRestart = builder.create()
+                            dlgRestart.show()
+                            dlgRestart.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+                        }, 300)
+                    })
+                dialog = builder.create()
+                dialog.show()
+                dialog.setCanceledOnTouchOutside(false)
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+            } else {
+                // all picks but image
+                fabPlusOnClick(
+                    ReturnToDialogData.adapterView,
+                    ReturnToDialogData.itemView,
+                    ReturnToDialogData.itemPosition,
+                    ReturnToDialogData.itemId!!,
+                    ReturnToDialogData.returnToSearchHits,
+                    ReturnToDialogData.function
+                )
+            }
         }
     }
 
@@ -8089,10 +8063,6 @@ class MainActivity : AppCompatActivity(),
                 var itemId: Long? = -1
                 var returnToSearchHits: Boolean = false
                 var function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)? = null
-
-                fun reset() {
-                    ReturnToDialogData(false, "", null, null, -1, -1, false, null)
-                }
             }
 
             constructor(attachmentAllowed: Boolean,
@@ -8192,6 +8162,31 @@ class MainActivity : AppCompatActivity(),
             }
             jumpFolderDialog = jumpFolderBuilder.create()
             jumpFolderDialog.show()
+        }
+
+        // find text in all dataSections (folders) and return a list
+        fun insideDataStoreSearchAndReplace(searchText: String, replaceText: String, pw: ProgressWindow, context: Context): Boolean {
+            var success = true
+            try {
+                // iterate all data sections of DataStore
+                for (dsNdx in ds.dataSection.indices) {
+                    // set progress
+                    if (pw != null) {
+                        (context as Activity).runOnUiThread {
+                            pw.incCount += 1
+                        }
+                    }
+                    // get text from DataStore folder
+                    var sectionText = ds.dataSection[dsNdx]
+                    // search & replace action
+                    sectionText = sectionText.replace(searchText, replaceText, false)
+                    // put replace action back to where it belongs
+                    ds.dataSection[dsNdx] = sectionText
+                }
+            } catch (e: Exception) {
+                success = false
+            }
+            return success
         }
 
         // find text in all dataSections (folders) and return a list
@@ -8467,6 +8462,10 @@ class MainActivity : AppCompatActivity(),
             val attachmentsList = filePath.listFiles()
             val fileUsed = arrayOfNulls<Boolean>(attachmentsList!!.size)
             Arrays.fill(fileUsed, false)
+            // get list with app's uri permissions
+            var grantedPermissionList = MainActivity.contextMainActivity.contentResolver.getPersistedUriPermissions()
+            // build a uri list with links, which need a permission
+            var neededPermissionList: MutableList<Uri> = arrayListOf()
             // generate a progress window
             var progressWindow = ProgressWindow(context, context.getString(R.string.searchOrphans) )
             var maxProgressCount = 0
@@ -8477,7 +8476,29 @@ class MainActivity : AppCompatActivity(),
             // local progress window dialog dismiss listener is called, after blocking task finished
             fun setOnDismissListener(success: Boolean) {
                 if (success) {
+                    //
+                    // remove granted image link permissions, if not needed anymore
+                    //
+                    // loop granted items
+                    for (itemGranted in grantedPermissionList) {
+                        // have a found flag for granted permissions in the needed list
+                        var grantedFound = false
+                        // loop the needed permission list
+                        for (itemNeeded in neededPermissionList) {
+                            // if "granted permission" appears in "needed permission" --> all fine
+                            if (itemGranted.uri == itemNeeded) {
+                                grantedFound = true
+                                break
+                            }
+                        }
+                        // if "granted permission" appears NOT in "needed permission" --> revoke permission
+                        if (!grantedFound) {
+                            MainActivity.contextMainActivity.contentResolver.releasePersistableUriPermission(itemGranted.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                    }
+                    //
                     // ask to show or delete unused files in app folder
+                    //
                     try {
                         // two choices: navigate to, show + cancel
                         twoChoicesDialog(context,
@@ -8529,6 +8550,44 @@ class MainActivity : AppCompatActivity(),
                                 val m = PATTERN.UriLink.matcher(textLine)
                                 if (m.find()) {
                                     val lnkFull = m.group()
+                                    // only deal with lines containing "::::content://media/picker", which is a link to the phone gallery
+                                    if (lnkFull.contains("::::content://media/picker")) {
+                                        // get link parts: key and uri
+                                        val lnkStr = lnkFull.substring(1, lnkFull.length - 1)
+                                        try {
+                                            val lnkParts = lnkStr.split("::::".toRegex()).toTypedArray()
+                                            if (lnkParts != null && lnkParts.size == 2) {
+                                                // get linked image uri
+                                                var uri = Uri.parse(lnkParts[1])
+                                                // check "needed" to be found in "granted"
+                                                var found = false
+                                                for (item in grantedPermissionList) {
+                                                    if (item.uri == uri) {
+                                                        // set found flag
+                                                        found = true
+                                                        // add uri to needed list if not yet contained
+                                                        if (!neededPermissionList.contains(uri)) {
+                                                            neededPermissionList.add(uri)
+                                                        }
+                                                    }
+                                                }
+                                                // if not found, try to get permission & retrieve permission list again
+                                                if (!found) {
+                                                    try {
+                                                        // apply for permanent read permission
+                                                        MainActivity.contextMainActivity.contentResolver.takePersistableUriPermission(
+                                                            uri,
+                                                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                        )
+                                                    } catch (e: SecurityException) {
+                                                        // leave it unhandled
+                                                    }
+                                                    grantedPermissionList = MainActivity.contextMainActivity.contentResolver.getPersistedUriPermissions()
+                                                }
+                                            }
+                                        } finally {
+                                        }
+                                    }
                                     // only deal with lines containing "::::/", which is a file, not a www link
                                     if (lnkFull.contains("::::/")) {
                                         // get link parts: key and uri
@@ -8855,7 +8914,7 @@ class MainActivity : AppCompatActivity(),
         }
 
         // copy a file named by uriString to GrzLog Images folder
-        //     return just the filename, no need for more, because app storage path is fix
+        //     return just the filename, no need for more, because app storage path is fix & known
         fun copyAttachmentToApp(context: Context,
                                 uriString: String,
                                 uri: Uri?,
@@ -9701,6 +9760,7 @@ internal class LvAdapter : BaseAdapter {
     private var items: ArrayList<ListViewItem>? = null
     private var iconColor: Int = 0
     private var res = android.R.drawable.ic_dialog_alert
+    private var pathGrzLogImages = MainActivity.appStoragePath + "/Images/"
 
     constructor() : super() {}
     constructor(context: Context?, items: ArrayList<ListViewItem>?) {
@@ -9712,7 +9772,10 @@ internal class LvAdapter : BaseAdapter {
         } else {
             this.iconColor = R.color.royalblue
         }
+        listUriPermissionsGranted = context.contentResolver.getPersistedUriPermissions()
     }
+
+    var listUriPermissionsGranted: List<UriPermission>? = null
 
     var lp = RelativeLayout.LayoutParams(
         RelativeLayout.LayoutParams.WRAP_CONTENT,
@@ -9792,6 +9855,12 @@ internal class LvAdapter : BaseAdapter {
             // place icon left to key and after the opening bracket
             val start = text?.indexOf('[')?.plus(1)
             val stop = text?.indexOf(']')?.plus(1)
+            // get attachment file name
+            var fileNameString = items!![position].fullTitle!!.substring(
+                items!![position].fullTitle!!.indexOf("::::"),
+                items!![position].fullTitle!!.lastIndexOf("]")
+            )
+            // get mime type
             var mime = ""
             try {
                 if (stop != -1) {
@@ -9801,52 +9870,68 @@ internal class LvAdapter : BaseAdapter {
                     // set icon via spannable
                     res = android.R.drawable.ic_dialog_alert
                     // title could contain a mime, so exec mime detection on the last part of fullTitle
-                    mime = getFileExtension(
-                        items!![position].fullTitle!!.substring(
-                            items!![position].fullTitle!!.indexOf("::::"),
-                            items!![position].fullTitle!!.lastIndexOf("]")
-                        ))
+                    mime = getFileExtension(fileNameString)
                 }
             } catch (ioobe: IndexOutOfBoundsException ) {
                 mime = ""
             }
-            if (mime.length > 0) {
-                if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
-                    res = android.R.drawable.ic_menu_camera
-                } else {
-                    if (AUDIO_EXT.contains(mime, ignoreCase = true)) {
-                        res = android.R.drawable.ic_lock_silent_mode_off
+            // very quick check for a linked image
+            if (fileNameString[4] == 'c') {
+                // next check for picker uri
+                var pos = fileNameString.indexOf("content://media/picker")
+                if (pos != -1) {
+                    var uri = Uri.parse(fileNameString.substring(pos))
+                    if (listUriPermissionsGranted?.any { it.uri == uri } == true) {
+                        // linked images: filename is a PhotoPicker file name
+                        res = android.R.drawable.ic_menu_camera
                     } else {
-                        if (VIDEO_EXT.contains(mime, ignoreCase = true)) {
-                            res = R.drawable.ic_video
+                        // error --> uri not permitted or not found
+                        res = android.R.drawable.ic_dialog_alert
+                    }
+                }
+            } else {
+                if (mime.length > 0) {
+                    if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
+                        if (File(pathGrzLogImages + fileNameString.substring(5)).exists()) {
+                            res = android.R.drawable.ic_menu_camera
                         } else {
-                            if (mime.equals("pdf", ignoreCase = true)) {
-                                res = R.drawable.ic_pdf
+                            res = android.R.drawable.ic_dialog_alert
+                        }
+                    } else {
+                        if (AUDIO_EXT.contains(mime, ignoreCase = true)) {
+                            res = android.R.drawable.ic_lock_silent_mode_off
+                        } else {
+                            if (VIDEO_EXT.contains(mime, ignoreCase = true)) {
+                                res = R.drawable.ic_video
                             } else {
-                                if (mime.equals("txt", ignoreCase = true)) {
-                                    res = android.R.drawable.ic_dialog_email
+                                if (mime.equals("pdf", ignoreCase = true)) {
+                                    res = R.drawable.ic_pdf
                                 } else {
-                                    // mime could be .file-error due to a lost attachment file
-                                    if (!mime.equals(ERROR_EXT, ignoreCase = true)) {
-                                        // www attachment link, geo coordinates, GrzLog folder go here
-                                        val fullItemText = items!![position].fullTitle
-                                        val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
-                                        if (m?.find() == true) { // www attachment link OR geo coordinates OR GrzLog folder
-                                            val result = m.group()
-                                            val key = result.substring(1, result.length - 1)
-                                            val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                                            if (lnkParts != null && lnkParts.size == 2) {
-                                                var fileName = lnkParts[1]
-                                                if (fileName.startsWith("/") == false) {
-                                                    if (fileName.startsWith("geo:")) {
-                                                        res = R.drawable.location
-                                                    } else {
-                                                        res = android.R.drawable.ic_menu_compass
+                                    if (mime.equals("txt", ignoreCase = true)) {
+                                        res = android.R.drawable.ic_dialog_email
+                                    } else {
+                                        // mime could be .file-error due to a lost attachment file
+                                        if (!mime.equals(ERROR_EXT, ignoreCase = true)) {
+                                            // www attachment link, geo coordinates, GrzLog folder go here
+                                            val fullItemText = items!![position].fullTitle
+                                            val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                                            if (m?.find() == true) { // www attachment link OR geo coordinates OR GrzLog folder
+                                                val result = m.group()
+                                                val key = result.substring(1, result.length - 1)
+                                                val lnkParts = key.split("::::".toRegex()).toTypedArray()
+                                                if (lnkParts != null && lnkParts.size == 2) {
+                                                    var fileName = lnkParts[1]
+                                                    if (fileName.startsWith("/") == false) {
+                                                        if (fileName.startsWith("geo:")) {
+                                                            res = R.drawable.location
+                                                        } else {
+                                                            res = android.R.drawable.ic_menu_compass
+                                                        }
                                                     }
-                                                }
-                                                // in case a folder name contains a .
-                                                if (fileName.startsWith("folder/")) {
-                                                    res = android.R.drawable.ic_menu_agenda
+                                                    // in case a folder name contains a .
+                                                    if (fileName.startsWith("folder/")) {
+                                                        res = android.R.drawable.ic_menu_agenda
+                                                    }
                                                 }
                                             }
                                         }
@@ -9855,23 +9940,23 @@ internal class LvAdapter : BaseAdapter {
                             }
                         }
                     }
-                }
-            } else {
-                // check for folder attachment link OR geo , if the folder name does not contain a .
-                if ( start != -1 && stop != -1 ) {
-                    val fullItemText = items!![position].fullTitle
-                    val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
-                    if (m?.find() == true) {
-                        val result = m.group()
-                        val key = result.substring(1, result.length - 1)
-                        val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                        if (lnkParts != null && lnkParts.size == 2) {
-                            var fileName = lnkParts[1]
-                            if (fileName.startsWith("folder/")) {
-                                res = android.R.drawable.ic_menu_agenda
-                            }
-                            if (fileName.startsWith("geo:")) {
-                                res = R.drawable.location
+                } else {
+                    // check for folder attachment link OR geo , if the folder name does not contain a .
+                    if (start != -1 && stop != -1) {
+                        val fullItemText = items!![position].fullTitle
+                        val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                        if (m?.find() == true) {
+                            val result = m.group()
+                            val key = result.substring(1, result.length - 1)
+                            val lnkParts = key.split("::::".toRegex()).toTypedArray()
+                            if (lnkParts != null && lnkParts.size == 2) {
+                                var fileName = lnkParts[1]
+                                if (fileName.startsWith("folder/")) {
+                                    res = android.R.drawable.ic_menu_agenda
+                                }
+                                if (fileName.startsWith("geo:")) {
+                                    res = R.drawable.location
+                                }
                             }
                         }
                     }
@@ -9915,6 +10000,7 @@ class FabPlus {
     var attachmentUri: String? = ""          // attachment link uri as String
     var attachmentName = ""                  // attachment link readable name
     var attachmentImageScale = false         // attachment is an image to scale down to screen dimensions
+    var attachmentImageLink = false          // attachment is a link to an image from the phone gallery
     var attachmentUriUri: Uri? = null        // attachment as original Uri from onActivityResult
     var inputAlertTextSelStart = -1          // insert position for attachment link
     var pickAttachment = false               // flag indicates, fabPlus was called from onActivityResult

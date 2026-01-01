@@ -26,8 +26,9 @@ class HelpActivity : AppCompatActivity() {
         "         multi line is ok\n" +
         "         weblinks are highlighted\n" +
         "   Attachment: 'Select attachment' dialog\n" +
-        "         image from phone gallery\n" +
-        "         files from GrzLog gallery\n" +
+        "         image link to phone gallery (max. allowed is 512)\n" +
+        "         image copy from phone gallery\n" +
+        "         file link to GrzLog gallery\n" +
         "         capture camera image\n" +
         "         video from phone gallery\n" +
         "         audio from phone\n" +
@@ -128,6 +129,8 @@ class HelpActivity : AppCompatActivity() {
         "              delete orphaned files\n" +
         "       Scale images to phone display\n" +
         "              pro: reduces storage consumption\n" +
+        "       Show linked images\n" +
+        "              view, usages, upload, delete linked images\n" +
         "   Reset\n" +
         "       Reset app preferences (data are not touched)\n\n" +
         "   Quit active services\n" +

@@ -47,6 +47,7 @@ import com.grzwolf.grzlog.FileUtils.Companion.getPath
 import com.grzwolf.grzlog.MainActivity.Companion.appPwdPub
 import com.grzwolf.grzlog.MainActivity.Companion.appStoragePath
 import com.grzwolf.grzlog.MainActivity.Companion.ds
+import com.grzwolf.grzlog.MainActivity.Companion.returningFromAppGallery
 import com.grzwolf.grzlog.MainActivity.Companion.writeAppData
 import java.io.File
 import java.io.FileOutputStream
@@ -914,6 +915,27 @@ public class SettingsActivity :
                         }
                     )
                 } catch(e: Exception) {}
+                true
+            }
+
+            // action after show linked images in a LinkedImages activity
+            val showLinkedImages = findPreference("ShowLinkedImages") as Preference?
+            showLinkedImages!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                try {
+                    // release an existing moreDialog, otherwise it would popup after search dlg close
+                    if (MainActivity.folderMoreDialog != null) {
+                        MainActivity.folderMoreDialog?.let { it.dismiss() }
+                        MainActivity.folderMoreDialog = null
+                    }
+                    MainActivity.returningFromAppGallery = false
+                    // generate a controlling intent to return to Settings --> LinkedImages, bc. from here the start was ignited
+                    MainActivity.intentSettings = Intent(MainActivity.contextMainActivity, SettingsActivity::class.java)
+                    // start LinkedImages activity
+                    val linkedImagesIntent = Intent(context, LinkedImages::class.java)
+                    requireContext().startActivity(linkedImagesIntent)
+                } catch(e: Exception) {
+                    okBox(requireContext(), "Ups", e.message.toString())
+                }
                 true
             }
 

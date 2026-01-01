@@ -94,6 +94,8 @@ dependencies {
     implementation 'com.android.volley:volley:1.2.1'
     // app life cycle observer: keep for now 2.8.7, otherwise build fails
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+    // "embedded photo picker" for apps using Views --> not working in AS LadyBug --> TBD after switch to AS Otter
+    // implementation("androidx.photopicker:photopicker:1.0.0-alpha01")
 }
 repositories {
     mavenCentral()

@@ -152,8 +152,9 @@
     <string name="InsertNotAllowed">Insert line here is not allowed.</string>
     <string name="noCameraOp">cannot operate camera</string>
     <string name="Select">Select attachment</string>
-    <string name="Image">Phone gallery</string>
-    <string name="ImageApp">GrzLog gallery</string>
+    <string name="ImageLink">Image: link to Phone Gallery</string>
+    <string name="ImageCopy">Image: copy from Phone Gallery</string>
+    <string name="ImageApp">Link to GrzLog Gallery</string>
     <string name="Camera">Camera</string>
     <string name="exportFolder">Export folder</string>
     <string name="notYetImplemented">Not yet implemented.</string>
@@ -334,9 +335,9 @@
     <string name="image_scaling_failed">Image Scaling failed</string>
     <string name="yes_is_recommended">\'Yes\' is recommended, if GrzLog gallery was created before version v1.1.30</string>
     <string name="grzlog_gallery_images_before_version">GrzLog gallery images before version v1.1.30 consume a lot of space.</string>
-    <string name="warning">Warnung</string>
-    <string name="you_selected">"Sie selektierten "</string>
-    <string name="items">Items</string>
+    <string name="warning">Warning</string>
+    <string name="you_selected">"You selected "</string>
+    <string name="items">items</string>
     <string name="reminder">Reminder</string>
     <string name="keep">Proceed Selection</string>
     <string name="keep_selection">Repeat the following selection?</string>
@@ -387,6 +388,14 @@
     <string name="bak_larger_faster">fast, but larger file</string>
     <string name="bak_smaller_slower">smaller file, but slower</string>
     <string name="type_in_the_pdf_title">PDF title</string>
+    <string name="photo_picker_no_media_selected">photo picker: no media selected</string>
+    <string name="image_link_maximum_reached"><![CDATA[Maximum of 512 linked images is reached. Before adding further image links, you need to release links in Settings --> Release Image Links]]></string>
+    <string name="linked_images">Show linked images</string>
+    <string name="title_linked_images">Linked images</string>
+    <string name="scanLinkedImages">Scanning linked images</string>
+    <string name="removeUriPermission">The permission to access linked images will be removed.</string>
+    <string name="copyToGrzLogGallery">Will be copied to GrzLog Gallery. Affected image links will be updated accordingly.</string>
+    <string name="copyLinkedImages">Copy linked images to GrzLog gallery</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

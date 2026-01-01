@@ -31,6 +31,9 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- not working in AS LadyBug TBD after switching to AS Otter with AGP 4.0  -->
+    <!-- <uses-sdk tools:overrideLibrary="androidx.photopicker" />  -->
+
      <!-- https://stackoverflow.com/questions/62535856/intent-resolveactivity-returns-null-in-api-30 -->
     <queries>
         <!-- Camera -->
@@ -107,6 +110,15 @@
         <activity
             android:name="com.grzwolf.grzlog.LimitationsActivity"
             android:label="@string/title_activity_limits"
+            android:screenOrientation="portrait"
+            android:parentActivityName="com.grzwolf.grzlog.MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.grzwolf.grzlog.MainActivity" />
+        </activity>
+        <activity
+            android:name="com.grzwolf.grzlog.LinkedImages"
+            android:label="@string/title_linked_images"
             android:screenOrientation="portrait"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity">
             <meta-data

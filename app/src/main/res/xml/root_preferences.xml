@@ -205,6 +205,10 @@
             android:title="@string/rescale"
             android:summary="@string/clickHere"
             android:key="RescaleImages" />
+        <Preference
+            android:title="@string/linked_images"
+            android:summary="@string/clickHere"
+            android:key="ShowLinkedImages" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Reset">

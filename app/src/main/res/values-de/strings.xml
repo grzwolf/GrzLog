@@ -151,8 +151,9 @@
     <string name="InsertNotAllowed">Zeile einfügen ist hier nicht erlaubt.</string>
     <string name="noCameraOp">Kamera Fehler</string>
     <string name="Select">Auswahl Dateianhang</string>
-    <string name="Image">Phone Galerie</string>
-    <string name="ImageApp">GrzLog Galerie</string>
+    <string name="ImageLink">Bild: Link zur Phone Galerie</string>
+    <string name="ImageCopy">Bild: Kopie aus Phone Galerie</string>
+    <string name="ImageApp">Link zur GrzLog Galerie</string>
     <string name="Camera">Kamera</string>
     <string name="exportFolder">Export Ordner</string>
     <string name="notYetImplemented">Noch nicht verfügbar.</string>
@@ -333,9 +334,9 @@
     <string name="image_scaling_failed">Fehler bei Bilder Skalieren</string>
     <string name="yes_is_recommended">\'Ja\' ist empfohlen, wenn GrzLog Galerie vor Version v1.1.30 entstand.</string>
     <string name="grzlog_gallery_images_before_version">GrzLog Galerie Bilder vor Version v1.1.30 nehmen viel Platz ein.</string>
-    <string name="warning">Warning</string>
-    <string name="you_selected">"You selected "</string>
-    <string name="items">items</string>
+    <string name="warning">Warnung</string>
+    <string name="you_selected">"Es wurde augewählt "</string>
+    <string name="items">Items</string>
     <string name="reminder">Erinnerung</string>
     <string name="keep">Auswahl anwenden</string>
     <string name="keep_selection">Wiederholen der folgenden Auswahl?</string>
@@ -386,6 +387,14 @@
     <string name="bak_larger_faster">schnell, aber größere Datei</string>
     <string name="bak_smaller_slower">kleinere Datei, aber langsamer</string>
     <string name="type_in_the_pdf_title">PDF Titel</string>
+    <string name="photo_picker_no_media_selected">Foto Picker: keine Auswahl getroffen</string>
+    <string name="image_link_maximum_reached"><![CDATA[Maximum von 512 verlinkten Bildern ist erreicht. Bevor weitere Bilder verlinkt werden können, müssen Bilder Links freigegeben werden: Settings --> Bilder Links freigeben]]></string>
+    <string name="linked_images">Zeige verlinkte Bilder</string>
+    <string name="title_linked_images">Verlinkte Bilder</string>
+    <string name="scanLinkedImages">Scannw verlinkte Bilder</string>
+    <string name="removeUriPermission">Die Berechtigung zum Zugriff auf verlinkte Bilder wird entzogen.</string>
+    <string name="copyToGrzLogGallery">Werden in die GrzLog Galerie kopiert. Die betroffenen Links zu Bilder werden entsprechend angepaßt.</string>
+    <string name="copyLinkedImages">Kopiere verlinkte Bilder zur GrzLog Galerie</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
