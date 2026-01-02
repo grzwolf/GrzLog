@@ -11,6 +11,7 @@ import android.util.Size
 import android.util.TypedValue
 import android.view.*
 import android.widget.*
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import java.io.File
 import java.nio.file.Paths
@@ -46,6 +47,9 @@ class GalleryActivity : AppCompatActivity() {
         setContentView(R.layout.gallery_activity)
         val actionBar = supportActionBar
         actionBar?.setDisplayHomeAsUpEnabled(true)
+
+        // adding onBackPressed callback listener
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
 
         // quit local app reminders
         MainActivity.showAppReminders = false
@@ -403,14 +407,16 @@ class GalleryActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    // Android back button detection
-    override fun onBackPressed() {
-        // treat like cancel
-        MainActivity.returningFromAppGallery = true
-        MainActivity.returnAttachmentFromAppGallery = ""
-        // return to MainActivity with "Cancel" shows either "Folder More Dialog" or "Input More Dialog"
-        MainActivity.showFolderMoreDialog = !returnPayload
-        super.onBackPressed()
+    // Android back button & gesture detection
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            // treat like cancel
+            MainActivity.returningFromAppGallery = true
+            MainActivity.returnAttachmentFromAppGallery = ""
+            // return to MainActivity with "Cancel" shows either "Folder More Dialog" or "Input More Dialog"
+            MainActivity.showFolderMoreDialog = !returnPayload
+            finish()
+        }
     }
 
     // GridView adapter

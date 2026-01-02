@@ -587,7 +587,7 @@ class MainActivity : AppCompatActivity(),
         // 0 indicates the very first app usage, which has oc no backup
         if (deferredBakDate == 0L) {
             val spe = sharedPref.edit()
-            spe.putLong("deferredBak", Date().time.toLong())
+            spe.putLong("deferredBak", Date().time)
             spe.apply()
         }
         // have a missing/outdated backup reminder as root preference
@@ -623,7 +623,7 @@ class MainActivity : AppCompatActivity(),
                     {
                         // defer bak reminder for one week
                         val spe = sharedPref.edit()
-                        spe.putLong("deferredBak", Date().time.toLong())
+                        spe.putLong("deferredBak", Date().time)
                         spe.apply()
                     },
                     null
@@ -843,7 +843,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     // if app is in foreground or doesn't go thru onResume: handle event incoming content 'share with'
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleSharedIntent(intent)
     }
@@ -925,8 +925,8 @@ class MainActivity : AppCompatActivity(),
                     for (i in 0 until listView.count) {
                         var status = !listView.isItemChecked(i)
                         listView.setItemChecked(i, status)
-                        listView?.setSelection(i)    // only visible after view is updated
-                        checkedItems?.set(i, status) // important: reliable even w/o view update
+                        listView.setSelection(i)    // only visible after view is updated
+                        checkedItems.set(i, status) // important: reliable even w/o view update
                     }
                     // restart toggle dialog after toggling is done to show new status
                     Handler().postDelayed({
@@ -996,14 +996,14 @@ class MainActivity : AppCompatActivity(),
                     var imageUriString: String? = uriOri.toString()
                     if (imageUriString!!.contains("com.google.android.apps.photos.contentprovider", ignoreCase = true)) {
                         // GooglePhoto needs extra care
-                        val imagepath = FileUtils.getPath(this, uri!!)
+                        val imagepath = FileUtils.getPath(this, uri)
                         val imagefile = File(imagepath.toString())
                         uri = Uri.fromFile(imagefile)
                         imageUriString = uri.toString()
                     } else {
                         // image from documents & content
                         if (imageUriString.startsWith("content://")) {
-                            imageUriString = getPath(this, uri!!)
+                            imageUriString = getPath(this, uri)
                         }
                     }
                     if (uri != null) {
@@ -1029,10 +1029,10 @@ class MainActivity : AppCompatActivity(),
             }
         }
         // clean up intent
-        intent?.replaceExtras(Bundle())
-        intent?.setAction("")
-        intent?.setData(null)
-        intent?.setFlags(0)
+        intent.replaceExtras(Bundle())
+        intent.setAction("")
+        intent.setData(null)
+        intent.setFlags(0)
     }
 
     // listener for the status of requested permissions
@@ -1215,10 +1215,10 @@ class MainActivity : AppCompatActivity(),
         // text view is either title or section, dismiss spacer
         var tv: TextView
         try {
-            tv = itemView!!.findViewById(R.id.tvItemTitle)
+            tv = itemView.findViewById(R.id.tvItemTitle)
         } catch (e: Exception) {
             try {
-                tv = itemView!!.findViewById(R.id.tvSectionTitle)
+                tv = itemView.findViewById(R.id.tvSectionTitle)
             } catch (e: Exception) {
                 return
             }
@@ -1274,13 +1274,13 @@ class MainActivity : AppCompatActivity(),
             // get the clicked item's full text
             val fullItemText = lvMain.arrayList[itemPosition].fullTitle
             // get the attachment (image, video, audio, txt, pdf, www, folder) in fullItemText
-            val matchFull = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+            val matchFull = fullItemText?.let { PATTERN.UriLink.matcher(it) }
             var matchFullResult = ""
             if (matchFull?.find() == true) {
                 matchFullResult = matchFull.group()
             }
             // check, what was clicked on by user, if it is an attachment
-            val matchLink = attachment.let { PATTERN.UriLink.matcher(it.toString()) }
+            val matchLink = attachment.let { PATTERN.UriLink.matcher(it) }
 
             //
             // 1. handle geo location coordinates
@@ -1801,7 +1801,7 @@ class MainActivity : AppCompatActivity(),
                     // reminder candidate
                     val message = lvMain.arrayList[itemPosition].title
                     // reminder candidate may already exist or it is a new one
-                    if (MainActivity.grzlogReminderList.firstOrNull {it.toString() == message} != null) {
+                    if (MainActivity.grzlogReminderList.firstOrNull {it == message} != null) {
                         // reminder already exists: offer option to keep ist or to remove it
                         var bld: AlertDialog.Builder? = null
                         bld = AlertDialog.Builder(
@@ -2110,8 +2110,8 @@ class MainActivity : AppCompatActivity(),
                 }
                 override fun onChildViewRemoved(view: View?, view1: View?) {}
             })
-        itemfolderMoreDialog?.show()
-        itemfolderMoreDialog?.setCanceledOnTouchOutside(false)
+        itemfolderMoreDialog.show()
+        itemfolderMoreDialog.setCanceledOnTouchOutside(false)
     }
 
     // execute the long click as edit ListView item
@@ -2145,7 +2145,7 @@ class MainActivity : AppCompatActivity(),
                 keyString = lnkParts[0]
                 uriString = lnkParts[1]
             }
-            lineInput = lineInput!!.replace(result, "[$keyString]")
+            lineInput = lineInput.replace(result, "[$keyString]")
             fabPlus.attachmentUri = uriString
             fabPlus.attachmentName = keyString
             fabPlus.inputAlertText = lineInput
@@ -2536,9 +2536,12 @@ class MainActivity : AppCompatActivity(),
                 val builder: AlertDialog.Builder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
                 // visible screen dimensions
                 val widthWnd: Int = contextMainActivity.resources.displayMetrics.widthPixels
-                val heightWnd: Int = contextMainActivity.resources.displayMetrics.heightPixels -
-                                     MainActivity.statusBarInset.top -
-                                     MainActivity.navigationBarInset.bottom
+                var heightWnd: Int = contextMainActivity.resources.displayMetrics.heightPixels
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                    heightWnd = contextMainActivity.resources.displayMetrics.heightPixels -
+                            MainActivity.statusBarInset.top -
+                            MainActivity.navigationBarInset.bottom
+                }
                 // title text consists of 4 text lines
                 var ss1 = SpannableString(getString(R.string.mark_items_to_replace) + "\n")
                 ss1.setSpan(
@@ -2632,10 +2635,10 @@ class MainActivity : AppCompatActivity(),
                             dlg.setOnShowListener {
                                 dlg.listView.smoothScrollToPosition(lastVisiblePos)
                                 // final dialog layout dimensions
-                                val listView = (dlg as AlertDialog?)?.listView
+                                val listView = dlg?.listView
                                 listView!!.bottom += 100
-                                listView!!.setPadding(0, 100, 0, 100)
-                                listView!!.layout(0, 0, listView!!.width, listViewFinalHeight)
+                                listView.setPadding(0, 100, 0, 100)
+                                listView.layout(0, 0, listView.width, listViewFinalHeight)
                                 dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, dlgFinalHeight))
                             }
                             dlg.show()
@@ -2697,11 +2700,11 @@ class MainActivity : AppCompatActivity(),
                         for (i in 0 until listView.count) {
                             var status = !listView.isItemChecked(i)
                             listView.setItemChecked(i, status)
-                            listView?.setSelection(i)    // only visible after view is updated
-                            checkedItems?.set(i, status) // important: reliable even w/o view update
+                            listView.setSelection(i)    // only visible after view is updated
+                            checkedItems.set(i, status) // important: reliable even w/o view update
                         }
                         // prepare scrolling to recently visible list part
-                        val lastVisiblePos = Math.max(0, listView!!.lastVisiblePosition - 1)
+                        val lastVisiblePos = Math.max(0, listView.lastVisiblePosition - 1)
                         // get out of old dialog
                         dialog.dismiss()
                         // restart toggle dialog after toggling is done to show new status
@@ -2711,10 +2714,10 @@ class MainActivity : AppCompatActivity(),
                             dlg.setOnShowListener {
                                 dlg.listView.smoothScrollToPosition(lastVisiblePos)
                                 // final dialog layout dimensions
-                                val listView = (dlg as AlertDialog?)?.listView
+                                val listView = dlg?.listView
                                 listView!!.bottom += 100
-                                listView!!.setPadding(0, 100, 0, 100)
-                                listView!!.layout(0, 0, listView!!.width, listViewFinalHeight)
+                                listView.setPadding(0, 100, 0, 100)
+                                listView.layout(0, 0, listView.width, listViewFinalHeight)
                                 dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, dlgFinalHeight))
                             }
                             dlg.show()
@@ -2742,11 +2745,11 @@ class MainActivity : AppCompatActivity(),
                     dlg.findViewById<TextView>(alertTitle)?.let {
                         titleTextLinesHeight = it.lineHeight
                     }
-                    val listView = (dlg as AlertDialog?)?.listView
+                    val listView = dlg?.listView
                     listView!!.bottom += 100
-                    listView!!.setPadding(0, 100, 0, 100)
-                    listViewFinalHeight = listviewHeight(listView!!) + 200
-                    listView!!.layout(0, 0, listView!!.width, listViewFinalHeight)
+                    listView.setPadding(0, 100, 0, 100)
+                    listViewFinalHeight = listviewHeight(listView) + 200
+                    listView.layout(0, 0, listView.width, listViewFinalHeight)
                     dlgFinalHeight = 100 + 3*titleTextLinesHeight + (1.3f*titleTextLinesHeight).toInt() + listViewFinalHeight
                     dlg.getWindow()?.setLayout(widthWnd + 20, Math.min(heightWnd, dlgFinalHeight))
                 }
@@ -3223,7 +3226,7 @@ class MainActivity : AppCompatActivity(),
                     // get current text from input editor: extract the part with the brackets bla[foo]bla
                     linkText = fabPlus.inputAlertText!!
                     var linkTextNoBrackets = ""
-                    val matchLnk = linkText.let { PATTERN.UriLink.matcher(it.toString()) }
+                    val matchLnk = linkText.let { PATTERN.UriLink.matcher(it) }
                     if (matchLnk.find() == true) {
                         linkText = matchLnk.group()
                         linkTextNoBrackets = linkText.substring(1, linkText.length-1)
@@ -3237,7 +3240,7 @@ class MainActivity : AppCompatActivity(),
                         if (fabPlus.attachmentUri!!.length > 0) {
                             fullLink = "[" + linkTextNoBrackets + "::::" + fabPlus.attachmentUri!! + "]"
                         }
-                        val matchOri = fullLink?.let { PATTERN.UriLink.matcher(it.toString()) }
+                        val matchOri = fullLink?.let { PATTERN.UriLink.matcher(it) }
                         var oriLink = ""
                         if (matchOri?.find() == true) {
                             var noBrackets = matchOri.group()
@@ -3248,7 +3251,7 @@ class MainActivity : AppCompatActivity(),
                             }
                         }
                         // add oriLink to linkText
-                        if (linkText.toString().isNotEmpty() && oriLink.isNotEmpty()) {
+                        if (linkText.isNotEmpty() && oriLink.isNotEmpty()) {
                             linkText = linkText.substring(0, linkText.length - 1) + "::::" + oriLink + "]"
                         }
                     } else {
@@ -3265,7 +3268,7 @@ class MainActivity : AppCompatActivity(),
                 }
                 // fire attachment picker dlg, which finally ends at onActivityResult
                 dlg.dismiss()
-                startFilePickerDialog(attachmentAllowed, linkText.toString(), adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
             }
         )
 
@@ -3808,22 +3811,22 @@ class MainActivity : AppCompatActivity(),
             return
         }
         // estimate current view position
-        var currentViewPct = (100.0 * lv!!.firstVisiblePosition / lv!!.adapter!!.count + 0.5).toInt()
+        var currentViewPct = (100.0 * lv.firstVisiblePosition / lv.adapter!!.count + 0.5).toInt()
         // prepare single choice item pre selection
         var checkItem = -1
-        if (lv!!.firstVisiblePosition == 0) {
+        if (lv.firstVisiblePosition == 0) {
             checkItem = 0
         }
-        if (lv!!.firstVisiblePosition == lv!!.adapter!!.count / 4) {
+        if (lv.firstVisiblePosition == lv.adapter!!.count / 4) {
             checkItem = 1
         }
-        if (lv!!.firstVisiblePosition == lv!!.adapter!!.count / 2) {
+        if (lv.firstVisiblePosition == lv.adapter!!.count / 2) {
             checkItem = 2
         }
-        if (lv!!.firstVisiblePosition == lv!!.adapter!!.count * 3 / 4) {
+        if (lv.firstVisiblePosition == lv.adapter!!.count * 3 / 4) {
             checkItem = 3
         }
-        if (lv!!.lastVisiblePosition == lv!!.adapter!!.count - 1) {
+        if (lv.lastVisiblePosition == lv.adapter!!.count - 1) {
             checkItem = 4
             currentViewPct = 100
         }
@@ -3845,20 +3848,20 @@ class MainActivity : AppCompatActivity(),
         ) { dialog, which ->
             if (which == 0) {
                 // jump to top
-                lv!!.setSelection(0)
+                lv.setSelection(0)
             }
             if (which == 1) {
-                lv!!.setSelection(lv.adapter.count / 4)
+                lv.setSelection(lv.adapter.count / 4)
             }
             if (which == 2) {
-                lv!!.setSelection(lv.adapter.count / 2)
+                lv.setSelection(lv.adapter.count / 2)
             }
             if (which == 3) {
-                lv!!.setSelection(lv.adapter.count * 3 / 4)
+                lv.setSelection(lv.adapter.count * 3 / 4)
             }
             if (which == 4) {
                 // jump to bottom
-                lv!!.setSelection(lv.adapter.count - 1)
+                lv.setSelection(lv.adapter.count - 1)
             }
             if (which == 5) {
                 // jump to a search phrase: repeating a search phrase on multiple hits, jumps further down
@@ -3867,7 +3870,7 @@ class MainActivity : AppCompatActivity(),
                 input.setText(jumpToPhrase)
                 showEditTextContextMenu(input, false)
                 // input text change listener resets jumpToPhrase string
-                input!!.addTextChangedListener(object : TextWatcher {
+                input.addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
                     override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
                     override fun afterTextChanged(s: Editable) { jumpToPhrase = "" }
@@ -4822,9 +4825,9 @@ class MainActivity : AppCompatActivity(),
         } else {
             AlertDialog.Builder(changeFileBuilderContext)
         }
-        val folderMoreBuilderContext = folderMoreBuilder!!.context
-        folderMoreBuilder!!.setTitle(getString(R.string.whatTodoWithFolder) + itemText + "'")
-        folderMoreBuilder!!.setItems(
+        val folderMoreBuilderContext = folderMoreBuilder.context
+        folderMoreBuilder.setTitle(getString(R.string.whatTodoWithFolder) + itemText + "'")
+        folderMoreBuilder.setItems(
             items,
             DialogInterface.OnClickListener { dialogRename, which ->
                 // MORE FOLDER OPTIONS: open folder
@@ -4941,7 +4944,7 @@ class MainActivity : AppCompatActivity(),
                                 val fbt = FabBackTag("", ArrayList(), -1, "")
                                 fabBack!!.tag = fbt
                             }
-                            ds.namesSection[selectedSectionTemp] = text.toString()
+                            ds.namesSection[selectedSectionTemp] = text
                             ds.selectedSection = selectedSectionTemp
                             writeAppData(appStoragePath, ds, appName)
                             ds.clear()
@@ -5309,11 +5312,11 @@ class MainActivity : AppCompatActivity(),
             }
         )
         // MORE FOLDER OPTIONS back/cancel
-        folderMoreBuilder!!.setNegativeButton(R.string.back) { dialog, which ->
+        folderMoreBuilder.setNegativeButton(R.string.back) { dialog, which ->
             onOptionsItemSelected(item)
         }
         // MORE FILE OPTIONS show
-        folderMoreDialog = folderMoreBuilder!!.create()
+        folderMoreDialog = folderMoreBuilder.create()
         val listView = folderMoreDialog?.getListView()
         listView?.divider = ColorDrawable(Color.GRAY)
         listView?.dividerHeight = 2
@@ -5806,7 +5809,7 @@ class MainActivity : AppCompatActivity(),
                     val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
                     var theme = sharedPref.getString(getString(R.string.chosenTheme), "Dark")
                     if (theme != "Dark") {
-                        tv!!.setTextColor(Color.WHITE)
+                        tv.setTextColor(Color.WHITE)
                     }
                     wwwBuilder.setTitle(getString(R.string.wwwLink))
                     wwwBuilder.setPositiveButton(
@@ -5932,7 +5935,7 @@ class MainActivity : AppCompatActivity(),
                     val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
                     var theme = sharedPref.getString(getString(R.string.chosenTheme), "Dark")
                     if (theme != "Dark") {
-                        tv!!.setTextColor(Color.WHITE)
+                        tv.setTextColor(Color.WHITE)
                     }
                     // edit builder title
                     editLinkBuilder.setTitle(getString(R.string.editExistingLink))
@@ -5952,7 +5955,7 @@ class MainActivity : AppCompatActivity(),
                                     // prepare replace link internals in full string
                                     var oldReplace = ""
                                     var oldFullText = fabPlus.inputAlertText
-                                    val old = oldFullText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                                    val old = oldFullText?.let { PATTERN.UriLink.matcher(it) }
                                     if (old?.find() == true) {
                                         oldReplace = old.group()
                                     }
@@ -6512,7 +6515,7 @@ class MainActivity : AppCompatActivity(),
         if (et!!.requestFocus()) {
             Handler().postDelayed({
                 et.setSelection(selectStart, selectStop)
-                WindowCompat.getInsetsController(window, et)!!.show(WindowInsetsCompat.Type.ime())
+                WindowCompat.getInsetsController(window, et).show(WindowInsetsCompat.Type.ime())
             }, msDelay.toLong())
         }
     }
@@ -6904,7 +6907,7 @@ class MainActivity : AppCompatActivity(),
             // current text line
             var textLine = textLines[ndx]
             // check for a date header in the current line
-            if (textLine?.let { Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", it) } == true) {
+            if (textLine.let { Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", it) } == true) {
                 textLine = trimEndAll(textLine)
                 if (textLine.length == 10) { // if week day name is missing, add it
                     textLine += dayNameOfWeek(textLine)
@@ -6912,7 +6915,7 @@ class MainActivity : AppCompatActivity(),
             }
             // render a RTF line text directly to file (avoids utf8 / ANSI mess)
             // java String textLine utf8 (2 bytes) is converted to ANSI (1 byte) - ok für German Umlauts
-            val ascii8Bytes = textLine!!.toByteArray(StandardCharsets.ISO_8859_1)
+            val ascii8Bytes = textLine.toByteArray(StandardCharsets.ISO_8859_1)
             try {
                 // write to file all previous content from sb
                 fos?.write(sb.toString().toByteArray())
@@ -7146,12 +7149,12 @@ class MainActivity : AppCompatActivity(),
         val len = parts.size
         for (i in 0 until len) {
             // header: a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR 9.toChar()
-            if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i].toString()) || parts[i].toString().startsWith(9.toChar())) {
+            if (Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", parts[i]) || parts[i].startsWith(9.toChar())) {
                 // no spaces at end of the row - ONLY in timestamp part, NOT in any other part
-                parts[i] = trimEndAll(parts[i]!!)
+                parts[i] = trimEndAll(parts[i])
                 // headers shall be bold
-                var ssPart = SpannableString(trimEndAll(parts[i].toString()) + "\n")
-                if (parts[i].toString().startsWith(9.toChar())) {
+                var ssPart = SpannableString(trimEndAll(parts[i]) + "\n")
+                if (parts[i].startsWith(9.toChar())) {
                     // header via 9.toChar()
                     ssPart.setSpan(
                         BackgroundColorSpan(0x66777777),
@@ -7161,7 +7164,7 @@ class MainActivity : AppCompatActivity(),
                     )
                 } else {
                     // if week day name is missing, add it
-                    if (parts[i]!!.length == 10) {
+                    if (parts[i].length == 10) {
                         parts[i] += dayNameOfWeek(parts[i])
                     }
                     // the days Sat and Sun have a different background color
@@ -7184,7 +7187,7 @@ class MainActivity : AppCompatActivity(),
                 }
                 ssb.append(ssPart)
             } else {
-                val ssPart = SpannableString(trimEndAll(parts[i].toString()) + "\n")
+                val ssPart = SpannableString(trimEndAll(parts[i]) + "\n")
                 ssb.append(ssPart)
             }
         }
@@ -7889,13 +7892,13 @@ class MainActivity : AppCompatActivity(),
                 override fun onResponse(response: String?) {
                     if (response != null) {
                         var listTags: MutableList<String> = ArrayList()
-                        val m = Pattern.compile("tag/v\\d+.\\d+.\\d+").matcher(response!!)
-                        while (m?.find() == true) {
-                            var group = m?.group()!!
+                        val m = Pattern.compile("tag/v\\d+.\\d+.\\d+").matcher(response)
+                        while (m.find() == true) {
+                            var group = m.group()
                             if (group.startsWith("tag/v")) {
-                                var result = m?.group()!!.substring(5)
-                                if (!listTags.contains(result!!)) {
-                                    listTags.add(result!!)
+                                var result = m.group().substring(5)
+                                if (!listTags.contains(result)) {
+                                    listTags.add(result)
                                 }
                             }
                         }
@@ -8899,8 +8902,8 @@ class MainActivity : AppCompatActivity(),
         fun deleteDir(dir: File?): Boolean {
             return if (dir != null && dir.isDirectory) {
                 val children = dir.list()
-                for (i in children.indices) {
-                    val success = deleteDir(File(dir, children[i]))
+                for (i in children!!.indices) {
+                    val success = deleteDir(File(dir, children[i]!!))
                     if (!success) {
                         return false
                     }
@@ -9140,7 +9143,7 @@ class GrzListView {
                 itemTitle = parts[i].replace(lnkString, keyString)
             }
             // distinguish header & item: regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
-            if (PATTERN.DateDay.matcher(itemTitle.toString()).find()) {
+            if (PATTERN.DateDay.matcher(itemTitle).find()) {
                 // if week day name is missing, add it
                 itemTitle = trimEndAll(itemTitle)
                 if (itemTitle.length == 10) {
@@ -9830,7 +9833,7 @@ internal class LvAdapter : BaseAdapter {
         }
         // highlight a reminder
         if (MainActivity.grzlogReminderList.size > 0) {
-            if (MainActivity.grzlogReminderList.firstOrNull {it.toString() == tv.text} != null) {
+            if (MainActivity.grzlogReminderList.firstOrNull {it == tv.text} != null) {
                 tv.setTextColor(ContextCompat.getColor(context!!, R.color.red))
             }
         }
@@ -9914,7 +9917,7 @@ internal class LvAdapter : BaseAdapter {
                                         if (!mime.equals(ERROR_EXT, ignoreCase = true)) {
                                             // www attachment link, geo coordinates, GrzLog folder go here
                                             val fullItemText = items!![position].fullTitle
-                                            val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                                            val m = fullItemText?.let { PATTERN.UriLink.matcher(it) }
                                             if (m?.find() == true) { // www attachment link OR geo coordinates OR GrzLog folder
                                                 val result = m.group()
                                                 val key = result.substring(1, result.length - 1)
@@ -9944,7 +9947,7 @@ internal class LvAdapter : BaseAdapter {
                     // check for folder attachment link OR geo , if the folder name does not contain a .
                     if (start != -1 && stop != -1) {
                         val fullItemText = items!![position].fullTitle
-                        val m = fullItemText?.let { PATTERN.UriLink.matcher(it.toString()) }
+                        val m = fullItemText?.let { PATTERN.UriLink.matcher(it) }
                         if (m?.find() == true) {
                             val result = m.group()
                             val key = result.substring(1, result.length - 1)

@@ -3,6 +3,7 @@ package com.grzwolf.grzlog
 import android.os.Bundle
 import android.view.*
 import android.widget.EditText
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 
 
@@ -205,6 +206,9 @@ class HelpActivity : AppCompatActivity() {
         val actionBar = supportActionBar
         actionBar?.setDisplayHomeAsUpEnabled(true)
 
+        // adding onBackPressed callback listener
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
+
         textView = findViewById(R.id.helpView)
         textView.setText(text)
     }
@@ -221,8 +225,10 @@ class HelpActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    // Android back button detection
-    override fun onBackPressed() {
-        super.onBackPressed()
+    // Android back button & gesture detection
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            finish()
+        }
     }
 }

@@ -78,7 +78,7 @@ class DownloadController(private val context: Context, private val url: String, 
                         break
                     }
                     (context as Activity).runOnUiThread(Runnable {
-                        progressWindow.absCount = bytesTotal.toFloat()
+                        progressWindow.absCount = bytesTotal
                         progressWindow.curCount = bytesDownloaded.toInt()
                     })
                 }

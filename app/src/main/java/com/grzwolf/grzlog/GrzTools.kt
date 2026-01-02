@@ -235,7 +235,7 @@ fun createZipArchive(
                     entry.time = fi.lastModified()
                     zipOut.putNextEntry(entry)
                     var count: Int
-                    while (origin!!.read(data, 0, BUFFER).also { count = it } != -1) {
+                    while (origin.read(data, 0, BUFFER).also { count = it } != -1) {
                         zipOut.write(data, 0, count)
                         zipOut.flush()
                     }
@@ -248,7 +248,7 @@ fun createZipArchive(
                 entry.time = f.lastModified()
                 zipOut.putNextEntry(entry)
                 var count: Int
-                while (origin!!.read(data, 0, BUFFER).also { count = it } != -1) {
+                while (origin.read(data, 0, BUFFER).also { count = it } != -1) {
                     zipOut.write(data, 0, count)
                     zipOut.flush()
                 }
@@ -1241,8 +1241,6 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
         if (mimeExt.equals("gif", ignoreCase = true)) {
             selfClose = false
         }
-        // navigation bar height
-        var navigationBarHeight = MainActivity.navigationBarInset.bottom
         // get image original dimensions
         var bmpWidth = resource.intrinsicWidth
         var bmpHeight = resource.intrinsicHeight
@@ -1289,9 +1287,12 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
         }
         // max allowed dialog dimensions based on display
         val widthMax = context.resources.displayMetrics.widthPixels
-        var heightMax = context.resources.displayMetrics.heightPixels -
-                        MainActivity.navigationBarInset.bottom -
-                        MainActivity.statusBarInset.top
+        var heightMax = context.resources.displayMetrics.heightPixels
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            heightMax = context.resources.displayMetrics.heightPixels -
+                    MainActivity.navigationBarInset.bottom -
+                    MainActivity.statusBarInset.top
+        }
         // would be a reasonable image height
         var wantImgHeight = widthMax / aspectRatio
         // temporarily set dialog layout and get its height back (as expected it's identical to heightMax)
@@ -1306,7 +1307,7 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
         var spaceTitleTextButton = (titHeight + txtHeight + butHeight) * 1.5f
         // calc space in pix for title, text, button, anxiety gauge
         // final image height based on dialog width and image aspect ratio with a max limit at dialog height - title, text, button
-        var heightImg = Math.min((dlgHeight - spaceTitleTextButton).toFloat(), wantImgHeight).toInt()
+        var heightImg = Math.min((dlgHeight - spaceTitleTextButton), wantImgHeight).toInt()
         imageView.layoutParams.height = heightImg
         // dialog height dimension shall match to image height
         var heightDlgMatched = heightImg + spaceTitleTextButton

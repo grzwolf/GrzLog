@@ -174,7 +174,7 @@ public class SettingsActivity :
             // release controlling intent, if Settings are left
             MainActivity.intentSettings = null
             // we mimic the same behaviour, as if the Android back button were clicked
-            super.onBackPressed()
+            onBackPressed()
         }
         return super.onOptionsItemSelected(item)
     }
@@ -200,13 +200,13 @@ public class SettingsActivity :
                     override fun onResponse(response: String?) {
                         if (response != null) {
                             var listTags: MutableList<String> = ArrayList()
-                            val m = Pattern.compile("tag/v\\d+.\\d+.\\d+").matcher(response!!)
-                            while (m?.find() == true) {
-                                var group = m?.group()!!
+                            val m = Pattern.compile("tag/v\\d+.\\d+.\\d+").matcher(response)
+                            while (m.find() == true) {
+                                var group = m.group()
                                 if (group.startsWith("tag/v")) {
-                                    var result = m?.group()!!.substring(5)
-                                    if (!listTags.contains(result!!)) {
-                                        listTags.add(result!!)
+                                    var result = m.group().substring(5)
+                                    if (!listTags.contains(result)) {
+                                        listTags.add(result)
                                     }
                                 }
                             }
@@ -318,13 +318,13 @@ public class SettingsActivity :
             // theme chooser
             val themePreference = findPreference<Preference>(getString(R.string.chosenTheme)) as ListPreference?
             themePreference!!.summary = getString(R.string.currentTheme) + sharedPref.getString(getString(R.string.chosenTheme), "?")
-            themePreference!!.setOnPreferenceChangeListener { preference, newValue ->
+            themePreference.setOnPreferenceChangeListener { preference, newValue ->
                 if (preference is ListPreference) {
                     // note: preference gets automatically updated after leaving setOnPreferenceChangeListener
                     val index = preference.findIndexOfValue(newValue.toString())
                     val entry = preference.entries.get(index)
                     val entryvalue = preference.entryValues.get(index)
-                    themePreference!!.summary = getString(R.string.currentTheme) + entry
+                    themePreference.summary = getString(R.string.currentTheme) + entry
                     // restart settings activity to apply the theme
                     requireActivity().startActivity(Intent(context, SettingsActivity::class.java))
                     // close current settings activity
@@ -340,21 +340,21 @@ public class SettingsActivity :
             } else {
                 nip!!.setValueIndex(0)
             }
-            nip!!.summary = nip!!.entry
-            nip!!.onPreferenceChangeListener =
+            nip.summary = nip.entry
+            nip.onPreferenceChangeListener =
                 Preference.OnPreferenceChangeListener { preference, newValue ->
                     // parse change
                     var newValBool = false
                     if (newValue == "bottom") {
                         newValBool = true
-                        nip!!.setValueIndex(1)
+                        nip.setValueIndex(1)
                     }
                     if (newValue == "top") {
                         newValBool = false
-                        nip!!.setValueIndex(0)
+                        nip.setValueIndex(0)
                     }
                     // update summary
-                    nip!!.summary = nip!!.entry
+                    nip.summary = nip.entry
                     // update shared preference
                     val spe = sharedPref.edit()
                     spe.putBoolean("newAtBottom", newValBool)
@@ -377,27 +377,27 @@ public class SettingsActivity :
             var spc = findPreference<SwitchPreferenceCompat>("backupForeground")
             spc!!.setChecked(bakFg)
             if (!manuallyValBoolOrig) {
-                spc!!.setChecked(true)
+                spc.setChecked(true)
             }
-            spc!!.isEnabled = manuallyValBoolOrig
+            spc.isEnabled = manuallyValBoolOrig
             pref = findPreference<Preference>("Backup")
             pref!!.isEnabled = manuallyValBoolOrig
             // handle the tap on backup mode strategy
-            bakModePref!!.summary = bakModePref!!.entry
-            bakModePref!!.onPreferenceChangeListener =
+            bakModePref.summary = bakModePref.entry
+            bakModePref.onPreferenceChangeListener =
                 Preference.OnPreferenceChangeListener { preference, newValue ->
                     // parse change
                     var manuallyValBool = false
                     if (newValue == "manually") {
                         manuallyValBool = true
-                        bakModePref!!.setValueIndex(0)
+                        bakModePref.setValueIndex(0)
                     }
                     if (newValue == "automated") {
                         manuallyValBool = false
-                        bakModePref!!.setValueIndex(1)
+                        bakModePref.setValueIndex(1)
                     }
                     // update summary
-                    bakModePref!!.summary = bakModePref!!.entry
+                    bakModePref.summary = bakModePref.entry
                     // update invisible switch preference
                     var pref = findPreference<Preference>("BackupModeManually")
                     pref!!.setDefaultValue(!manuallyValBool)
@@ -408,9 +408,9 @@ public class SettingsActivity :
                     var spc = findPreference<SwitchPreferenceCompat>("backupForeground")
                     spc!!.setChecked(bakFg)
                     if (!manuallyValBool) {
-                        spc!!.setChecked(true)
+                        spc.setChecked(true)
                     }
-                    spc!!.isEnabled = manuallyValBool
+                    spc.isEnabled = manuallyValBool
                     // update 'Backup Data now'
                     pref = findPreference<Preference>("Backup")
                     pref!!.isEnabled = manuallyValBool
@@ -493,7 +493,7 @@ public class SettingsActivity :
                         if (lastCheck == "1900-01-01") {
                             lastCheck = "?"
                         }
-                        startCheckPref?.setSummary(getString(R.string.checked) + " " + lastCheck)
+                        startCheckPref.setSummary(getString(R.string.checked) + " " + lastCheck)
                         true
                     }
             } else {
@@ -515,7 +515,7 @@ public class SettingsActivity :
             // action after Export Backup to Google Drive: get GrzLog.zip from Download and upload it
             var bakToGoogle = findPreference("BackupToGDrive") as Preference?
             bakToGoogle!!.summary = getString(R.string.clickHere) + getString(R.string.last) + sharedPref.getString("BackupUploadGDrive", "- ?? -")
-            bakToGoogle!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+            bakToGoogle.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 // only one upload allowed
                 if (gdriveUploadOngoing) {
                     okBox(requireActivity(), getString(R.string.Note), "Upload is ongoing")
@@ -571,12 +571,12 @@ public class SettingsActivity :
                         httpCheckForUpdate(
                             MainActivity.contextMainActivity,
                             getString(R.string.githubGrzLog),
-                            checkUpdatePref!!,
+                            checkUpdatePref,
                             getString(R.string.appCheckUpdate),
                             appVer,
                             updateLinkPref!!)
                     } catch (e: Exception) {
-                        checkUpdatePref?.setTitle(getString(R.string.appCheckUpdate) + " - " + getString(R.string.error))
+                        checkUpdatePref.setTitle(getString(R.string.appCheckUpdate) + " - " + getString(R.string.error))
                     }
                     true
                 }
@@ -598,7 +598,7 @@ public class SettingsActivity :
                     var autoUpdateFile = autoUpdateLink.substringAfterLast("/")
                     var title = getString(R.string.grzlog_update)
                     var choiceNegative = getString(R.string.check_for_update)
-                    if (autoUpdateLink!!.length > 0) {
+                    if (autoUpdateLink.length > 0) {
                         title = getString(R.string.grzlog_update_available)
                         choiceNegative = getString(R.string.automatic_update_recommended)
                     }
@@ -639,7 +639,7 @@ public class SettingsActivity :
                             )
                         },
                         { // runner AUTOMATIC / CHECK AGAIN
-                            if (autoUpdateLink!!.length > 0) {
+                            if (autoUpdateLink.length > 0) {
                                 // an APK file for download is available
                                 var granted = context?.getPackageManager()?.canRequestPackageInstalls()
                                 if (granted != null) {
@@ -986,10 +986,10 @@ public class SettingsActivity :
             } else {
                 stopSrvPref!!.isEnabled = false
             }
-            stopSrvPref!!.onPreferenceClickListener =
+            stopSrvPref.onPreferenceClickListener =
                 Preference.OnPreferenceClickListener { // ... are you sure ...
                     val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
-                    builder.setTitle(getString(R.string.quit_active_services) + " \'" + stopSrvPref!!.summary + "\'")
+                    builder.setTitle(getString(R.string.quit_active_services) + " \'" + stopSrvPref.summary + "\'")
                     var msg = getString(R.string.really)
                     builder.setMessage(msg)
                     // YES
@@ -1260,7 +1260,7 @@ public class SettingsActivity :
                 }
                 // show progress in notification bar
                 var notificationManager = NotificationManagerCompat.from(MainActivity.contextMainActivity)
-                val channelId = "GrzLog" as String
+                val channelId = "GrzLog"
                 val intent = Intent(MainActivity.contextMainActivity, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                             Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -1308,9 +1308,9 @@ public class SettingsActivity :
                                 var file = getBackupFile(appContext!!)
                                 if (file != null) {
                                     val lastModDate = Date(file.lastModified())
-                                    backupInfo!!.summary = file.toString() + context.getString(R.string.lastBackup) + lastModDate.toString() + "\""
+                                    backupInfo.summary = file.toString() + context.getString(R.string.lastBackup) + lastModDate.toString() + "\""
                                 } else {
-                                    backupInfo!!.summary = context.getString(R.string.noBackupExisting)
+                                    backupInfo.summary = context.getString(R.string.noBackupExisting)
                                 }
                             }
                         } else {
@@ -1475,7 +1475,7 @@ public class SettingsActivity :
             try {
                 // show progress in notification bar
                 var notificationManager = NotificationManagerCompat.from(MainActivity.contextMainActivity)
-                val channelId = "GrzLog" as String
+                val channelId = "GrzLog"
                 val intent = Intent(MainActivity.contextMainActivity, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                             Intent.FLAG_ACTIVITY_CLEAR_TASK

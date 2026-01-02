@@ -24,6 +24,7 @@ import android.widget.BaseAdapter
 import android.widget.GridView
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.grzwolf.grzlog.MainActivity.Companion.ds
 import java.io.File
@@ -50,6 +51,9 @@ class LinkedImages : AppCompatActivity() {
         setContentView(R.layout.gallery_activity) // re uses Gallery layout
         val actionBar = supportActionBar
         actionBar?.setDisplayHomeAsUpEnabled(true)
+
+        // adding onBackPressed callback listener
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
 
         // needed in a sub thread
         contextLinkedImages = this
@@ -415,14 +419,16 @@ class LinkedImages : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    // Android back button detection
-    override fun onBackPressed() {
-        // treat like cancel
-        MainActivity.returningFromAppGallery = false
-        MainActivity.returnAttachmentFromAppGallery = ""
-        // return to MainActivity with "Cancel" shows either "Folder More Dialog" or "Input More Dialog"
-        MainActivity.showFolderMoreDialog = false
-        super.onBackPressed()
+    // Android back button & gesture detection
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            // treat like cancel
+            MainActivity.returningFromAppGallery = false
+            MainActivity.returnAttachmentFromAppGallery = ""
+            // return to MainActivity with "Cancel" shows either "Folder More Dialog" or "Input More Dialog"
+            MainActivity.showFolderMoreDialog = false
+            finish()
+        }
     }
 
     // execute link copy to GrzLog locally & search and replace DataStore in a separate thread
