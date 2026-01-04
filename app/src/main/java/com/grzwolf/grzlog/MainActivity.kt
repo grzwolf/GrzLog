@@ -2740,6 +2740,9 @@ class MainActivity : AppCompatActivity(),
             }
             // END OF input replace phrase dialog
             var replaceDialog = replaceBuilder.create()
+            replaceDialog!!.setOnShowListener {
+                replaceDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+            }
             replaceDialog.show()
             replaceDialog.setCanceledOnTouchOutside(false)
             rText.requestFocus()
@@ -2752,6 +2755,9 @@ class MainActivity : AppCompatActivity(),
         }
         // build + show input search phrase dialog + open keyboard
         searchDialog = searchBuilder.create()
+        searchDialog!!.setOnShowListener {
+            searchDialog!!.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
         searchDialog!!.show()
         searchDialog!!.setCanceledOnTouchOutside(false)
         sText.requestFocus()
@@ -5347,6 +5353,9 @@ class MainActivity : AppCompatActivity(),
             val listView = folderMoreDialog?.getListView()
             listView?.divider = ColorDrawable(Color.BLACK)
             listView?.dividerHeight = 3
+            inputBuilderDialog.setOnShowListener {
+                inputBuilderDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+            }
             inputBuilderDialog.show()
             inputSearch.requestFocus()
             showKeyboard(inputSearch, 0, 0, 250)
