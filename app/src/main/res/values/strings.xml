@@ -396,6 +396,7 @@
     <string name="removeUriPermission">The permission to access linked images will be removed.</string>
     <string name="copyToGrzLogGallery">Will be copied to GrzLog Gallery. Affected image links will be updated accordingly.</string>
     <string name="copyLinkedImages">Copy linked images to GrzLog gallery</string>
+    <string name="no_permission_released">Permission release probably not needed.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

@@ -395,6 +395,7 @@
     <string name="removeUriPermission">Die Berechtigung zum Zugriff auf verlinkte Bilder wird entzogen.</string>
     <string name="copyToGrzLogGallery">Werden in die GrzLog Galerie kopiert. Die betroffenen Links zu Bilder werden entsprechend angepaßt.</string>
     <string name="copyLinkedImages">Kopiere verlinkte Bilder zur GrzLog Galerie</string>
+    <string name="no_permission_released">Freigabe von Berechtigungen nicht nötig.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

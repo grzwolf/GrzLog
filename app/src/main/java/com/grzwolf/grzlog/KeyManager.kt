@@ -1,5 +1,6 @@
 package com.grzwolf.grzlog
 
+import android.app.Activity
 import android.content.Context
 import android.security.KeyPairGeneratorSpec
 import android.util.Base64
@@ -69,7 +70,9 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
                 generator.generateKeyPair()
             }
         } catch (e: java.lang.Exception) {
-            centeredToast(context, context.getString(R.string.no_encryption_available), 3000)
+            (context as Activity).runOnUiThread {
+                centeredToast(context, context.getString(R.string.no_encryption_available), 3000)
+            }
         }
     }
 
@@ -128,7 +131,9 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
             return crypted
 
         } catch (e: java.lang.Exception) {
-            centeredToast(context, context.getString(R.string.encryption_failed) + " Pub", 3000)
+            (context as Activity).runOnUiThread {
+                centeredToast(context, context.getString(R.string.encryption_failed) + " Pub", 3000)
+            }
             return initialText
         }
     }
@@ -161,7 +166,9 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
             return finalText
 
         } catch (e: java.lang.Exception) {
-            centeredToast(context, context.getString(R.string.decryption_failed) + " Prv", 3000)
+            (context as Activity).runOnUiThread {
+                centeredToast(context, context.getString(R.string.decryption_failed) + " Prv", 3000)
+            }
             return cryptText
         }
     }
@@ -227,7 +234,9 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
             val decryptedBytes = cipher.doFinal(encryptedData)
             return String(decryptedBytes)
         } catch (e: java.lang.Exception) {
-            centeredToast(context, context.getString(R.string.decryption_failed) + " GCM", 3000)
+            (context as Activity).runOnUiThread {
+                centeredToast(context, context.getString(R.string.decryption_failed) + " GCM", 3000)
+            }
             return ""
         }
     }

@@ -4,11 +4,13 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.UriPermission
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Html
@@ -64,6 +66,12 @@ class LinkedImages : AppCompatActivity() {
         // gridView is the main Gallery UI component
         gridView = findViewById(R.id.galleryList)
 
+        // revert API36 insets for API < 35
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            gridView.margin(top = 10F)
+            gridView.margin(bottom = 0F)
+        }
+
         // image click shall show a larger image
         gridView.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
             if (adapter == null) {
@@ -106,7 +114,7 @@ class LinkedImages : AppCompatActivity() {
     // update 'availability signal colors' = 'active status' of menu items
     fun updateMenuStatus() {
         if (adapter!!.list.any { it.selected == true }) {
-            val selMap = adapter!!.list.groupingBy { it.selected == true }.eachCount()
+            val selMap = adapter!!.list.groupingBy { it.selected == true && it.pickerUri.toString().isNotEmpty() && it.fileName.isNotEmpty() }.eachCount()
             if (selMap.getValue(true) == 1) {
                 // 1 selection --> usage search allowed
                 itemUsages.icon!!.setColorFilter(
@@ -365,7 +373,7 @@ class LinkedImages : AppCompatActivity() {
                                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                                 )
                             } catch (e: Exception) {
-                                centeredToast(this,"Ups ...", 1000)
+                                centeredToast(this,getString(R.string.no_permission_released), 2000)
                             }
                         }
                     }
@@ -379,22 +387,22 @@ class LinkedImages : AppCompatActivity() {
             )
         }
 
-        // take last selected item and show its usages in all folders
+        // take the selected item and show its usages in all folders
         if (item.itemId == R.id.action_Usages) {
             // anything to do ?
             if (adapter!!.list.all { it.selected == false }) {
                 return super.onOptionsItemSelected(item)
             }
             // exactly 1 item selected ?
-            val selMap = adapter!!.list.groupingBy { it.selected == true }.eachCount()
+            val selMap = adapter!!.list.groupingBy { it.selected == true  && it.pickerUri.toString().isNotEmpty() && it.fileName.isNotEmpty() }.eachCount()
             if (selMap.getValue(true) != 1) {
                 return super.onOptionsItemSelected(item)
             }
-            // pick the 1st selected item
+            // pick the selected item
             var pickerUri: Uri? = null
             var searchText = ""
             for (aItem in adapter!!.list) {
-                if (aItem.selected) {
+                if (aItem.selected && aItem.pickerUri.toString().isNotEmpty() && aItem.fileName.isNotEmpty()) {
                     pickerUri = aItem.pickerUri
                     searchText = aItem.fileName
                     break
@@ -521,7 +529,10 @@ class LinkedImages : AppCompatActivity() {
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION
                             )
                         } catch (e: Exception) {
-                            centeredToast(contextLinkedImages, "Ups ...", 1000)
+                            // it is acceptable to not handle this exception
+//                            runOnUiThread {
+//                                centeredToast(contextLinkedImages, "Ups ...", 1000)
+//                            }
                         }
                     }
                 }
@@ -658,8 +669,9 @@ class LinkedImages : AppCompatActivity() {
                         val m = PATTERN.UriLink.matcher(textLine)
                         if (m.find()) {
                             val lnkFull = m.group()
-                            // only deal with lines containing "::::content://media/picker", which is a link to the phone gallery
-                            if (lnkFull.contains("::::content://media/picker")) {
+                            // only deal with lines containing "::::content://media", which is a link to the phone gallery
+                            // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
+                            if (lnkFull.contains("::::content://media")) {
                                 // get link parts: key and uri
                                 val lnkStr = lnkFull.substring(1, lnkFull.length - 1)
                                 try {
@@ -680,6 +692,7 @@ class LinkedImages : AppCompatActivity() {
                                             }
                                         }
                                         // if not found, try to get permission & retrieve permission list again
+                                        // OR build neededPermissionList in an alternative way
                                         if (!found) {
                                             try {
                                                 // apply for permanent read permission
@@ -687,10 +700,13 @@ class LinkedImages : AppCompatActivity() {
                                                     uri,
                                                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                                                 )
+                                                grantedPermissionList = MainActivity.contextMainActivity.contentResolver.getPersistedUriPermissions()
                                             } catch (e: SecurityException) {
-                                                // leave it not handled: happens, if uri remission was removed - get it again won't fly
+                                                // if this happens, build neededPermissionList in an alternative way
+                                                if (!neededPermissionList.contains(uri)) {
+                                                    neededPermissionList.add(uri)
+                                                }
                                             }
-                                            grantedPermissionList = MainActivity.contextMainActivity.contentResolver.getPersistedUriPermissions()
                                         }
                                     }
                                 } finally {

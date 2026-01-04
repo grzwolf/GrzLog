@@ -5,6 +5,7 @@ import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.media.ThumbnailUtils
+import android.os.Build
 import android.os.Bundle
 import android.text.Html
 import android.util.Size
@@ -73,6 +74,13 @@ class GalleryActivity : AppCompatActivity() {
         }
         // gridView is the main Gallery UI component
         gridView = findViewById(R.id.galleryList)
+
+        // revert API36 insets for API < 35
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            gridView.margin(top = 10F)   // <!-- marginTop API36 100dp, API 35 10dp  -->
+            gridView.margin(bottom = 0F)  // .marginBottom(0) // <!-- marginBottom API36 30dp -->
+        }
+
         // click shall provide a larger image
         gridView.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
             if (adapter == null) {

@@ -5576,8 +5576,15 @@ class MainActivity : AppCompatActivity(),
         // callback invoked after media is selected or picker activity closed
         if (uri != null) {
             // get permanent read permission: releasePersistableUriPermission(uri, flag) will revoke that
-            val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            this.contentResolver.takePersistableUriPermission(uri, flag)
+            try {
+                // apply for permanent read permission
+                MainActivity.contextMainActivity.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                // leave it not handled: happens, if uri permission was removed - get it again won't fly
+            }
             // get the real file name of a "MediaStore Picker" Uri, which only provides a confusing MediaStore ID
             var uriString = uri.toString()
             var idMediaStore = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
@@ -6593,7 +6600,7 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    // if image capture input is cancelled, we need to remove/delete the previously captured image
+    // if image capture input is canceled, we need to remove/delete the previously captured image
     fun deleteCapturedImage(uriString: String?) {
         if (uriString!!.length == 0) {
             return
@@ -7948,11 +7955,12 @@ class MainActivity : AppCompatActivity(),
 
 
     // find text in all dataSections (folders) and return a list
-    class GlobalSearchHit(textCombined: SpannableString, lineNdx: Int, folderName: String) {
-        var textCombined = textCombined
-        var lineNdx = lineNdx
-        var folderName = folderName
-    }
+    class GlobalSearchHit(
+        var textCombined: SpannableString,
+        var lineNdx: Int,
+        var folderName: String
+    )
+    {}
 
     // static components accessible from other fragments / activities
     companion object {
@@ -8407,7 +8415,7 @@ class MainActivity : AppCompatActivity(),
         fun openFolder(prvFolderNumber: Int, newFolderNumber: Int, highLightPos: Int) {
             // new active folder
             ds.selectedSection = newFolderNumber
-            // write such info to disk an re read data from disk
+            // write such info to disk and re read data from disk
             if (prvFolderNumber != -1 && prvFolderNumber != newFolderNumber ) {
                 writeAppData(appStoragePath, ds, appName)
                 ds.clear()
@@ -8427,6 +8435,7 @@ class MainActivity : AppCompatActivity(),
                 if (encryptProtectedFolders) {
                     toolbar.setTitleTextColor(Color.YELLOW)
                 } else {
+                    contextMainActivity.title = ds.namesSection[ds.selectedSection]
                     toolbar.setTitleTextColor(Color.MAGENTA)
                 }
             }
@@ -8483,21 +8492,29 @@ class MainActivity : AppCompatActivity(),
                     // remove granted image link permissions, if not needed anymore
                     //
                     // loop granted items
-                    for (itemGranted in grantedPermissionList) {
-                        // have a found flag for granted permissions in the needed list
-                        var grantedFound = false
-                        // loop the needed permission list
-                        for (itemNeeded in neededPermissionList) {
-                            // if "granted permission" appears in "needed permission" --> all fine
-                            if (itemGranted.uri == itemNeeded) {
-                                grantedFound = true
-                                break
+                    try {
+                        for (itemGranted in grantedPermissionList) {
+                            // have a found flag for granted permissions in the needed list
+                            var grantedFound = false
+                            // loop the needed permission list
+                            for (itemNeeded in neededPermissionList) {
+                                // if "granted permission" appears in "needed permission" --> all fine
+                                if (itemGranted.uri == itemNeeded) {
+                                    grantedFound = true
+                                    break
+                                }
+                            }
+                            // if "granted permission" appears NOT in "needed permission" --> revoke permission
+                            if (!grantedFound) {
+                                MainActivity.contextMainActivity.contentResolver.releasePersistableUriPermission(
+                                    itemGranted.uri,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                )
                             }
                         }
-                        // if "granted permission" appears NOT in "needed permission" --> revoke permission
-                        if (!grantedFound) {
-                            MainActivity.contextMainActivity.contentResolver.releasePersistableUriPermission(itemGranted.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
+                    } catch (e: Exception) {
+                        // happens, if grantedPermissionList and/or releasePersistableUriPermission is not supported
+                        // --> leave it not handled
                     }
                     //
                     // ask to show or delete unused files in app folder
@@ -8553,8 +8570,9 @@ class MainActivity : AppCompatActivity(),
                                 val m = PATTERN.UriLink.matcher(textLine)
                                 if (m.find()) {
                                     val lnkFull = m.group()
-                                    // only deal with lines containing "::::content://media/picker", which is a link to the phone gallery
-                                    if (lnkFull.contains("::::content://media/picker")) {
+                                    // only deal with lines containing "::::content://media", which is a link to the phone gallery
+                                    // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
+                                    if (lnkFull.contains("::::content://media")) {
                                         // get link parts: key and uri
                                         val lnkStr = lnkFull.substring(1, lnkFull.length - 1)
                                         try {
@@ -9881,15 +9899,26 @@ internal class LvAdapter : BaseAdapter {
             // very quick check for a linked image
             if (fileNameString[4] == 'c') {
                 // next check for picker uri
-                var pos = fileNameString.indexOf("content://media/picker")
+                // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
+                var pos = fileNameString.indexOf("content://media")
                 if (pos != -1) {
                     var uri = Uri.parse(fileNameString.substring(pos))
                     if (listUriPermissionsGranted?.any { it.uri == uri } == true) {
                         // linked images: filename is a PhotoPicker file name
                         res = android.R.drawable.ic_menu_camera
                     } else {
-                        // error --> uri not permitted or not found
+                        // set a default: error --> uri not permitted or not found
                         res = android.R.drawable.ic_dialog_alert
+                        // check for media id (just a number after the last '/'): special handling API < 35
+                        var pos = fileNameString.lastIndexOf('/')
+                        if (pos != -1) {
+                            var mediaId = fileNameString.substring(pos + 1)
+                            mediaId.toIntOrNull()?.let {
+                                if (it > 0) {
+                                    res = android.R.drawable.ic_menu_camera
+                                }
+                            }
+                        }
                     }
                 }
             } else {

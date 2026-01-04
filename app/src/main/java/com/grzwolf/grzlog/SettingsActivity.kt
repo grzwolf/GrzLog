@@ -15,6 +15,7 @@ import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -146,13 +147,23 @@ public class SettingsActivity :
         // make volatile data static
         appContext = applicationContext
         settingsActivity = this
-        setContentView(R.layout.settings_activity)
-        supportFragmentManager
-            .beginTransaction()
-            .replace(R.id.settings, SettingsFragment())
-            .commit()
         val actionBar = supportActionBar
         actionBar?.setDisplayHomeAsUpEnabled(true)
+
+        // revert API36 insets for API < 35
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            setContentView(R.layout.settings_activity35)
+            supportFragmentManager
+                .beginTransaction()
+                .replace(R.id.settings, SettingsFragment())
+                .commit()
+        } else {
+            setContentView(R.layout.settings_activity)
+            supportFragmentManager
+                .beginTransaction()
+                .replace(R.id.settings, SettingsFragment())
+                .commit()
+        }
 
         // life cycle observer
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)

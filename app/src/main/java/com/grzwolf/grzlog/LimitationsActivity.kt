@@ -1,8 +1,11 @@
 package com.grzwolf.grzlog
 
+import android.os.Build
 import android.os.Bundle
 import android.view.*
 import android.widget.EditText
+import android.widget.HorizontalScrollView
+import android.widget.ScrollView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 
@@ -34,6 +37,16 @@ class LimitationsActivity : AppCompatActivity() {
         setContentView(R.layout.help_activity)
         val actionBar = supportActionBar
         actionBar?.setDisplayHomeAsUpEnabled(true)
+
+        // revert API36 insets for API < 35
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            val view0 = findViewById(R.id.scrollView0) as HorizontalScrollView
+            view0.margin(top = 0F)
+            view0.margin(bottom = 0F)
+            val view1 = findViewById(R.id.scrollView1) as ScrollView
+            view1.margin(top = 0F)
+            view1.margin(bottom = 0F)
+        }
 
         // adding onBackPressed callback listener
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)

@@ -26,9 +26,11 @@ import android.os.Environment
 import android.os.Handler
 import android.provider.MediaStore
 import android.util.Size
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.View.MeasureSpec
+import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
 import android.view.WindowMetrics
@@ -1203,6 +1205,7 @@ class GalleryInfo() {
         }
 
         // get real path of a "content image": MediaStore or PhotoPicker start with "content://media"
+        // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
         private fun getFileRealPath(
             contentResolver: ContentResolver,
             uri: Uri
@@ -1426,7 +1429,8 @@ fun showImageInAndroidGalleryViewer(context: Context, imageUri: Uri) {
     val intent = Intent(Intent.ACTION_VIEW)
 
     // distinguish images from "Android Photo Picker" and all others
-    if (imageUri.toString().startsWith("content://media/picker")) {
+    // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
+    if (imageUri.toString().startsWith("content://media")) {
         // applies to image links to Gallery: convert "MediaStore Picker Uri" to "Google Photos Uri"
         val realPath = GalleryInfo.getGalleryImageRealPath(context, imageUri)
         val realUri = FileProvider.getUriForFile(
@@ -1542,8 +1546,9 @@ fun showAppLinkOrAttachment(context: Context, title: String, fileName: String?) 
 
     //
     // only image links to the phone Gallery provided by "Android Photo Picker"
+    // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
     //
-    if (fileName.startsWith("content://media/picker") == true) {
+    if (fileName.startsWith("content://media") == true) {
         // get uri from filename
         val uri = Uri.parse(fileName)
         // start popup with empty imagePath --> showImagePopup(..) converts this case into a real file name from uri
@@ -2197,3 +2202,18 @@ fun extractNumbersUsingLoop(str: String): List<Int> {
     }
     return numbers
 }
+
+// margin helper, kudos --> https://stackoverflow.com/questions/45411634/set-runtime-margin-to-any-view-using-kotlin
+fun View.margin(left: Float? = null, top: Float? = null, right: Float? = null, bottom: Float? = null) {
+    layoutParams<ViewGroup.MarginLayoutParams> {
+        left?.run { leftMargin = dpToPx(this) }
+        top?.run { topMargin = dpToPx(this) }
+        right?.run { rightMargin = dpToPx(this) }
+        bottom?.run { bottomMargin = dpToPx(this) }
+    }
+}
+inline fun <reified T : ViewGroup.LayoutParams> View.layoutParams(block: T.() -> Unit) {
+    if (layoutParams is T) block(layoutParams as T)
+}
+fun View.dpToPx(dp: Float): Int = context.dpToPx(dp)
+fun Context.dpToPx(dp: Float): Int = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
