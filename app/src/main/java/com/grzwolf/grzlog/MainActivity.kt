@@ -77,7 +77,6 @@ import com.grzwolf.grzlog.DataStore.ACTION
 import com.grzwolf.grzlog.DataStore.TIMESTAMP
 import com.grzwolf.grzlog.FileUtils.Companion.getFile
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
-import com.grzwolf.grzlog.GrzLogAppWidget.Companion.lastClickTime
 import com.grzwolf.grzlog.MainActivity.GrzEditText
 import java.io.*
 import java.nio.charset.StandardCharsets
@@ -1622,12 +1621,7 @@ class MainActivity : AppCompatActivity(),
             return
         }
         // theme
-        val builderItemMore: AlertDialog.Builder? =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-            } else {
-                AlertDialog.Builder(this@MainActivity)
-            }
+        val builderItemMore = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         // since we want to deal with an item, scroll there (normally we are there, but not after return from selection dialog)
         if (itemPosition < lvMain.listView!!.firstVisiblePosition || itemPosition > lvMain.listView!!.lastVisiblePosition) {
             var ofs = (lvMain.listView!!.lastVisiblePosition - lvMain.listView!!.firstVisiblePosition) / 2
@@ -1649,7 +1643,7 @@ class MainActivity : AppCompatActivity(),
         headLine.setSpan(ForegroundColorSpan(ContextCompat.getColor(this, R.color.yellow)), headPart.length, headLine.length, 0)
         var titleView: TextView = TextView(this)
         titleView.text = headLine
-        builderItemMore?.setCustomTitle(titleView)
+        builderItemMore.setCustomTitle(titleView)
         // the following options are related to the ListView item
         val charSequences: MutableList<CharSequence> = ArrayList()
         charSequences.add(getString(R.string.EditLine))                     // ITEM == 0
@@ -1668,7 +1662,7 @@ class MainActivity : AppCompatActivity(),
         charSequences.add(getString(R.string.cutToClipboard))              // ITEM == 9
         charSequences.add(getString(R.string.RemoveLine))                   // ITEM == 10
         val itemsMore = charSequences.toTypedArray()
-        builderItemMore?.setItems(
+        builderItemMore.setItems(
             itemsMore,
             DialogInterface.OnClickListener { dialog, whichOri ->
                 var which = whichOri
@@ -1996,15 +1990,9 @@ class MainActivity : AppCompatActivity(),
                 if (which == 9) {
                     val message = lvMain.arrayList[itemPosition].title
                     var youSureBld: AlertDialog.Builder?
-                    youSureBld =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            AlertDialog.Builder(
+                    youSureBld = AlertDialog.Builder(
                                 this@MainActivity,
-                                android.R.style.Theme_Material_Dialog
-                            )
-                        } else {
-                            AlertDialog.Builder(this@MainActivity)
-                        }
+                                android.R.style.Theme_Material_Dialog)
                     youSureBld.setTitle(R.string.cutToClipboard)
                     youSureBld.setMessage(message)
                     // 'you sure' dlg OK with quit
@@ -2038,15 +2026,9 @@ class MainActivity : AppCompatActivity(),
                 if (which == 10) {
                     val message = lvMain.arrayList[itemPosition].title
                     var youSureBld: AlertDialog.Builder?
-                    youSureBld =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            AlertDialog.Builder(
+                    youSureBld = AlertDialog.Builder(
                                 this@MainActivity,
-                                android.R.style.Theme_Material_Dialog
-                            )
-                        } else {
-                            AlertDialog.Builder(this@MainActivity)
-                        }
+                                android.R.style.Theme_Material_Dialog)
                     youSureBld.setTitle(R.string.RemoveLine)
                     youSureBld.setMessage(message)
                     // 'you sure' dlg OK with quit
@@ -2074,7 +2056,7 @@ class MainActivity : AppCompatActivity(),
                 }
             })
         // BUTTON RETURN
-        builderItemMore?.setPositiveButton(
+        builderItemMore.setPositiveButton(
             R.string.close,
             DialogInterface.OnClickListener { dialog, which ->
                 Handler().postDelayed({
@@ -2088,7 +2070,7 @@ class MainActivity : AppCompatActivity(),
                 }
             }
         )
-        var itemfolderMoreDialog = builderItemMore?.create()
+        var itemfolderMoreDialog = builderItemMore.create()
         val listView = itemfolderMoreDialog?.getListView()
         listView?.divider = ColorDrawable(Color.GRAY)
         listView?.dividerHeight = 2
@@ -2176,11 +2158,7 @@ class MainActivity : AppCompatActivity(),
                                            returnToSearchHits: Boolean,
                                            function: ((AdapterView<*>, View?, Int, Long) -> Unit?)?) {
         // build a dialog
-        var builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-        } else {
-            AlertDialog.Builder(this@MainActivity)
-        }
+        var builder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         // get a list of selected indexes including the included spacers
         var listSelPos = lvMain.getSelectedIndexList()
         // range format the list of selected indexes including the included spacers
@@ -4496,11 +4474,7 @@ class MainActivity : AppCompatActivity(),
                     "(" + lvMain.searchHitListFolder.size.toString() + ") " +
                     searchViewQuery
             var text: Spanned
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                text = Html.fromHtml("<small>$string</small>", Html.FROM_HTML_MODE_LEGACY)
-            } else {
-                text = Html.fromHtml("<small>$string</small>")
-            }
+            text = Html.fromHtml("<small>$string</small>", Html.FROM_HTML_MODE_LEGACY)
             title = text
         }
         // SEARCH: up
@@ -4544,11 +4518,7 @@ class MainActivity : AppCompatActivity(),
                     "(" + lvMain.searchHitListFolder.size.toString() + ") " +
                     searchViewQuery
             var text: Spanned
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                text = Html.fromHtml("<small>$string</small>", Html.FROM_HTML_MODE_LEGACY)
-            } else {
-                text = Html.fromHtml("<small>$string</small>")
-            }
+            text = Html.fromHtml("<small>$string</small>", Html.FROM_HTML_MODE_LEGACY)
             title = text
         }
         // UNDO: reverse change after long press edit
@@ -4817,14 +4787,9 @@ class MainActivity : AppCompatActivity(),
             "",                                // 8 empty ITEM as separator
             getString(R.string.newFolder)                       // 9 New
         )
-        var folderMoreBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            AlertDialog.Builder(
+        var folderMoreBuilder = AlertDialog.Builder(
                 changeFileBuilderContext,
-                android.R.style.Theme_Material_Dialog
-            )
-        } else {
-            AlertDialog.Builder(changeFileBuilderContext)
-        }
+                android.R.style.Theme_Material_Dialog)
         val folderMoreBuilderContext = folderMoreBuilder.context
         folderMoreBuilder.setTitle(getString(R.string.whatTodoWithFolder) + itemText + "'")
         folderMoreBuilder.setItems(
@@ -5494,17 +5459,14 @@ class MainActivity : AppCompatActivity(),
         }
     }
     fun verifyExifPermission(): Boolean {
-        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-//            Toast.makeText(baseContext, "Access EXIF data was already granted", Toast.LENGTH_LONG).show()
-                true
-            } else {
-                requestPermissions(this, arrayOf(Manifest.permission.ACCESS_MEDIA_LOCATION), PERMISSION_REQUEST_EXIFDATA)
-                false
-            }
+        var retVal = false
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            retVal = true
         } else {
-            true
+            requestPermissions(this, arrayOf(Manifest.permission.ACCESS_MEDIA_LOCATION), PERMISSION_REQUEST_EXIFDATA)
+            retVal = false
         }
+        return retVal
     }
     fun verifyLocationPermission(): Boolean {
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
@@ -6341,19 +6303,10 @@ class MainActivity : AppCompatActivity(),
         }
         // create the file, where the photo should go: the ONLY use case is AOSP camera
         try {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                val photoFile = createImageFile()
-                uri = FileProvider.getUriForFile(
-                    Objects.requireNonNull(
-                        applicationContext
-                    ), BuildConfig.APPLICATION_ID + ".provider", photoFile!!
-                )
-            } else {
-                uri = createImageUri()
-                // weird: delete the recently generated but empty file - otherwise we would have two images a)an empty one + b)the real one
-                val file = File(uri.toString())
-                file.delete()
-            }
+            uri = createImageUri()
+            // weird: delete the recently generated but empty file - otherwise we would have two images a)an empty one + b)the real one
+            val file = File(uri.toString())
+            file.delete()
         } catch (ex: IOException) {
             return uri
         }
@@ -6459,58 +6412,22 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    // create image file name, important: use the same directory here and in galleryForceScan(..) - I tried to obtain dir from photoPath but no success
-    @Throws(IOException::class)
-    private fun createImageFile(): File? {
-        var image: File?
-        val timeStamp =
-            SimpleDateFormat("yyyyMMdd_HHmmss").format(Date()) // Create an image file name
-        val imageFileName = "JPEG_$timeStamp.jpg"
-        image = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val resolver = applicationContext.contentResolver
-            val contentValues = ContentValues()
-            contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, imageFileName)
-            contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpg")
-            contentValues.put(
-                MediaStore.MediaColumns.RELATIVE_PATH,
-                Environment.DIRECTORY_PICTURES + File.separator + "GrzLog"
-            )
-            val imageUri =
-                resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                    ?: throw IOException("Failed to create new MediaStore record.")
-            imageUri.path?.let { File(it) }
-        } else {
-            val storageDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),"GrzLog")
-            File(storageDir, imageFileName)
-        }
-        return image
-    }
-
     @Throws(IOException::class)
     private fun createImageUri(): Uri? {
         var imageUri: Uri?
-        val timeStamp =
-            SimpleDateFormat("yyyyMMdd_HHmmss").format(Date()) // Create an image file name
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date()) // Create an image file name
         val imageFileName = "JPEG_$timeStamp.jpg"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val resolver = applicationContext.contentResolver
-            val contentValues = ContentValues()
-            contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, imageFileName)
-            contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpg")
-            contentValues.put(
-                MediaStore.MediaColumns.RELATIVE_PATH,
-                Environment.DIRECTORY_PICTURES + File.separator + "GrzLog"
-            )
-            imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-            if (imageUri == null) {
-                throw IOException("Failed to create new MediaStore record.")
-            }
-        } else {
-            val storageDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-                "GrzLog"
-            )
-            imageUri = Uri.fromFile(File(storageDir, imageFileName))
+        val resolver = applicationContext.contentResolver
+        val contentValues = ContentValues()
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, imageFileName)
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpg")
+        contentValues.put(
+            MediaStore.MediaColumns.RELATIVE_PATH,
+            Environment.DIRECTORY_PICTURES + File.separator + "GrzLog"
+        )
+        imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        if (imageUri == null) {
+            throw IOException("Failed to create new MediaStore record.")
         }
         return imageUri
     }
@@ -6778,12 +6695,7 @@ class MainActivity : AppCompatActivity(),
         val items = arrayOf<CharSequence>("150dpi", "200dpi", "300dpi --> 250kb/jpg", "400dpi", "600dpi")
         var selection = 2
         var dialog: AlertDialog?
-        var builder: AlertDialog.Builder?
-        builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-        } else {
-            AlertDialog.Builder(this@MainActivity)
-        }
+        var builder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         builder.setTitle(getString(R.string.GenerateRTF) + " - " + getString(R.string.ChoosePrintQuality))
         builder.setSingleChoiceItems(
             items,
@@ -7046,12 +6958,7 @@ class MainActivity : AppCompatActivity(),
         val items = arrayOf<CharSequence>("150dpi", "200dpi", "300dpi --> 250kb/jpg", "400dpi", "600dpi")
         var selection = 2
         var dialog: AlertDialog?
-        var builder: AlertDialog.Builder?
-        builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
-        } else {
-            AlertDialog.Builder(this@MainActivity)
-        }
+        var builder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         builder.setTitle(getString(R.string.GeneratePDF) + " - " + getString(R.string.ChoosePrintQuality))
         builder.setSingleChoiceItems(
             items,
@@ -7832,28 +7739,26 @@ class MainActivity : AppCompatActivity(),
     //
     // create the NotificationChannel, only available on >= API 26+
     private fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // channel 1 is the lockscreen reminder
-            val name1: CharSequence = "grzlog"
-            val description1 = "grzlog"
-            val importance1 = NotificationManager.IMPORTANCE_DEFAULT
-            val channel1 = NotificationChannel("grzlog", name1, importance1)
-            channel1.description = description1
-            val notificationManager1 = getSystemService(
-                NotificationManager::class.java
-            )
-            notificationManager1.createNotificationChannel(channel1)
-            // channel 2 is the silent backup progress indicator
-            val name2: CharSequence = "GrzLog"
-            val description2 = "Backup is ongoing"
-            val importance2 = NotificationManager.IMPORTANCE_LOW
-            val channel2 = NotificationChannel("GrzLog", name2, importance2)
-            channel2.description = description2
-            val notificationManager2 = getSystemService(
-                NotificationManager::class.java
-            )
-            notificationManager2.createNotificationChannel(channel2)
-        }
+        // channel 1 is the lockscreen reminder
+        val name1: CharSequence = "grzlog"
+        val description1 = "grzlog"
+        val importance1 = NotificationManager.IMPORTANCE_DEFAULT
+        val channel1 = NotificationChannel("grzlog", name1, importance1)
+        channel1.description = description1
+        val notificationManager1 = getSystemService(
+            NotificationManager::class.java
+        )
+        notificationManager1.createNotificationChannel(channel1)
+        // channel 2 is the silent backup progress indicator
+        val name2: CharSequence = "GrzLog"
+        val description2 = "Backup is ongoing"
+        val importance2 = NotificationManager.IMPORTANCE_LOW
+        val channel2 = NotificationChannel("GrzLog", name2, importance2)
+        channel2.description = description2
+        val notificationManager2 = getSystemService(
+            NotificationManager::class.java
+        )
+        notificationManager2.createNotificationChannel(channel2)
     }
 
     // lock screen notification: generate message
@@ -7944,12 +7849,10 @@ class MainActivity : AppCompatActivity(),
             .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
             .setContentIntent(pendingIntent)
         val notificationManager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name: CharSequence = "GrzLog Update Check"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
-            notificationManager.createNotificationChannel(mChannel)
-        }
+        val name: CharSequence = "GrzLog Update Check"
+        val importance = NotificationManager.IMPORTANCE_HIGH
+        val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
+        notificationManager.createNotificationChannel(mChannel)
         notificationManager.notify(reqCode, notificationBuilder.build()) // 0 is the request code, it should be unique id
     }
 

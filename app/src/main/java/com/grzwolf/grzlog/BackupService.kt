@@ -116,12 +116,7 @@ class BackupService : Service() {
         val pendingIntent: PendingIntent = Intent(this, MainActivity::class.java).let { notificationIntent ->
             PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
-
-        val builder: Notification.Builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Notification.Builder(
-            this,
-            notificationChannelId
-        ) else Notification.Builder(this)
-
+        val builder = Notification.Builder(this, notificationChannelId)
         return builder
             .setContentTitle("GrzLog Backup Service")
             .setContentText("working")

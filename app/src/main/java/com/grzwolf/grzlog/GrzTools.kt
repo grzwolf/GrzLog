@@ -673,11 +673,7 @@ fun okBox(context: Context?, title: String?, message: String) {
 
 fun okBox(context: Context?, title: String?, message: String, runnerOk: Runnable?) {
     var builder: AlertDialog.Builder?
-    builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
-    } else {
-        AlertDialog.Builder(context)
-    }
+    builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
     builder.setTitle(title)
     builder.setMessage("\n" + message)
     builder.setPositiveButton(R.string.ok, DialogInterface.OnClickListener { dialog, which ->
