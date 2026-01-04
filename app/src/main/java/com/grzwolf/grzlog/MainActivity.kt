@@ -8435,7 +8435,14 @@ class MainActivity : AppCompatActivity(),
                 if (encryptProtectedFolders) {
                     toolbar.setTitleTextColor(Color.YELLOW)
                 } else {
-                    contextMainActivity.title = ds.namesSection[ds.selectedSection]
+                    // warning triangle
+                    var spanStr = SpannableString(ds.namesSection[ds.selectedSection] + "   ")
+                    val drawable = AppCompatResources.getDrawable(MainActivity.contextMainActivity, android.R.drawable.ic_dialog_alert)
+                    drawable!!.setBounds(0, 0, 50, 50)
+                    val icon = ImageSpan(drawable, ImageSpan.ALIGN_CENTER)
+                    spanStr.setSpan(icon, spanStr.length-2, spanStr.length-1, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+                    contextMainActivity.title = spanStr
+                    // color
                     toolbar.setTitleTextColor(Color.MAGENTA)
                 }
             }
@@ -8812,12 +8819,13 @@ class MainActivity : AppCompatActivity(),
             for (i in dataStore.dataSection.indices) {
                 // only decrypt protected folders
                 if (dataStore.timeSection[i] == TIMESTAMP.AUTH) {
+                    var warning = (i == dataStore.selectedSection)
                     // 1)  check for GCM
                     // 2a) if not empty, update dataStore.dataSection             --> done
                     // 2b) if empty, check for PUBPRV
                     // 3a) if not empty, update dataStore.dataSection with chunks --> done
                     // 3b) if empty --> no encryption at all                      --> done
-                    var clearData = keyManager.decryptGCM(dataStore.dataSection[i], keyManager.decryptPwdPrv(appPwdPub))
+                    var clearData = keyManager.decryptGCM(dataStore.dataSection[i], keyManager.decryptPwdPrv(appPwdPub), warning)
                     if (clearData.isNotEmpty()) {
                         dataStore.dataSection[i] = clearData
                     } else {

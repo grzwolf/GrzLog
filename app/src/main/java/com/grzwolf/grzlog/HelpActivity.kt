@@ -104,7 +104,7 @@ class HelpActivity : AppCompatActivity() {
         "       Click on search hit: edit line OR show attachment\n" +
         "       Encrypt protected folders\n" +
         "              protected & encrypted folder title is yellow\n" +
-        "              protected & not encrypted folder title is magenta\n" +
+        "              protected & not encrypted folder title is magenta with a warning triangle\n" +
         "              not protected & not encrypted folder title is white\n" +
         "   Backup and Restore\n" +
         "       Backup File Information\n" +

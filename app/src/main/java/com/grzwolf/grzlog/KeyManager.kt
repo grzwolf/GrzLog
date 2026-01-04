@@ -221,7 +221,7 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
             return ""
         }
     }
-    fun decryptGCM(encryptedText: String, key: String): String {
+    fun decryptGCM(encryptedText: String, key: String, warning: Boolean): String {
         try {
             val keyArr = key.toByteArray()
             val parts = encryptedText.split(":")
@@ -234,8 +234,14 @@ class KeyManager(private val context: Context, keyStoreAlias: String, private va
             val decryptedBytes = cipher.doFinal(encryptedData)
             return String(decryptedBytes)
         } catch (e: java.lang.Exception) {
-            (context as Activity).runOnUiThread {
-                centeredToast(context, context.getString(R.string.decryption_failed) + " GCM", 3000)
+            if (warning) {
+                (context as Activity).runOnUiThread {
+                    dontShowAgain(
+                        context,
+                        context.getString(R.string.decryption_failed),
+                        "notEncrypted"
+                    )
+                }
             }
             return ""
         }
