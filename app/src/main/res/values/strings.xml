@@ -65,7 +65,7 @@
     <string name="Reminder">Reminder</string>
     <string name="InsertFile">Attachment</string>
     <string name="Options">What to do with the current line?</string>
-    <string name="ShowReminder">GrzLog reminder:</string>
+    <string name="ShowReminder">Reminder Options:</string>
     <string name="created_with">created with \"</string>
     <string name="imageFailure">[Image failure]</string>
 
@@ -397,6 +397,8 @@
     <string name="copyToGrzLogGallery">Will be copied to GrzLog Gallery. Affected image links will be updated accordingly.</string>
     <string name="copyLinkedImages">Copy linked images to GrzLog gallery</string>
     <string name="no_permission_released">Permission release probably not needed.</string>
+    <string name="calendar_event">Set Calendar event</string>
+    <string name="grzlog_reminder">Set GrzLog reminder</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

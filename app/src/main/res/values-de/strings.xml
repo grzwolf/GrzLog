@@ -65,7 +65,7 @@
     <string name="Reminder">Erinnerung</string>
     <string name="InsertFile">Anhang</string>
     <string name="Options">Was soll mit der aktuellen Zeile geschehen?</string>
-    <string name="ShowReminder">GrzLog Erinnerung:</string>
+    <string name="ShowReminder">Erinnerung Optionen:</string>
     <string name="created_with">erzeugt von \"</string>
     <string name="imageFailure">[Bidfehler]</string>
 
@@ -396,6 +396,8 @@
     <string name="copyToGrzLogGallery">Werden in die GrzLog Galerie kopiert. Die betroffenen Links zu Bilder werden entsprechend angepaßt.</string>
     <string name="copyLinkedImages">Kopiere verlinkte Bilder zur GrzLog Galerie</string>
     <string name="no_permission_released">Freigabe von Berechtigungen nicht nötig.</string>
+    <string name="calendar_event">Kalendereintrag setzen</string>
+    <string name="grzlog_reminder">GrzLog Erinnerung</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

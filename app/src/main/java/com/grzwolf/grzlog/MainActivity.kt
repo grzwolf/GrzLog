@@ -25,6 +25,7 @@ import android.os.*
 import android.print.PrintAttributes
 import android.print.PrintAttributes.Resolution
 import android.print.pdf.PrintedPdfDocument
+import android.provider.CalendarContract
 import android.provider.MediaStore
 import android.provider.Settings
 import android.text.*
@@ -1774,13 +1775,13 @@ class MainActivity : AppCompatActivity(),
                     fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
-                // ITEM == 3  'select items dialog' - afterwards return to here
+                // ITEM == 3  'select items dialog' - afterward return to here
                 if (which == 3) {
                     // function as parameter: https://stackoverflow.com/questions/62935022/pass-function-with-parameters-in-extension-functionkotlin
                     whatToDoWithItemsSelection(adapterView, itemView, itemPosition, itemId, returnToSearchHits, ::whatToDoWithLongClickItem)
                 }
 
-                // ITEM == 4 'add an in app reminder'
+                // ITEM == 4 'add an in-app reminder'
                 if (which == 4) {
                     if (!notificationPermissionGranted) {
                         whatToDoWithLongClickItem(adapterView, itemView, itemPosition, itemId, returnToSearchHits)
@@ -1794,7 +1795,7 @@ class MainActivity : AppCompatActivity(),
                     showMenuItemUndo()
                     // reminder candidate
                     val message = lvMain.arrayList[itemPosition].title
-                    // reminder candidate may already exist or it is a new one
+                    // reminder candidate may already exist, or it is a new one
                     if (MainActivity.grzlogReminderList.firstOrNull {it == message} != null) {
                         // reminder already exists: offer option to keep ist or to remove it
                         var bld: AlertDialog.Builder? = null
@@ -1808,7 +1809,7 @@ class MainActivity : AppCompatActivity(),
                         bld.setNeutralButton(
                             getString(R.string.remove),
                             DialogInterface.OnClickListener { dialog, which ->
-                                // get all left over reminders
+                                // get all leftover reminders
                                 var listLeftOver: MutableList<String> = ArrayList()
                                 for (i in 0 until grzlogReminderList.size) {
                                     // discard currently selected item
@@ -1845,16 +1846,17 @@ class MainActivity : AppCompatActivity(),
                         dlg.show()
                     } else {
                         // new reminder
-                        var youSureBld: AlertDialog.Builder? = null
-                        youSureBld = AlertDialog.Builder(
+                        var reminderDlg: AlertDialog? = null
+                        var reminderBld: AlertDialog.Builder? = null
+                        reminderBld = AlertDialog.Builder(
                             this@MainActivity,
                             android.R.style.Theme_Material_Dialog
                         )
-                        youSureBld.setTitle(R.string.ShowReminder)
-                        youSureBld.setMessage(message)
-                        // 'you sure' dlg OK + quit
-                        youSureBld.setPositiveButton(
-                            R.string.ok,
+                        reminderBld.setTitle(R.string.ShowReminder)
+                        reminderBld.setMessage(message)
+                        // reminder dlg 'middle button' --> OK + quit
+                        reminderBld.setNegativeButton(
+                            R.string.grzlog_reminder,
                             DialogInterface.OnClickListener { dialog, which ->
                                 // add reminder to list
                                 grzlogReminderList.add(message!!)
@@ -1874,9 +1876,77 @@ class MainActivity : AppCompatActivity(),
                                     itemId,
                                     returnToSearchHits
                                 )
-                            })
-                        // 'you sure' dlg CANCEL
-                        youSureBld.setNegativeButton(
+                            }
+                        )
+                        // reminder dlg "top button" allows to add a calendar event
+                        reminderBld.setPositiveButton(
+                            R.string.calendar_event,
+                            DialogInterface.OnClickListener { dialog, which ->
+                                // show date picker dialog
+                                val cal = Calendar.getInstance()
+                                val yNow = cal.get(Calendar.YEAR)
+                                val mNow = cal.get(Calendar.MONTH)
+                                val dNow = cal.get(Calendar.DAY_OF_MONTH)
+                                val dpd = DatePickerDialog(
+                                    this,
+                                    AlertDialog.THEME_DEVICE_DEFAULT_DARK,
+                                    DatePickerDialog.OnDateSetListener { view, year, monthOfYear, dayOfMonth ->
+
+                                }, yNow, mNow, dNow)
+                                dpd.show()
+                                // date picker dialog OK button listener
+                                val okButton = dpd.getButton(DialogInterface.BUTTON_POSITIVE)
+                                okButton.setOnClickListener {
+                                    // get selected date
+                                    val year = dpd.datePicker.year
+                                    val month = dpd.datePicker.month
+                                    val day = dpd.datePicker.dayOfMonth
+                                    // close date picker
+                                    dpd.dismiss()
+                                    // start time picker
+                                    val cal = Calendar.getInstance()
+                                    // time picker listener catches ok (aka time is set)
+                                    val timeSetListener = TimePickerDialog.OnTimeSetListener { timePicker, hour, minute ->
+                                        cal.set(Calendar.HOUR_OF_DAY, hour)
+                                        cal.set(Calendar.MINUTE, minute)
+                                        // start phone calendar app
+                                        val startMillis: Long = Calendar.getInstance().run {
+                                            set(year, month, day, hour, minute)
+                                            timeInMillis
+                                        }
+                                        val endMillis: Long = Calendar.getInstance().run {
+                                            set(year, month, day, hour, minute)
+                                            timeInMillis
+                                        }
+                                        val intent = Intent(Intent.ACTION_INSERT)
+                                            .setData(CalendarContract.Events.CONTENT_URI)
+                                            .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startMillis)
+                                            .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endMillis)
+                                            .putExtra(CalendarContract.Events.TITLE, message)
+                                            .putExtra(CalendarContract.Events.DESCRIPTION, "")
+                                            .putExtra(CalendarContract.Events.EVENT_LOCATION, "")
+                                            .putExtra(CalendarContract.Events.AVAILABILITY, CalendarContract.Events.AVAILABILITY_BUSY)
+//                                            .putExtra(Intent.EXTRA_EMAIL, "")
+                                        startActivity(intent)
+                                        // back to the item reminder dlg
+                                        Handler().postDelayed({
+                                            reminderDlg!!.show()
+                                        }, 300)
+                                    }
+                                    // show time picker dialog
+                                    TimePickerDialog(
+                                        this,
+                                        AlertDialog.THEME_DEVICE_DEFAULT_DARK,
+                                        timeSetListener,
+                                        cal.get(Calendar.HOUR_OF_DAY),
+                                        0,
+                                        true
+                                    ).show()
+                                }
+                            }
+                        )
+                        // reminder dlg "bottom button" --> CANCEL
+                        reminderBld.setNeutralButton(
                             R.string.cancel,
                             DialogInterface.OnClickListener { dialog, which ->
                                 whatToDoWithLongClickItem(
@@ -1886,10 +1956,16 @@ class MainActivity : AppCompatActivity(),
                                     itemId,
                                     returnToSearchHits
                                 )
-                            })
-                        val youSureDlg = youSureBld.create()
-                        youSureDlg.setCanceledOnTouchOutside(false)
-                        youSureDlg.show()
+                            }
+                        )
+                        reminderDlg = reminderBld.create()
+                        reminderDlg.setCanceledOnTouchOutside(false)
+                        reminderDlg.setOnShowListener {
+                            reminderDlg.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                        }
+                        reminderDlg.show()
+                        reminderDlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
+                        reminderDlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
                     }
                 }
 
@@ -1944,7 +2020,7 @@ class MainActivity : AppCompatActivity(),
                             val dsText = ds.dataSection[ds.selectedSection]                          // raw data from DataStore
                             title = ds.namesSection[ds.selectedSection]                              // set app title to folder Name
                             lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)        // convert & format raw text to array
-                            lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList)   // build adapter and populate main listview
+                            lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList)          // build adapter and populate main listview
                             lvMain.listView!!.adapter = lvMain.adapter                               // populate main listview via adapter
                             lvMain.adapter!!.notifyDataSetChanged()
                             // jump to, temporary highlight affected item and revert it to normal 3s later
@@ -7477,7 +7553,7 @@ class MainActivity : AppCompatActivity(),
                 if (tn.uriString.length > 0) {
                     yPos += 5
                     drawPdfImage(tn, painter, canvas, marginL.toFloat(), yPos.toFloat())
-                    tn = ThumbNail() // reset image link afterwards is actually not needed
+                    tn = ThumbNail() // reset image link afterward is actually not needed
                     yPos += lineHeight * 9 // increase yPos by height of image = 9 * line
                 } else {
                     yPos += lineHeight // increase yPos just by one line
@@ -8657,7 +8733,7 @@ class MainActivity : AppCompatActivity(),
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             // supposed to happen:
             //        a) install after previously running GrzLog0.0.1 or any "grzlog" legacy app
-            //        b) any change to DataStore and de-serialization afterwards will fail
+            //        b) any change to DataStore and de-serialization afterward will fail
             // Fix: restore GrzLog.ser from GrzLog.txt: 1) local GrzLog.txt  2) /Download GrzLog.txt
             //
             if (dataStore == null) {
