@@ -659,21 +659,24 @@ fun listviewHeight(list: ListView): Int {
 
 // multipurpose AlertBuilder dialog boxes
 fun okBox(context: Context?, title: String?, message: String) {
-    var builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+    val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
     builder.setTitle(title)
     builder.setMessage("\n" + message)
     builder.setPositiveButton(
         R.string.ok,
         DialogInterface.OnClickListener { dialog, which -> dialog.dismiss() })
     try {
-        builder.show()
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
+        dialog.show()
     } catch (e: Exception) {
     }
 }
 
 fun okBox(context: Context?, title: String?, message: String, runnerOk: Runnable?) {
-    var builder: AlertDialog.Builder?
-    builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+    val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
     builder.setTitle(title)
     builder.setMessage("\n" + message)
     builder.setPositiveButton(R.string.ok, DialogInterface.OnClickListener { dialog, which ->
@@ -681,7 +684,11 @@ fun okBox(context: Context?, title: String?, message: String, runnerOk: Runnable
         dialog.dismiss()
     })
     try {
-        builder.show()
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
+        dialog.show()
     } catch (e: Exception) {
     }
 }
@@ -697,30 +704,34 @@ fun twoChoicesDialog(
     runnerNeutral: Runnable?,
     runnerNegative: Runnable?
 ) {
-
-    var dialog: AlertDialog?
-    var builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+    val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
     builder.setTitle(title)
     builder.setMessage("\n" + message)
+    // CANCEL
     builder.setPositiveButton(
         R.string.cancel,
         DialogInterface.OnClickListener { dialog, which ->
             runnerPositive?.run()
             return@OnClickListener
         })
+    // ALTERNATIVE # ONE
     builder.setNeutralButton(
         choicePositive,
         DialogInterface.OnClickListener { dialog, which ->
             runnerNeutral?.run()
             dialog.dismiss()
         })
+    // ALTERNATIVE # TWO
     builder.setNegativeButton(
         choiceNegative,
         DialogInterface.OnClickListener { dialog, which ->
             runnerNegative?.run()
             dialog.dismiss()
         })
-    dialog = builder.create()
+    val dialog = builder.create()
+    dialog.setOnShowListener {
+        dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+    }
     dialog.show()
     dialog.setCanceledOnTouchOutside(false)
     val buttonPositive: Button = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
@@ -761,7 +772,11 @@ fun decisionBox(
             dialog.dismiss()
         })
     try {
-        builder.show()
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
+        dialog.show()
     } catch (e: Exception) {
     }
 }
@@ -2213,3 +2228,19 @@ inline fun <reified T : ViewGroup.LayoutParams> View.layoutParams(block: T.() ->
 }
 fun View.dpToPx(dp: Float): Int = context.dpToPx(dp)
 fun Context.dpToPx(dp: Float): Int = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics).toInt()
+
+// kudos: https://stackoverflow.com/questions/2799097/how-can-i-detect-when-an-android-application-is-running-in-the-emulator
+fun isEmulator(): Boolean {
+    return  (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+            || Build.FINGERPRINT.startsWith("generic")
+            || Build.FINGERPRINT.startsWith("unknown")
+            || Build.HARDWARE.contains("goldfish")
+            || Build.HARDWARE.contains("ranchu")
+            || Build.MODEL.contains("sdk", true)
+            || Build.MODEL.contains("Emulator")
+            || Build.MANUFACTURER.contains("Genymotion")
+            || Build.PRODUCT.contains("sdk", true)
+            || Build.PRODUCT.contains("vbox86p")
+            || Build.PRODUCT.contains("emulator")
+            || Build.PRODUCT.contains("simulator")
+}

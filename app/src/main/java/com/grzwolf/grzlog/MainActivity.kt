@@ -86,6 +86,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.*
 import java.util.regex.Pattern
 import kotlin.properties.Delegates
@@ -111,6 +112,9 @@ val ERROR_EXT = "file-error"
 class MainActivity : AppCompatActivity(),
     ActivityCompat.OnRequestPermissionsResultCallback,
     LifecycleObserver {
+
+    // app is running in emulator
+    var runInEmulator = isEmulator()
 
     // in app reminder
     var notificationPermissionGranted = false
@@ -766,7 +770,7 @@ class MainActivity : AppCompatActivity(),
             if (!menuSearchVisible) {
                 // standard app menu
                 showMenuItems(false)
-                // onResume always cancels undo data, but not if fabPlus.editInsertLine is active (if returning from a cancelled pick)
+                // onResume always cancels undo data, but not if fabPlus.editInsertLine is active (if returning from a canceled pick)
                 if (!fabPlus.editInsertLine) {
                     ds.undoSection = ""
                     ds.undoText = ""
@@ -3067,19 +3071,15 @@ class MainActivity : AppCompatActivity(),
         } catch ( e:Exception) {}
     }
 
-    // initial size of fabPlus input dialog is called by "(fabPlus.mainDialog)?.setOnShowListener"
+    // dynamic size of fabPlus input dialog is called by "(fabPlus.mainDialog)?.setOnShowListener"
     fun setFabPlusDialogSize() {
-        val fontSize = fabPlus.inputAlertView!!.textSize
-        val lineSpacingExtra = Math.max(fabPlus.inputAlertView!!.lineSpacingExtra, 25f)
-        val lineSpacingMultiplier = fabPlus.inputAlertView!!.lineSpacingMultiplier
-        val lineHeight = fontSize * lineSpacingMultiplier + lineSpacingExtra
-        val heightMax = resources.displayMetrics.heightPixels * 0.50f
         if (fabPlus.mainDialog != null) {
-            val wnd = (fabPlus.mainDialog)?.getWindow()!!
-            if (wnd != null) {
-                val corr = Math.min((fabPlus.inputAlertView!!.getLineCount() - 1) * lineHeight + 600, heightMax)
-                wnd.setLayout(WindowManager.LayoutParams.MATCH_PARENT, corr.toInt())
-            }
+            // dialog shall consume max. 60% of the screen height
+            val heightMax = resources.displayMetrics.heightPixels * 0.60f
+            // fabPlus.mainDialogInitHeight in pixels is the initial dlg height
+            val height = Math.min((fabPlus.inputAlertView!!.getLineCount() - 1) * fabPlus.inputAlertView!!.textSize + fabPlus.mainDialogInitHeight, heightMax)
+            // set dialog layout dimensions
+            fabPlus.mainDialog!!.getWindow()?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, height.toInt())
         }
     }
 
@@ -3090,7 +3090,8 @@ class MainActivity : AppCompatActivity(),
         itemPosition: Int = -1,
         itemId: Long = -1,
         returnToSearchHits: Boolean = false,
-        function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)? = null)
+        function: ((AdapterView<*>, View?, Int, Long, Boolean) -> Unit?)? = null,
+        restartInputText: String = "")
     {
         // avoid multiple fabPlus instances (example: have one open + home + tap widget)
         if (fabPlus.inputAlertView != null && fabPlus.inputAlertView!!.isShown) {
@@ -3119,6 +3120,11 @@ class MainActivity : AppCompatActivity(),
             ds.undoAction = ACTION.UNDEFINED
         }
         showMenuItemUndo()
+
+        // fabPlusOnClick was restarted with an input text to be corrected by user
+        if (restartInputText.isNotEmpty()) {
+            fabPlus.inputAlertText = restartInputText
+        }
 
         // it looks awkward, if search stays open
         if (searchView != null) {
@@ -3162,11 +3168,10 @@ class MainActivity : AppCompatActivity(),
                         var tmp = fabPlus.inputAlertView!!.text.toString()
                         tmp = tmp.replace("[", "")
                         tmp = tmp.replace("]", "")
-                        fabPlus.inputAlertText = tmp
                         // restart fabPlus.mainDialog with the activated ability to insert a new attachment link
                         fabPlus.mainDialog?.dismiss()
                         Handler(Looper.getMainLooper()).postDelayed({
-                            fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                            fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function, tmp)
                         }, 100)
                         return
                     } else {
@@ -3257,12 +3262,9 @@ class MainActivity : AppCompatActivity(),
         if (theme != "Dark") {
             fabPlus.inputAlertView!!.setTextColor(Color.WHITE)
         }
-        // title
-        val head = SpannableString(getString(R.string.writeGrzLog))
-        head.setSpan(RelativeSizeSpan(0.7F),0,head.length,0)
-        fabPlusBuilder.setTitle(head)
-
+        //
         // fabPlus button NEUTRAL: the only option while editing an item is to insert an attachment
+        //
         fabPlusBuilder.setNeutralButton(
             R.string.InsertFile,
             DialogInterface.OnClickListener { dlg, which ->
@@ -3331,7 +3333,7 @@ class MainActivity : AppCompatActivity(),
                 startFilePickerDialog(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
             }
         )
-
+        //
         // fabPlus button OK
         //
         fabPlusBuilder.setPositiveButton(R.string.ok, DialogInterface.OnClickListener { dialog, which ->
@@ -3347,11 +3349,11 @@ class MainActivity : AppCompatActivity(),
             // get input data from AlertDialog
             var newText = trimEndAll(fabPlus.inputAlertView!!.text.toString())
 
-            // just in case, such thing came in from paste operation
+            // just in case, newText came in from a paste operation
             newText = newText.replace("\r\n", "\n")
 
             // empty input is only allowed, if timestamp is not empty
-            if (newText.isEmpty() and (timestampType == TIMESTAMP.OFF)) {
+            if (newText.isEmpty() && (timestampType == TIMESTAMP.OFF)) {
                 centeredToast(this, getString(R.string.inputOneSpace), 3000)
                 fabPlus.button?.background?.setAlpha(130)
                 fabPlus.button?.show()
@@ -3430,27 +3432,37 @@ class MainActivity : AppCompatActivity(),
                 }
             }
 
-            // get original data from DataStore
+            // get all original data from DataStore
             val oriText = ds.dataSection[ds.selectedSection]
             var oriParts: Array<String?> = oriText.split("\\n+".toRegex()).toTypedArray()
             if (oriParts.size == 0) {
                 oriParts = arrayOf("")
             }
-            // final string collector
-            var finalStr: String
-            // alternative final string collector with skipped dates
+
+            // final string collector w/o skipped dates
+            var finalStr = ""
+
+            // alternative final string collector contains skipped dates
             var finalStrWithSkippedDates: String = ""
             var newTextWithSkippedDates: String = ""
             var numAutoFilledDates = 0
             var fillWithSkippedDates = sharedPref.getBoolean("askAutoFillSkippedDates", true)
+
             // will a date header be added
             var addDateHeader = false
+
+            // index offset to highlight the inserted items
+            var insertStartPos = 0
+
             // marker to indicate a valid last date before the current input date
             var dateLastIsValid = true
+
             // need to distinguish between 'edit line' (aka long press) AND 'new input' (aka + button)
             val plusButtonInput: Boolean
             if (lvMain.editLongPress) {
+                //
                 // long press line edit
+                //
                 plusButtonInput = false
                 // ... but, an image link could be renewed, after permission was released --> linkedImageWasChanged
                 if (!linkedImageWasChanged) {
@@ -3493,126 +3505,533 @@ class MainActivity : AppCompatActivity(),
                 }
                 // save undo data: if a line was inserted, we already have undo data and don't want to override them, just extend undoAction
                 if (fabPlus.editInsertLine) {
-                    ds.undoText += ":\n'$newText'"
+                    ds.undoText += ":\n\n'$newText'"
                     ds.undoAction = ACTION.REVERTINSERT
                 } else {
                     ds.undoSection = ds.dataSection[ds.selectedSection]
-                    ds.undoText = getString(R.string.EditRow) + ":\n'$newText'"
+                    ds.undoText = getString(R.string.EditRow) + ":\n\n'$newText'"
                     ds.undoAction = ACTION.REVERTEDIT
                 }
                 showMenuItemUndo()
+
             } else {
+                //
                 // normal "+ button" input
+                //
                 plusButtonInput = true
+
                 // sake of mind
                 lvMain.selectedRow = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else lvMain.arrayList.size - 1
-                // allow undo
+
+                // allow action undo
                 ds.undoSection = ds.dataSection[ds.selectedSection]
-                ds.undoText = getString(R.string.EditRow) + ":\n'$newText'"
+                ds.undoText = getString(R.string.EditRow) + ":\n\n'$newText'"
                 ds.undoAction = ACTION.REVERTADD
                 showMenuItemUndo()
-                // input might contain multiple lines or \n (from shareBody): don't add a timestamp
-                if (newText.contains("\n")) {
+
+                // check, if user put text on top of a date --> not allowed
+                val newTextParts = newText.split("\\n+".toRegex()).toTypedArray()
+                var newTextHeaderPos = -1
+                for (i in 0 until newTextParts.size) {
+                    if (PATTERN.DateDay.matcher(newTextParts[i]).find()) {
+                        newTextHeaderPos = i
+                        break
+                    }
+                }
+                if (newTextHeaderPos > 0) {
+                    // leave error note
+                    okBox(
+                        this@MainActivity,
+                        getString(R.string.error),
+                        getString(R.string.input_sequence) + ":\n\n'" + newText + "'\n\n" + getString(R.string.not_allowed),
+                        {
+                            // clear undo
+                            ds.undoSection = ""
+                            ds.undoText = ""
+                            ds.undoAction = ACTION.UNDEFINED
+                            localCancel(dialog, this)
+                            // restart fabPlus.mainDialog to let the user correct his previous input
+                            fabPlus.mainDialog?.dismiss()
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function, newText)
+                            }, 100)
+                        }
+                    )
+                    return@OnClickListener
+                }
+
+                //
+                // user input follows the show order:
+                //
+                // SHOW_ORDER.TOP    --> most recent item is directly underneath today's date header
+                // SHOW_ORDER.BOTTOM --> most recent item is directly underneath yesterday's date header
+                val newTextOri = newText
+                if (newTextParts.size > 1) {
+                    // input might contain multiple lines or \n (from shareBody): if so, don't add a timestamp
                     timestampType = TIMESTAMP.OFF
                     // if input contains multiple lines, take care about their showOrder
                     if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
                         newText = lvMain.toggleTextShowOrder(null, newText).str
                     }
                 }
-                // a common date format string
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd")
 
-                // get today date stamp w/o time
-                val dateToday: Date?
-                dateToday = try {
-                    dateFormat.parse(dateFormat.format(Date()))
-                } catch (ex: Exception) {
-                    Date()
-                }
-                // prepare for a date max. 1 day before
-                val cal = Calendar.getInstance()
-                var todayStr = dateFormat.format(dateToday)
-                cal.time = dateFormat.parse(todayStr)
-                cal.add(Calendar.DATE, -1)
-                val yesterdayStr = dateFormat.format(cal.time)
-                val yesterdayDate = dateFormat.parse(yesterdayStr)
-                // last entry date
-                val dateStringLast = if (oriParts[0] != null) {
-                    oriParts[0]
-                } else {
-                    yesterdayStr
-                }
-                val dateLast: Date
-                dateLast = try {
-                    dateFormat.parse(dateStringLast.toString())!!
-                } catch (ex: Exception) { //  ... if no data is found, we start over with yesterday
-                    dateLastIsValid = false
-                    yesterdayDate
-                }
-                // keep latest date stamp always on top: 0 = add today at top / 1 = don't add today at top
-                var combineNdx = 1
-                var dateStr = dateStringLast + "\n"
-                // if topmost date is not today, we need to add the today's date stamp
-                if (dateLast.compareTo(dateToday) != 0) {
-                    dateStr = SimpleDateFormat("yyyy-MM-dd EEE", Locale.getDefault()).format(dateToday!!) + "\n"
-                    combineNdx = 0
-                    addDateHeader = true
-                }
-                // add time at the beginning of the newText
-                var timeStr = ""
-                if (timestampType != TIMESTAMP.OFF) {
-                    if (timestampType == TIMESTAMP.HHMM) {
-                        var timeFormat = "HH:mm"
-                        timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
-                    }
-                    if (timestampType == TIMESTAMP.HHMMSS) {
-                        var timeFormat = "HH:mm:ss"
-                        timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
+                // newText could be EITHER 'normal text' OR "yyyy-MM-dd" / "yyyy-MM-dd EEE"
+                // distinguishing the two cases allows to add a 'future date header'
+                var newTextIsDatePattern: Boolean
+                var newTextDate: LocalDate? = null
+                try {
+                    // allowed user input is "yyyy-MM-dd", anything else throws
+                    newTextDate = LocalDate.parse(newTextParts[0], DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    newTextIsDatePattern = true
+                } catch (_: DateTimeParseException) {
+                    try {
+                        // alternative allowed user input is "yyyy-MM-dd EEE", anything else throws and is considered as text input
+                        newTextDate = LocalDate.parse(newTextParts[0], DateTimeFormatter.ofPattern("yyyy-MM-dd EEE"))
+                        newTextIsDatePattern = true
+                    } catch (_: DateTimeParseException) {
+                        newTextIsDatePattern = false
                     }
                 }
-                if (combineNdx == 0) {
-                    newText = timeStr + newText + "\n"
-                } else {
-                    newText = timeStr + newText
-                }
-                // build final string after input
-                finalStr = dateStr
-                finalStr += newText
-                // alternative finalStr
-                finalStrWithSkippedDates = finalStr
-                // prepare auto fill skipped dates
-                if ( fillWithSkippedDates && dateLastIsValid ) {
-                    newTextWithSkippedDates = finalStr
-                    // start date is one day after the last entry's date
-                    val c = Calendar.getInstance()
-                    c.time = dateFormat.parse(dateStringLast)
-                    c.add(Calendar.DATE, 1)
-                    val fromStr = dateFormat.format(c.time)
-                    val fromDate = dateFormat.parse(fromStr)
-                    // list contains all date strings between today and the last recorded entry
-                    // !! reversed():
-                    //    build & run < API 35 ok
-                    //    build & run = API 35 ok
-                    //    build API 35 + run < API 35 --> exception NoSuchMethodError
-                    val skippedDatesList = getDaysBetweenDates(fromDate, dateToday!!).asReversed()
-                    numAutoFilledDates = skippedDatesList.size
-                    if (skippedDatesList.size > 0) {
-                        for (dateStr in skippedDatesList) {
-                            finalStrWithSkippedDates += "\n" + dateStr
-                            newTextWithSkippedDates += dateStr + "\n"
+                if (newTextIsDatePattern) {
+                    //
+                    // add a future date header
+                    //
+
+                    // prepare for skipped date headers
+                    var skippedDatesList = listOf<String>()
+
+                    // get topmost header date
+                    // topMostHeaderDate keeps null, if it is a non date header
+                    var topMostHeaderDate: LocalDate? = null
+                    val m0 = PATTERN.DateDay.matcher(oriParts[0])
+                    if (m0.find()) {
+                        try {
+                            // build a date from oriParts
+                            topMostHeaderDate = LocalDate.parse(
+                                m0.group(),
+                                DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
+                            )
+                        } catch(e: DateTimeParseException) {
+                            try {
+                                // it can happen, that topmost header does not have a week day name
+                                topMostHeaderDate = LocalDate.parse(
+                                    m0.group(),
+                                    DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                                )
+                            } catch(e: DateTimeParseException) {
+                                topMostHeaderDate = null
+                            }
                         }
-                    } else {
-                        fillWithSkippedDates = false
-                        finalStrWithSkippedDates = ""
-                        newTextWithSkippedDates = ""
                     }
-                }
 
-                // finally append all original entries to finalStr
-                for (i in combineNdx until oriParts.size) {
-                    finalStr += "\n" + oriParts[i]
-                    if (fillWithSkippedDates) {
-                        finalStrWithSkippedDates += "\n" + oriParts[i]
+                    // search newText as header in oriParts
+                    val newTextHeaderString = newText + dayNameOfWeek(newText)
+                    val foundString = oriParts.find { it?.equals(newTextHeaderString) ?: false }
+
+                    // if newText was found --> error duplicate and get out
+                    if (foundString?.isNotEmpty() ?: false) {
+                        // leave error note
+                        okBox(
+                            this@MainActivity,
+                            getString(R.string.error),
+                            "'" + foundString + "' " + getString(R.string.duplicate_item),
+                            {
+                                // clear undo
+                                ds.undoSection = ""
+                                ds.undoText = ""
+                                ds.undoAction = ACTION.UNDEFINED
+                                localCancel(dialog, this)
+                                // restart fabPlus.mainDialog to let the user correct his previous input
+                                fabPlus.mainDialog?.dismiss()
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function, newTextOri)
+                                }, 100)
+                            }
+                        )
+                        return@OnClickListener
+                    }
+
+                    // if topmost header is a non date type, we are done
+                    if (topMostHeaderDate == null) {
+
+                        // newText goes straight to top position
+                        finalStr = newText + "\n" + oriText
+                        // in such case, no skipped dates
+                        fillWithSkippedDates = false
+
+                    } else {
+
+                        //
+                        // check newTextDate to be younger or older as topMostHeaderDate
+                        //
+                        if (newTextDate?.isAfter(topMostHeaderDate) ?: false) { // isAfter == isYounger
+
+                            // if newTextDate is younger as topMostHeaderDate,
+                            //    newText goes to the top position in ds
+                            finalStr = newText + "\n" + oriText
+
+                            // build a skipped dates list
+                            skippedDatesList = getDaysBetweenDates(
+                                java.sql.Date.valueOf(topMostHeaderDate.plusDays(1).toString()),
+                                java.sql.Date.valueOf(newTextDate.toString())
+                            ).asReversed()
+
+                            // obviously a date input more than a year into the future
+                            if (skippedDatesList.size > 365) {
+                                // leave error note
+                                okBox(
+                                    this@MainActivity,
+                                    getString(R.string.error),
+                                    "'" + newText + "' " + getString(R.string.wrong_date),
+                                    {
+                                        // clear undo
+                                        ds.undoSection = ""
+                                        ds.undoText = ""
+                                        ds.undoAction = ACTION.UNDEFINED
+                                        localCancel(dialog, this)
+                                        // restart fabPlus.mainDialog to let the user correct his previous input
+                                        fabPlus.mainDialog?.dismiss()
+                                        Handler(Looper.getMainLooper()).postDelayed({
+                                            fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function, newTextOri)
+                                        }, 100)
+                                    }
+                                )
+                                return@OnClickListener
+                            }
+
+                            // skipped dates
+                            if (skippedDatesList.size == 0) {
+                                // no skipped dates
+                                fillWithSkippedDates = false
+                            } else {
+                                // take care about skipped dates
+                                finalStrWithSkippedDates = newText + "\n"
+                                newTextWithSkippedDates = newText + "\n"
+                                for (dateStr in skippedDatesList) {
+                                    finalStrWithSkippedDates += dateStr + "\n"
+                                    newTextWithSkippedDates += dateStr + "\n"
+                                }
+                                finalStrWithSkippedDates += oriText
+                            }
+
+                        } else {
+
+                            // if newTextDate is older than topMostHeaderDate,
+                            //    iterate oriParts to find an item, which date is older as newTextDate
+                            //    newText goes to this matching position
+                            var itemHeaderDate: LocalDate? = null
+                            var fstOlderHeaderDate: LocalDate? = null
+                            var fstOlderHeaderPos = -1
+                            var fstNewerHeaderDate: LocalDate? = null
+                            // loop oriParts
+                            for (ndx in 0 until oriParts.size) {
+                                // any date header contains a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
+                                val m1 = PATTERN.DateDay.matcher(oriParts[ndx])
+                                if (m1.find()) {
+                                    // index offset for highlighting inserted items
+                                    insertStartPos++
+                                    try {
+                                        // build a date from oriParts
+                                        itemHeaderDate = LocalDate.parse(
+                                            m1.group(),
+                                            DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
+                                        )
+                                        // compare itemHeaderDate date with newTextDate:
+                                        //     isBefore == isOlder
+                                        if (itemHeaderDate.isBefore(newTextDate) ?: false) {
+                                            // this is the 1st header date, which is older as our newTextDate
+                                            //    aka lower index of skipped dates
+                                            fstOlderHeaderDate = itemHeaderDate
+                                            fstOlderHeaderPos = ndx
+                                            // next look up from here the position of a younger header date
+                                            //    this info gives us the upper index skipped dates
+                                            val indexUpStart = Math.max(ndx - 1, 0)
+                                            for (idx in indexUpStart downTo 0) {
+                                                // check for date = header
+                                                val m2 = PATTERN.DateDay.matcher(oriParts[idx])
+                                                if (m2.find()) {
+                                                    // index offset for highlighting inserted items
+                                                    insertStartPos--
+                                                    try {
+                                                        // build a date from oriParts
+                                                        fstNewerHeaderDate = LocalDate.parse(
+                                                            m2.group(),
+                                                            DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
+                                                        )
+                                                        // compare oriParts date with newTextDate:
+                                                        //     isAfter == isYounger
+                                                        if (fstNewerHeaderDate.isAfter(newTextDate)?: false) {
+                                                            // we found a header date, which is younger as our newTextDate
+                                                            break
+                                                        }
+                                                    } catch (e: DateTimeParseException) {
+                                                        // no issue to leave it unhandled
+                                                    }
+                                                } else {
+                                                    // index offset for highlighting inserted items
+                                                    insertStartPos--
+                                                }
+                                            }
+                                            break
+                                        }
+                                    } catch (e: DateTimeParseException) {
+                                        // no issue to leave it unhandled
+                                    }
+                                } else {
+                                    // index offset for highlighting inserted items
+                                    insertStartPos++
+                                }
+                            }
+
+                            // obviously a completely wrong date input: date too old
+                            if (fstOlderHeaderDate == null) {
+                                // leave error note
+                                okBox(
+                                    this@MainActivity,
+                                    getString(R.string.error),
+                                    "'" + newText + "' " + getString(R.string.wrong_date),
+                                    {
+                                        // clear undo
+                                        ds.undoSection = ""
+                                        ds.undoText = ""
+                                        ds.undoAction = ACTION.UNDEFINED
+                                        localCancel(dialog, this)
+                                        // restart fabPlus.mainDialog to let the user correct his previous input
+                                        fabPlus.mainDialog?.dismiss()
+                                        Handler(Looper.getMainLooper()).postDelayed({
+                                            fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function, newTextOri)
+                                        }, 100)
+                                    }
+                                )
+                                return@OnClickListener
+                            }
+
+                            // build a skipped dates list
+                            skippedDatesList = getDaysBetweenDates(
+                                java.sql.Date.valueOf(fstOlderHeaderDate.toString()),
+                                java.sql.Date.valueOf(newTextDate.toString())
+                            ).asReversed()
+
+                            // build finalStr and alternatives
+                            finalStr = ""
+                            for (i in 0 until oriParts.size) {
+
+                                if (i == fstOlderHeaderPos) {
+                                    //
+                                    // here is an insert position match
+                                    //
+                                    // add newText to finalStr
+                                    if (finalStr.isEmpty()) {
+                                        finalStr += newText + "\n"
+                                    } else {
+                                        finalStr += "\n" + newText
+                                    }
+                                    // insert skipped dates
+                                    if (fillWithSkippedDates) {
+                                        // 1st add newText to newTextWithSkippedDates
+                                        if (newTextWithSkippedDates.isEmpty()) {
+                                            newTextWithSkippedDates += newText + "\n"
+                                        } else {
+                                            newTextWithSkippedDates += "\n" + newText
+                                        }
+                                        // 2nd add newText to finalStrWithSkippedDates
+                                        if (finalStrWithSkippedDates.isEmpty()) {
+                                            finalStrWithSkippedDates += newText + "\n"
+                                        } else {
+                                            finalStrWithSkippedDates += "\n" + newText
+                                        }
+                                        // 3rd add skipped dates to *WithSkippedDates
+                                        if (skippedDatesList.size > 0) {
+                                            for (dateStr in skippedDatesList) {
+                                                finalStrWithSkippedDates += "\n" + dateStr
+                                                newTextWithSkippedDates += dateStr + "\n"
+                                            }
+                                        } else {
+                                            fillWithSkippedDates = false
+                                            finalStrWithSkippedDates = ""
+                                            newTextWithSkippedDates = ""
+                                        }
+                                    }
+                                } else {
+                                    //
+                                    // normal loop
+                                    //
+                                    // finalStr
+                                    if (finalStr.isEmpty()) {
+                                        finalStr += oriParts[i]
+                                    } else {
+                                        finalStr += "\n" + oriParts[i]
+                                    }
+                                    // alternative final string with skipped dates
+                                    if (fillWithSkippedDates) {
+                                        if (finalStrWithSkippedDates.isEmpty()) {
+                                            finalStrWithSkippedDates += oriParts[i]
+                                        } else {
+                                            finalStrWithSkippedDates += "\n" + oriParts[i]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    //
+                    // standard text input
+                    //
+
+                    //
+                    // loop oriParts date headers to be able to insert newText for a today's date
+                    // --> oriParts might contain date headers younger as today
+                    //
+                    var spacers = 0           // spacers needed to translate offset in ds into lvMain
+                    var newTextInsertPos = -1 // offset in ds
+                    val todayDate = LocalDate.now()
+                    var itemHeaderDate: LocalDate? = null
+                    for (ndx in 0 until oriParts.size) {
+                        // any date header contains a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
+                        val m1 = PATTERN.DateDay.matcher(oriParts[ndx])
+                        if (m1.find()) {
+                            try {
+                                // build a date from oriParts
+                                itemHeaderDate = LocalDate.parse(
+                                    m1.group(),
+                                    DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
+                                )
+                            } catch (e: Exception) {
+                                // build a date from oriParts
+                                itemHeaderDate = LocalDate.parse(
+                                    m1.group(),
+                                    DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                                )
+                            }
+                            if (itemHeaderDate != null) {
+                                // compare to find a date match
+                                if (todayDate.year == itemHeaderDate.year && todayDate.dayOfYear == itemHeaderDate.dayOfYear) {
+                                    newTextInsertPos = ndx         // ds offset to insert newText
+                                    insertStartPos = ndx + spacers // lvMain pos for highlighting
+                                    break
+                                }
+                                // for highlighting
+                                spacers++
+                            }
+                        }
+                    }
+                    if (newTextInsertPos > 0) {
+                        //
+                        // newText goes right behind insertPos
+                        //
+
+                        for (ndx in 0 until oriParts.size) {
+                            finalStr += oriParts[ndx] + "\n"
+                            if (ndx == newTextInsertPos) {
+                                finalStr += newText + "\n"
+                            }
+                        }
+                        // no skipped dates
+                        fillWithSkippedDates = false
+
+                    } else {
+                        //
+                        // newText goes to top
+                        //
+
+                        // get today date stamp w/o time
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
+                        val dateToday: Date? = try {
+                            dateFormat.parse(dateFormat.format(Date()))
+                        } catch (ex: Exception) {
+                            Date()
+                        }
+
+                        // prepare for a date max. 1 day before
+                        val cal = Calendar.getInstance()
+                        val todayStr = dateFormat.format(dateToday)
+                        cal.time = dateFormat.parse(todayStr)
+                        cal.add(Calendar.DATE, -1)
+                        val yesterdayStr = dateFormat.format(cal.time)
+                        val yesterdayDate = dateFormat.parse(yesterdayStr)
+                        // last entry's date
+                        val dateStringLast = if (oriParts[0] != null) {
+                            oriParts[0]
+                        } else {
+                            yesterdayStr
+                        }
+                        val dateLast: Date
+                        dateLast = try {
+                            dateFormat.parse(dateStringLast.toString())!!
+                        } catch (ex: Exception) { //  ... if no data is found, we start over with yesterday
+                            dateLastIsValid = false
+                            yesterdayDate
+                        }
+                        // keep latest date stamp always on top: 0 = add today at top / 1 = don't add today at top
+                        var combineNdx = 1
+                        var dateStr = dateStringLast + "\n"
+                        // if topmost date is not today, we need to add the today's date stamp
+                        if (dateLast.compareTo(dateToday) != 0) {
+                            dateStr = SimpleDateFormat(
+                                "yyyy-MM-dd EEE",
+                                Locale.getDefault()
+                            ).format(dateToday!!) + "\n"
+                            combineNdx = 0
+                            addDateHeader = true
+                        }
+                        // add time at the beginning of the newText
+                        var timeStr = ""
+                        if (timestampType != TIMESTAMP.OFF) {
+                            if (timestampType == TIMESTAMP.HHMM) {
+                                val timeFormat = "HH:mm"
+                                timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
+                            }
+                            if (timestampType == TIMESTAMP.HHMMSS) {
+                                val timeFormat = "HH:mm:ss"
+                                timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
+                            }
+                        }
+                        if (combineNdx == 0) {
+                            newText = timeStr + newText + "\n"
+                        } else {
+                            newText = timeStr + newText
+                        }
+                        // build final string after input
+                        finalStr = dateStr
+                        finalStr += newText
+                        // alternative finalStr
+                        finalStrWithSkippedDates = finalStr
+                        // prepare auto fill skipped dates
+                        if (fillWithSkippedDates && dateLastIsValid) {
+                            newTextWithSkippedDates = finalStr
+                            // start date is one day after the last entry's date
+                            val c = Calendar.getInstance()
+                            c.time = dateFormat.parse(dateStringLast)
+                            c.add(Calendar.DATE, 1)
+                            val fromStr = dateFormat.format(c.time)
+                            val fromDate = dateFormat.parse(fromStr)
+                            // list contains all date strings between today and the last recorded entry
+                            // !! reversed():
+                            //    build & run < API 35 ok
+                            //    build & run = API 35 ok
+                            //    build API 35 + run < API 35 --> exception NoSuchMethodError
+                            val skippedDatesList = getDaysBetweenDates(fromDate, dateToday!!).asReversed()
+                            numAutoFilledDates = skippedDatesList.size
+                            if (skippedDatesList.size > 0) {
+                                for (dateStr in skippedDatesList) {
+                                    finalStrWithSkippedDates += "\n" + dateStr
+                                    newTextWithSkippedDates += dateStr + "\n"
+                                }
+                            } else {
+                                fillWithSkippedDates = false
+                                finalStrWithSkippedDates = ""
+                                newTextWithSkippedDates = ""
+                            }
+                        }
+
+                        // finally append all original entries to finalStr
+                        for (i in combineNdx until oriParts.size) {
+                            finalStr += "\n" + oriParts[i]
+                            if (fillWithSkippedDates) {
+                                finalStrWithSkippedDates += "\n" + oriParts[i]
+                            }
+                        }
                     }
                 }
             }
@@ -3623,18 +4042,88 @@ class MainActivity : AppCompatActivity(),
                 finalStrWithSkippedDates += "\n"
             }
 
-            // finale asks for a decision regarding skipped dates
+            // finally ask for a decision regarding skipped dates
             if ( plusButtonInput && fillWithSkippedDates && dateLastIsValid ) {
+                // insert skipped day at all ?
                 decisionBox(
                     this@MainActivity,
                     DECISION.YESNO,
                     getString(R.string.autoFillSkippedDates),
                     getString(R.string.continueQuestion),
-                    { fabPlusOkFinale(finalStrWithSkippedDates, newTextWithSkippedDates, addDateHeader, plusButtonInput, numAutoFilledDates) },
-                    { fabPlusOkFinale(finalStr, newText, addDateHeader, plusButtonInput, 0) }
+                    // "insert skipped day at all" YES = insert skipped days
+                    {
+                        // perhaps count of skipped days is very large, say > 1 year
+                        if (numAutoFilledDates > 365) {
+                            twoChoicesDialog(
+                                this,
+                                getString(R.string.many_skipped_dates),
+                                getString(R.string.continue_with) + numAutoFilledDates.toString() + getString(R.string.days),
+                                getString(R.string.continue_inserting_skipped_days),
+                                getString(R.string.no_inserting_skipped_days),
+                                // "skipped days is very large" CANCEL = quit all
+                                {
+                                    // clear undo
+                                    ds.undoSection = ""
+                                    ds.undoText = ""
+                                    ds.undoAction = ACTION.UNDEFINED
+                                    showMenuItemUndo()
+                                    // quit all input
+                                    localCancel(dialog, this)
+                                },
+                                // "skipped days is very large" YES = keep huge number of inserted days
+                                {
+                                    fabPlusOkFinale(
+                                        finalStrWithSkippedDates,
+                                        newTextWithSkippedDates,
+                                        addDateHeader,
+                                        plusButtonInput,
+                                        numAutoFilledDates,
+                                        insertStartPos
+                                    )
+                                },
+                                // "skipped days is very large" NO = do not insert skipped days
+                                {
+                                    fabPlusOkFinale(
+                                        finalStr,
+                                        newText,
+                                        addDateHeader,
+                                        plusButtonInput,
+                                        0,
+                                        insertStartPos
+                                    )
+                                }
+                            )
+                        } else {
+                            // skipped days count is within the range of one year
+                            fabPlusOkFinale(
+                                finalStrWithSkippedDates,
+                                newTextWithSkippedDates,
+                                addDateHeader,
+                                plusButtonInput,
+                                numAutoFilledDates,
+                                insertStartPos
+                            )
+                        }
+                    },
+                    // "insert skipped day at all" NO = abandon inserting skipped days
+                    { fabPlusOkFinale(
+                        finalStr,
+                        newText,
+                        addDateHeader,
+                        plusButtonInput,
+                        0,
+                        insertStartPos)
+                    }
                 )
             } else {
-                fabPlusOkFinale(finalStr, newText, addDateHeader, plusButtonInput, 0)
+                // no skipped days existing
+                fabPlusOkFinale(
+                    finalStr,
+                    newText,
+                    addDateHeader,
+                    plusButtonInput,
+                    0,
+                    insertStartPos)
             }
 
         })
@@ -3662,7 +4151,14 @@ class MainActivity : AppCompatActivity(),
             }
         )
 
-        // handle editor
+        // title
+        val customTitleView = TextView(fabPlusBuilder.context)
+        customTitleView.text = SpannableString(getString(R.string.writeGrzLog))
+        customTitleView.setTextColor(Color.WHITE)
+        customTitleView.setPadding(50, 50, 50, 50)
+        fabPlusBuilder.setCustomTitle(customTitleView)
+        // input editor
+        fabPlus.inputAlertView!!.setBackgroundColor(Color.rgb(80, 80, 80))
         fabPlusBuilder.setView(fabPlus.inputAlertView)
         // >= Android 12: default filter limit is set to 10k chars --> remove filters
         fabPlus.inputAlertView!!.filters = arrayOf()
@@ -3671,6 +4167,20 @@ class MainActivity : AppCompatActivity(),
         // the listener matches the initial dialog width to the screen width & the box height to the text length
         (fabPlus.mainDialog)?.setOnShowListener {
             setFabPlusDialogSize()
+        }
+        // measure the initial dialog height with a one line text
+        (fabPlus.mainDialog)?.window?.decorView?.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+            // make it a one time measurement: fabPlus.mainDialogInitHeight init is 100000
+            if (v.height < fabPlus.mainDialogInitHeight ) {
+                // TBD: no clue, why this crap is needed
+                if (runInEmulator) {
+                    // emulators 'Pixel 4' and 'Pixel 9a' behave as expected
+                    fabPlus.mainDialogInitHeight = v.height
+                } else {
+                    // real Pixel 9a needs this, otherwise dlg is too large in height
+                    fabPlus.mainDialogInitHeight = v.height - 200
+                }
+            }
         }
         // show AlertBuilder dialog
         (fabPlus.mainDialog)?.show()
@@ -3684,14 +4194,18 @@ class MainActivity : AppCompatActivity(),
         fabPlus.button?.hide()
         // tricky way to let the keyboard popup
         fabPlus.inputAlertView!!.requestFocus()
-        val startSel = fabPlus.inputAlertView!!.selectionStart
-        val stopSel = fabPlus.inputAlertView!!.selectionEnd
-        showKeyboard(fabPlus.inputAlertView, startSel, stopSel, 250)
+        showKeyboard(fabPlus.inputAlertView, fabPlus.inputAlertView!!.selectionStart, fabPlus.inputAlertView!!.selectionEnd, 250)
     }
 
-    // final handling of fabPlusOk as a separate fun to allow option to auto fill skipped dates
-    fun fabPlusOkFinale(finalStr: String, newText: String, addDateHeader: Boolean, plusButtonInput: Boolean, numAutoFilledDates: Int ) {
-
+    // final handling of fabPlusOk as a separate fun to allow option to autofill skipped dates
+    fun fabPlusOkFinale(
+        finalStr: String,
+        newText: String,
+        addDateHeader: Boolean,
+        plusButtonInput: Boolean,
+        numAutoFilledDates: Int,
+        insertStartPos: Int = 0)
+    {
         // memorize the inserted lines in tagSection
         ds.tagSection.clear()
         var numOfNewlines = newText.split("\n").size
@@ -3736,12 +4250,12 @@ class MainActivity : AppCompatActivity(),
                         corrector = 1
                     }
                 }
-                // each auto filled date is a header
+                // each autofilled date is a header
                 numOfNewlines += numAutoFilledDates
             }
             // now add the indexes to highlight
             for (i in 0 until numOfNewlines) {
-                ds.tagSection.add(lvMain.selectedRow + i + corrector)
+                ds.tagSection.add(lvMain.selectedRow + i + corrector + insertStartPos)
             }
         }
 
@@ -4743,7 +5257,7 @@ class MainActivity : AppCompatActivity(),
             shareDialog.show()
             shareDialog.setCanceledOnTouchOutside(false)
         }
-        // change data base folder
+        // change database folder
         if (id == R.id.action_ChangeFolder) {
             folderChangeDialog(item)
         }
@@ -5577,9 +6091,7 @@ class MainActivity : AppCompatActivity(),
     // extend class EditText to receive 'paste from menu'
     //
     @SuppressLint("AppCompatCustomView")
-    inner class GrzEditText(context: Context) : EditText(
-        context
-    ) {
+    inner class GrzEditText(context: Context) : EditText(context) {
         override fun onTextContextMenuItem(id: Int): Boolean {
             val consumed = super.onTextContextMenuItem(id)
             when (id) {
@@ -8527,7 +9039,7 @@ class MainActivity : AppCompatActivity(),
                                 showAppGallery(context, contextMainActivity as Activity, true, stringOrphans, false)
                             },
                             { // runner delete orphans
-                                deleteOrphanes(context, attachmentsList, fileUsed)
+                                deleteOrphans(context, attachmentsList, fileUsed)
                             }
                         )
                     } catch(e: Exception) {
@@ -8675,7 +9187,7 @@ class MainActivity : AppCompatActivity(),
             }
         }
         // delete unused files from app folder /Images
-        fun deleteOrphanes(context: Context, fileList: Array<File>, fileUsed: Array<Boolean?>) {
+        fun deleteOrphans(context: Context, fileList: Array<File>, fileUsed: Array<Boolean?>) {
             var filesDeleted = 0
             for (j in fileUsed.indices) {
                 if (!fileUsed[j]!!) {
@@ -10034,6 +10546,7 @@ class FabPlus {
     var pickAttachment = false               // flag indicates, fabPlus was called from onActivityResult
     var imageCapture = false                 // flag indicates, an image was captured
     var mainDialog: AlertDialog? = null      // main edit dlg after click on button +
+    var mainDialogInitHeight = 100000        // main edit dlg initial height with one line text
 }
 
 // compile regex patterns once in advance to detect: "blah[uriLink]blah", "YYYY-MM-DD", "YYYY-MM-DD Mon"

@@ -33,7 +33,7 @@
 
     <!-- Common Strings-->
     <string name="githubGrzLog">https://github.com/grzwolf/GrzLog/tags</string>
-    <string name="error">error</string>
+    <string name="error">Error</string>
     <string name="ok">OK</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
@@ -399,6 +399,15 @@
     <string name="no_permission_released">Permission release probably not needed.</string>
     <string name="calendar_event">Set Calendar event</string>
     <string name="grzlog_reminder">Set GrzLog reminder</string>
+    <string name="duplicate_item">Item is already existing.</string>
+    <string name="wrong_date">Perhaps wrong input?</string>
+    <string name="many_skipped_dates">Day count to insert is huge </string>
+    <string name="continue_with">"Continue with "</string>
+    <string name="days">" inserted days?"</string>
+    <string name="continue_inserting_skipped_days">Continue inserting skipped days</string>
+    <string name="no_inserting_skipped_days">Do not insert skipped days</string>
+    <string name="input_sequence">Wrong input sequence</string>
+    <string name="not_allowed">Date must be on top.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

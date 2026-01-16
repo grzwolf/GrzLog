@@ -27,7 +27,8 @@ class HelpActivity : AppCompatActivity() {
         "~~~~~~~~~~~~~~~~~~~\n" +
         "a) tap red + button -> 'Write to GrzLog'\n" +
         "   Edit: type or paste text\n" +
-        "         multi line is ok\n" +
+        "         multi line input is ok\n" +
+        "         topmost item is allowed to be a valid date in near future\n" +
         "         weblinks are highlighted\n" +
         "   Attachment: 'Select attachment' dialog\n" +
         "         image link to phone gallery (max. allowed is 512)\n" +
@@ -54,7 +55,7 @@ class HelpActivity : AppCompatActivity() {
         "       Insert line above\n" +
         "       Insert line below\n" +
         "       Select items dialog\n" +
-        "       Line as GrzLog reminder\n" +
+        "       Line as GrzLog reminder (could be added to a Calendar too)\n" +
         "       Toggle line as header\n" +
         "       Copy line\n" +
         "       Cut to clipboard\n" +

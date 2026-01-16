@@ -398,6 +398,15 @@
     <string name="no_permission_released">Freigabe von Berechtigungen nicht nötig.</string>
     <string name="calendar_event">Kalendereintrag setzen</string>
     <string name="grzlog_reminder">GrzLog Erinnerung</string>
+    <string name="duplicate_item">Eintrag ist bereits vorhanden.</string>
+    <string name="wrong_date">Falsche Eingabe?</string>
+    <string name="many_skipped_dates">Zahl einzufügener Tage ist groß</string>
+    <string name="continue_with">"Fortsetzen mit "</string>
+    <string name="days">" einzufügenden Tagen?"</string>
+    <string name="continue_inserting_skipped_days">Fortsetzen Tage einfügen</string>
+    <string name="no_inserting_skipped_days">Keine Tage einfügen</string>
+    <string name="input_sequence">Eingabefolge falsch</string>
+    <string name="not_allowed">Datum muß zu oberst sein.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
