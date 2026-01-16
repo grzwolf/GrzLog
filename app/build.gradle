@@ -30,7 +30,7 @@ android {
         def buildTime = new Date()
         versionNameSuffix = "${buildTime.format(' yyyy/MM/dd__HH:mm:ss')}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        archivesBaseName = "$applicationId v$versionName"
+        project.base.archivesName = "$applicationId v$versionName"
     }
 
     buildTypes {
