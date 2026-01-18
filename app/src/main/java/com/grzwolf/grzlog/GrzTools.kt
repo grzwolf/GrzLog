@@ -62,12 +62,14 @@ import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
 import com.grzwolf.grzlog.SettingsActivity.Companion.appContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
+import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.io.OutputStream
 import java.io.UnsupportedEncodingException
 import java.net.HttpURLConnection
@@ -2243,4 +2245,43 @@ fun isEmulator(): Boolean {
             || Build.PRODUCT.contains("vbox86p")
             || Build.PRODUCT.contains("emulator")
             || Build.PRODUCT.contains("simulator")
+}
+
+// kudos: https://umang91.medium.com/never-write-shell-scripts-again-use-kotlin-cb81b53ca1a1
+fun executeShellCommandWithStringOutput(command: String): String {
+    val process = ProcessBuilder("/bin/bash", "-c", command).start()
+    val reader = BufferedReader(InputStreamReader(process.inputStream))
+    var line: String? = ""
+    val builder = StringBuilder()
+    while (reader.readLine().also { line = it } != null) {
+        builder.append(line).append(System.getProperty("line.separator"))
+    }
+    // remove the extra new line added in the end while reading from the stream
+    return builder.toString().trim()
+}
+
+// kudos: https://stackoverflow.com/questions/28158175/how-to-read-android-properties-with-java
+fun getRoBuildFlavor(): String {
+    var process: Process? = null
+    try {
+        process = ProcessBuilder().command("/system/bin/getprop")
+            .redirectErrorStream(true).start()
+    } catch (e: IOException) {
+        return ""
+    }
+    val `in` = process!!.getInputStream()
+    val bufferedReader = BufferedReader(InputStreamReader(process.getInputStream()))
+    val log = java.lang.StringBuilder()
+    var line: String?
+    try {
+        while ((bufferedReader.readLine().also { line = it }) != null) {
+            if (line!!.contains("[ro.build.flavor]")) {
+                log.append(line + "\n")
+            }
+        }
+    } catch (e: IOException) {
+        return ""
+    }
+    process.destroy()
+    return log.toString()
 }

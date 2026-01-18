@@ -113,6 +113,9 @@ class MainActivity : AppCompatActivity(),
     ActivityCompat.OnRequestPermissionsResultCallback,
     LifecycleObserver {
 
+    // fabPlus dialog height is tricky, if running LineageOS
+    val isRoBuildFlavorLineage = getRoBuildFlavor().contains("lineage", true)
+
     // app is running in emulator
     var runInEmulator = isEmulator()
 
@@ -4172,12 +4175,10 @@ class MainActivity : AppCompatActivity(),
         (fabPlus.mainDialog)?.window?.decorView?.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
             // make it a one time measurement: fabPlus.mainDialogInitHeight init is 100000
             if (v.height < fabPlus.mainDialogInitHeight ) {
-                // TBD: no clue, why this crap is needed
-                if (runInEmulator) {
-                    // emulators 'Pixel 4' and 'Pixel 9a' behave as expected
-                    fabPlus.mainDialogInitHeight = v.height
-                } else {
-                    // real Pixel 9a needs this, otherwise dlg is too large in height
+                // 3x emu, Honor have expected behavior: v.height
+                fabPlus.mainDialogInitHeight = v.height
+                // real Pixel 9a on LineageOS needs: v.height - 200
+                if (isRoBuildFlavorLineage) {
                     fabPlus.mainDialogInitHeight = v.height - 200
                 }
             }
