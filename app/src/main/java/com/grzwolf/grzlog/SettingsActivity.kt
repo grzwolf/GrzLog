@@ -929,9 +929,9 @@ public class SettingsActivity :
                 true
             }
 
-            // action after show linked images in a LinkedImages activity
-            val showLinkedImages = findPreference("ShowLinkedImages") as Preference?
-            showLinkedImages!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+            // action after show linked images in a LinkedMedia activity
+            val showLinkedMedia = findPreference("ShowLinkedMedia") as Preference?
+            showLinkedMedia!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 try {
                     // release an existing moreDialog, otherwise it would popup after search dlg close
                     if (MainActivity.folderMoreDialog != null) {
@@ -939,11 +939,11 @@ public class SettingsActivity :
                         MainActivity.folderMoreDialog = null
                     }
                     MainActivity.returningFromAppGallery = false
-                    // generate a controlling intent to return to Settings --> LinkedImages, bc. from here the start was ignited
+                    // generate a controlling intent to return to Settings --> LinkedMedia, bc. from here the start was ignited
                     MainActivity.intentSettings = Intent(MainActivity.contextMainActivity, SettingsActivity::class.java)
-                    // start LinkedImages activity
-                    val linkedImagesIntent = Intent(context, LinkedImages::class.java)
-                    requireContext().startActivity(linkedImagesIntent)
+                    // start LinkedMedia activity
+                    val LinkedMediaIntent = Intent(context, LinkedMedia::class.java)
+                    requireContext().startActivity(LinkedMediaIntent)
                 } catch(e: Exception) {
                     okBox(requireContext(), "Ups", e.message.toString())
                 }

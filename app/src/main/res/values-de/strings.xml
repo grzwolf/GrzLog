@@ -67,7 +67,7 @@
     <string name="Options">Was soll mit der aktuellen Zeile geschehen?</string>
     <string name="ShowReminder">Erinnerung Optionen:</string>
     <string name="created_with">erzeugt von \"</string>
-    <string name="imageFailure">[Bidfehler]</string>
+    <string name="mediaFailure">[Medium Fehler]</string>
 
     <!-- Settings Strings-->
     <string name="lastBackup">\nletztes Sicherung: \"</string>
@@ -151,9 +151,9 @@
     <string name="InsertNotAllowed">Zeile einfügen ist hier nicht erlaubt.</string>
     <string name="noCameraOp">Kamera Fehler</string>
     <string name="Select">Auswahl Dateianhang</string>
-    <string name="ImageLink">Bild: Link zur Phone Galerie</string>
-    <string name="ImageCopy">Bild: Kopie aus Phone Galerie</string>
-    <string name="ImageApp">Link zur GrzLog Galerie</string>
+    <string name="MediaLink">Link zu Phone Galerie</string>
+    <string name="MediaCopy">Kopie aus Phone Galerie</string>
+    <string name="GrzLogLink">Link zu GrzLog Galerie</string>
     <string name="Camera">Kamera</string>
     <string name="exportFolder">Export Ordner</string>
     <string name="notYetImplemented">Noch nicht verfügbar.</string>
@@ -326,8 +326,8 @@
     <string name="grzlog_zip_gdrive_upload_is_ongoing">GrzLog.zip: GDrive Upload läuft</string>
     <string name="upload_error">Backup Fehler</string>
     <string name="scale_image">Bild skalieren</string>
-    <string name="match_to_phone_s_screen">Anpassen an Display</string>
-    <string name="reduces_data_storage_size">Reduziert Speicherbedarf</string>
+    <string name="match_to_phone_s_screen">Bilder skalieren an Display</string>
+    <string name="reduces_data_storage_size">Skalierung reduziert Speicherbedarf</string>
     <string name="GrzLogGallery">GrzLog Galerie</string>
     <string name="rescale">Skalieren der Bilder auf Display</string>
     <string name="image_scaling_done">Bilder Skalieren erfolgreich</string>
@@ -388,13 +388,14 @@
     <string name="bak_smaller_slower">kleinere Datei, aber langsamer</string>
     <string name="type_in_the_pdf_title">PDF Titel</string>
     <string name="photo_picker_no_media_selected">Foto Picker: keine Auswahl getroffen</string>
-    <string name="image_link_maximum_reached"><![CDATA[Maximum von 512 verlinkten Bildern ist erreicht. Bevor weitere Bilder verlinkt werden können, müssen Bilder Links freigegeben werden: Settings --> Bilder Links freigeben]]></string>
-    <string name="linked_images">Zeige verlinkte Bilder</string>
-    <string name="title_linked_images">Verlinkte Bilder</string>
-    <string name="scanLinkedImages">Scannw verlinkte Bilder</string>
-    <string name="removeUriPermission">Die Berechtigung zum Zugriff auf verlinkte Bilder wird entzogen.</string>
+    <string name="image_link_maximum_reached"><![CDATA[Maximum von 512 verlinkten Bildern/Videos ist erreicht. Bevor weitere Medien verlinkt werden können, müssen Links freigegeben werden: Settings --> Medien Links freigeben]]></string>
+    <string name="linked_images">Zeige verlinkte Bilder/Videos</string>
+    <string name="title_linked_images">Verlinkte Bilder/Videos</string>
+    <string name="scanLinkedMedia">Scannw verlinkte Bilder</string>
+    <string name="removeUriPermission">Lösche Links KEIN Änderung der Daten</string>
+    <string name="delete_links">Lösche Links UND Änderung der Daten</string>
     <string name="copyToGrzLogGallery">Werden in die GrzLog Galerie kopiert. Die betroffenen Links zu Bilder werden entsprechend angepaßt.</string>
-    <string name="copyLinkedImages">Kopiere verlinkte Bilder zur GrzLog Galerie</string>
+    <string name="copyLinkedMedia">Kopiere verlinkte Bilder zur GrzLog Galerie</string>
     <string name="no_permission_released">Freigabe von Berechtigungen nicht nötig.</string>
     <string name="calendar_event">Kalendereintrag setzen</string>
     <string name="grzlog_reminder">GrzLog Erinnerung</string>
@@ -407,6 +408,12 @@
     <string name="no_inserting_skipped_days">Keine Tage einfügen</string>
     <string name="input_sequence">Eingabefolge falsch</string>
     <string name="not_allowed">Datum muß zu oberst sein.</string>
+    <string name="no_media_info">Medien Fehler</string>
+    <string name="non_of_the_selected_links_could_be_copied">Keiner der ausgewählten Links konnte kopiert werden.</string>
+    <string name="remove_links">Links können auf zwei Wegen entfernt werden</string>
+    <string name="non_of_the_selected_links_could_be_deleted">Keiner der ausgewählten Links konnte entfernt werden.</string>
+    <string name="remove_selected_links_folder_update"><![CDATA[Entfernen der gewählten Links und Update der Ordner Daten. Entfernte Links hinterlassen ein <X>.]]></string>
+    <string name="remove_selected_links_only">Zugriffsberechtigungen für gewählte Links werden entfernt. Ordner Daten werden nicht geändert.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

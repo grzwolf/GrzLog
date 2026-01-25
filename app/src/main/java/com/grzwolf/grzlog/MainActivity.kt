@@ -142,14 +142,12 @@ class MainActivity : AppCompatActivity(),
     // different attachments
     internal object PICK {
         const val DUMMY   = 0
-        const val LINK    = 1 // unused due to restrictions in onActivityResult
-        const val IMAGE   = 2
-        const val CAPTURE = 3
-        const val VIDEO   = 4
-        const val AUDIO   = 5
-        const val PDF     = 6
-        const val TXT     = 7
-        const val ZIP     = 8
+        const val MEDIA   = 1
+        const val CAPTURE = 2
+        const val AUDIO   = 3
+        const val PDF     = 4
+        const val TXT     = 5
+        const val ZIP     = 6
     }
 
     // time when onPause is called
@@ -702,14 +700,15 @@ class MainActivity : AppCompatActivity(),
             } else {
                 // return from show app gallery with attachment picked - back to fabPlus input or file picker dialog
                 if (returnAttachmentFromAppGallery.length > 0) {
-                    var file = File(returnAttachmentFromAppGallery)
-                    var uriOri = Uri.fromFile(file)
+                    val file = File(returnAttachmentFromAppGallery)
+                    val uriOri = Uri.fromFile(file)
                     fabPlus.pickAttachment = true
                     fabPlus.attachmentUri = returnAttachmentFromAppGallery
                     fabPlus.attachmentUriUri = uriOri
                     fabPlus.attachmentImageScale = false // nothing to scale
                     fabPlus.attachmentImageLink = false  // no image link to phone gallery
-                    var mime = getFileExtension(returnAttachmentFromAppGallery)
+                    fabPlus.attachmentVideoLink = false  // no video link to phone gallery
+                    val mime = getFileExtension(returnAttachmentFromAppGallery)
                     returnAttachmentFromAppGallery = ""
                     if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
                         fabPlus.attachmentName = getString(R.string.image)
@@ -1019,7 +1018,8 @@ class MainActivity : AppCompatActivity(),
                         fabPlus.attachmentUri = imageUriString
                         fabPlus.attachmentUriUri = uriOri
                         fabPlus.attachmentImageScale = true // since it is a new image --> rescale it
-                        fabPlus.attachmentImageLink = false // definitely no image link here
+                        fabPlus.attachmentImageLink = false // definitely no media link here
+                        fabPlus.attachmentVideoLink = false //           -  "  -
                         fabPlus.attachmentName = getString(R.string.image)
                         fabPlus.inputAlertTextSelStart = 0  // insert position for attachment link
                         lvMain.editLongPress = false
@@ -1151,6 +1151,7 @@ class MainActivity : AppCompatActivity(),
                     fabPlus.attachmentUriUri = null
                     fabPlus.attachmentImageScale = false
                     fabPlus.attachmentImageLink = false
+                    fabPlus.attachmentVideoLink = false
                     fabPlus.attachmentName = "[gps]"
                     fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
                 } else {
@@ -1205,7 +1206,7 @@ class MainActivity : AppCompatActivity(),
 
     // ListView click handler implementation shows the item's linked content
     fun lvMainOnItemClick(adapterView: AdapterView<*>?, itemView: View?, itemPosition: Int, itemId: Long) {
-        // no view is a no go
+        // no view is a no-go
         if (itemView == null) {
             return
         }
@@ -1231,27 +1232,27 @@ class MainActivity : AppCompatActivity(),
             }
         }
         // text line count: text could be wrapped w/o a new line, still it has multiple lines
-        var lineCount = tv.getLineCount()
+        val lineCount = tv.getLineCount()
         // full item coordinates containing the wrapped lines
-        var vTop = itemView.top
-        var vHeight = itemView.height
-        var vHeightPerLine = vHeight / lineCount
+        val vTop = itemView.top
+        val vHeight = itemView.height
+        val vHeightPerLine = vHeight / lineCount
         // user touch position
-        var touchX = lvMain.touchEventPoint.x.toFloat() - tv.left // x corrected, bc. header is X centered
-        var touchY = lvMain.touchEventPoint.y.toFloat()
+        val touchX = lvMain.touchEventPoint.x.toFloat() - tv.left // x corrected, bc. header is X centered
+        val touchY = lvMain.touchEventPoint.y.toFloat()
         // loop wrapped lines
         var text = ""
         var wrappedLineIndex = -1
-        var wrappedLines : MutableList<String> = ArrayList()
+        val wrappedLines : MutableList<String> = ArrayList()
         for (i in 0 until lineCount) {
             // character indexes of a line in the text are used to extract sequentially one wrapped line
-            var lineBeg = tv.getLayout().getLineStart(i)
-            var lineEnd = tv.getLayout().getLineEnd(i)
-            var line = tv.getText().toString().substring(lineBeg, lineEnd)
+            val lineBeg = tv.getLayout().getLineStart(i)
+            val lineEnd = tv.getLayout().getLineEnd(i)
+            val line = tv.getText().toString().substring(lineBeg, lineEnd)
             // memorize wrapped lines: needed later, to complete a partial www-link or attachment
             wrappedLines.add(line)
             // identify the extracted line matching to the Y touch event
-            var top = vTop + vHeightPerLine * i
+            val top = vTop + vHeightPerLine * i
             if ((top <= touchY) && (top + vHeightPerLine >= touchY)) {
                 text = line
                 wrappedLineIndex = i
@@ -1263,16 +1264,16 @@ class MainActivity : AppCompatActivity(),
         var ofs = text.length
         for (i in 1 until text.length) {
             // extend the measured text until the touchX coordinate is hit
-            var ofsPxl = tv.paint.measureText(text, 0, i) + iconWidth
+            val ofsPxl = tv.paint.measureText(text, 0, i) + iconWidth
             if (ofsPxl >= touchX) {
                 ofs = i
                 break;
             }
         }
         // obtain the word around the character offset position from text
-        var word = getWordAtOffset(text, ofs)
-        // word could be a fragmented attachment, get the real attachment name with both enclosing brackets
-        var attachment = getAttachmentFromText(lvMain.arrayList[itemPosition].title.toString(), word)
+        val word = getWordAtOffset(text, ofs)
+        // get the real attachment name with both enclosing brackets
+        val attachment = getAttachmentFromText(lvMain.arrayList[itemPosition].title.toString())
 
         // so far, we only know what word/link was clicked on, it's time to show the content
         var title = ""
@@ -1288,9 +1289,10 @@ class MainActivity : AppCompatActivity(),
             }
             // check, what was clicked on by user, if it is an attachment
             val matchLink = attachment.let { PATTERN.UriLink.matcher(it) }
+            var matchLinkFind = matchLink.find()
 
             //
-            // 1. handle geo location coordinates
+            // 1. handle geolocation coordinates
             //
             if (matchFullResult.contains("::::geo:") ) {
                 // two choices: navigate to, show + cancel
@@ -1326,20 +1328,20 @@ class MainActivity : AppCompatActivity(),
             }
 
             //
-            // 2. handle a clicked attachment in an item's text
+            // 2. handle attachment in an item's text
             //
-            if (matchFullResult.isNotEmpty() && (matchLink.find() == true)) {
-                // if there is a double match --> attachment was clicked, so show attachment
+            if (matchFullResult.isNotEmpty() && matchLinkFind) {
+                // double match --> show attachment
                 val key = matchFullResult.substring(1, matchFullResult.length - 1)
                 val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                if (lnkParts != null && lnkParts.size == 2) {
-                    var linkNoBrackets = attachment.substring(1, attachment.length-1)
+                if (lnkParts != null && lnkParts.size >= 2) {
+                    val linkNoBrackets = attachment.substring(1, attachment.length-1)
                     if (linkNoBrackets.endsWith(lnkParts[0])) {
                         title = lnkParts[0]
                         fileName = lnkParts[1]
                         if (fileName.startsWith("folder/") == true) {
                             // fileName starting with folder/ is an attachment link to a GrzLog folder
-                            var folderName = fileName.substring(fileName.indexOf("folder/") + "folder/".length)
+                            val folderName = fileName.substring(fileName.indexOf("folder/") + "folder/".length)
                             decisionBox(
                                 this,
                                 DECISION.YESNO,
@@ -1365,7 +1367,17 @@ class MainActivity : AppCompatActivity(),
                                 centeredToast(this, getString(R.string.mayNotWork), 3000)
                             }
                             // all attachments other than folder
-                            showAppLinkOrAttachment(this, title, fileName)
+                            var type = GalleryInfo.MediaType.IS_UNKNOWN
+                            if (lnkParts.size > 2) {
+                                // specific case for linked images & videos
+                                if (lnkParts[2].equals("image")) {
+                                    type = GalleryInfo.MediaType.IS_IMAGE
+                                }
+                                if (lnkParts[2].equals("video")) {
+                                    type = GalleryInfo.MediaType.IS_VIDEO
+                                }
+                            }
+                            showAppLinkOrAttachment(this, title, fileName, type)
                         }
                     }
                 }
@@ -1436,7 +1448,7 @@ class MainActivity : AppCompatActivity(),
                     if (matchFullResult.isNotEmpty()) {
                         val key = matchFullResult.substring(1, matchFullResult.length - 1)
                         val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                        if (lnkParts != null && lnkParts.size == 2) {
+                        if (lnkParts != null && lnkParts.size >= 2) {
                             title = lnkParts[0]
                             fileName = lnkParts[1]
                             if (!verifyExifPermission()) {
@@ -1485,33 +1497,18 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    // complete a fragmented attachment link, so that it contains the pair of enclosing brackets
-    fun getAttachmentFromText(fullText: String, attachmentFragment: String) : String {
-        // plausible to search
-        if (fullText.indexOf("[") == -1 && fullText.indexOf("]") == -1) {
+    // get attachment link including enclosing brackets
+    fun getAttachmentFromText(fullText: String) : String {
+        // all plausible
+        val lhsBr = fullText.indexOf("[")
+        var rhsBr = fullText.indexOf("]")
+        if (lhsBr == -1 && rhsBr == -1 || lhsBr >= rhsBr) {
             return ""
         }
+        // one position further
+        rhsBr++
         // start
-        var tmp = attachmentFragment.trim()
-        // expand to left
-        var currPos = fullText.indexOf(tmp)
-        while (tmp.indexOf("[") == -1 && --currPos >= 0) {
-            if (fullText[currPos] == ']') {
-                return ""
-            }
-            tmp = fullText[currPos] + tmp
-        }
-        if (tmp.indexOf("[") == -1) {
-            return ""
-        }
-        // expand to right
-        currPos = fullText.indexOf(tmp) + tmp.length-1
-        while (tmp.lastIndexOf("]") == -1 && ++currPos < fullText.length) {
-            if (fullText[currPos] == '[') {
-                return ""
-            }
-            tmp = tmp + fullText[currPos]
-        }
+        var tmp = fullText.substring(lhsBr, rhsBr)
         // final check
         if (!PATTERN.UriLink.matcher(tmp).find()) {
             return ""
@@ -2206,7 +2203,7 @@ class MainActivity : AppCompatActivity(),
             val lnkParts = key.split("::::".toRegex()).toTypedArray()
             var keyString = ""
             var uriString = ""
-            if (lnkParts != null && lnkParts.size == 2) {
+            if (lnkParts != null && lnkParts.size >= 2) {
                 keyString = lnkParts[0]
                 uriString = lnkParts[1]
             }
@@ -3378,8 +3375,9 @@ class MainActivity : AppCompatActivity(),
                 )
             }
 
+            // perhaps a media link was changed
+            var linkedMediaWasChanged = false
             // search for an attachment in the input text
-            var linkedImageWasChanged = false
             val m = PATTERN.UriLink.matcher(newText)
             if (m.find()) {
                 val result = m.group()
@@ -3387,10 +3385,30 @@ class MainActivity : AppCompatActivity(),
                 // any provided attachment file name indicates there is work to do
                 if (fabPlus.attachmentUri!!.length != 0) {
                     // 1st) check for attachment of type "link to phone gallery"
-                    if (fabPlus.attachmentImageLink) {
-                        val appUriFileString = fabPlus.attachmentUriUri.toString()
+                    if (lvMain.editLongPress && itemPosition != -1) {
+                        // long press edit item could alter an image or video link
+                        val fullItemInfo = lvMain.arrayList[itemPosition].fullTitle
+                        if (fullItemInfo!!.endsWith("::::video]")) {
+                            fabPlus.attachmentVideoLink = true
+                        }
+                        if (fullItemInfo!!.endsWith("::::image]")) {
+                            fabPlus.attachmentImageLink = true
+                        }
+                    }
+                    if (fabPlus.attachmentImageLink || fabPlus.attachmentVideoLink) {
+                        var appUriFileString = fabPlus.attachmentUriUri.toString()
+                        if (lvMain.editLongPress && fabPlus.attachmentUriUri == null) {
+                            // long press edit item may not provide a genuine uri
+                            appUriFileString = fabPlus.attachmentUri!!
+                        }
+                        if (fabPlus.attachmentImageLink) {
+                            appUriFileString += "::::image"
+                        }
+                        if (fabPlus.attachmentVideoLink) {
+                            appUriFileString += "::::video"
+                        }
                         newText = newText.replace(result, "[$key::::$appUriFileString]")
-                        linkedImageWasChanged = true // set flag, because link could be renewed - which doesn't change any text
+                        linkedMediaWasChanged = true // set flag, because link could be renewed - which doesn't change any text
                     } else {
                         // 2nd) distinguish between www links and real attachments
                         if ((fabPlus.attachmentUri!!.startsWith("/") == false)
@@ -3427,7 +3445,7 @@ class MainActivity : AppCompatActivity(),
                     var innerKey = ""
                     var innerUri = ""
                     val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                    if (lnkParts != null && lnkParts.size == 2) {
+                    if (lnkParts != null && lnkParts.size >= 2) {
                         innerKey = lnkParts[0]
                         innerUri = lnkParts[1]
                         fabPlus.attachmentUri = innerUri
@@ -3468,7 +3486,7 @@ class MainActivity : AppCompatActivity(),
                 //
                 plusButtonInput = false
                 // ... but, an image link could be renewed, after permission was released --> linkedImageWasChanged
-                if (!linkedImageWasChanged) {
+                if (!linkedMediaWasChanged) {
                     // oriText text is showOrder dependent
                     if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
                         val botText = lvMain.toggleTextShowOrder(null, oriText).str
@@ -6131,7 +6149,7 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    // register a photo picker activity launcher
+    // register a media (image or video) picker activity launcher
     val pickMedia = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         // callback invoked after media is selected or picker activity closed
         if (uri != null) {
@@ -6148,14 +6166,26 @@ class MainActivity : AppCompatActivity(),
             // get the real file name of a "MediaStore Picker" Uri, which only provides a confusing MediaStore ID
             var uriString = uri.toString()
             var idMediaStore = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
-            val imageInfo = GalleryInfo.getGalleryImageInfo(this, idMediaStore)
+            val imageInfo = GalleryInfo.getGalleryMediaInfo(this, idMediaStore)
             // handle the provided image link with fabPlus button
             fabPlus.pickAttachment = true
-            fabPlus.attachmentUri = imageInfo?.name // name as to be found via Gallery, Photos, TC
-            fabPlus.attachmentUriUri = uri          // MediaStore Picker Uri
-            fabPlus.attachmentName = getString(R.string.image)
-            fabPlus.attachmentImageScale = false    // nothing to scale
-            fabPlus.attachmentImageLink = true      // image link to phone gallery
+            // name as to be found via Gallery, Photos, TC
+            fabPlus.attachmentUri = imageInfo?.name
+            // 'MediaStore Picker Uri' goes to attachmentUriUri
+            fabPlus.attachmentUriUri = uri 
+            // distinguish two media types: image and video
+            fabPlus.attachmentImageLink = false
+            fabPlus.attachmentVideoLink = false
+            if (imageInfo?.type == GalleryInfo.MediaType.IS_IMAGE) {
+                fabPlus.attachmentImageLink = true
+                fabPlus.attachmentName = getString(R.string.image)
+            }
+            if (imageInfo?.type == GalleryInfo.MediaType.IS_VIDEO) {
+                fabPlus.attachmentVideoLink = true
+                fabPlus.attachmentName = getString(R.string.video)
+            }
+            // nothing to scale
+            fabPlus.attachmentImageScale = false
             fabPlusOnClick(
                 ReturnToDialogData.adapterView,
                 ReturnToDialogData.itemView,
@@ -6198,23 +6228,19 @@ class MainActivity : AppCompatActivity(),
     {
         // suppress in app reminder at return from picker
         MainActivity.showAppReminders = false
-        // check image link count limit
-        var currentImageLinkCount = this.contentResolver.getPersistedUriPermissions().size
-        var childLinkImagesIsEnabled = true
+        // check media link count limit
+        val currentMediaLinkCount = this.contentResolver.getPersistedUriPermissions().size
+        var childLinkMediaIsEnabled = true
         // build a dialog
         var pickerBuilder: AlertDialog.Builder?
         pickerBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         pickerBuilder.setTitle(R.string.Select)
         // attachment picker dialog OPTIONS
         val options = arrayOf<CharSequence>(
-            getString(R.string.ImageLink)
-                    + "  "
-                    + currentImageLinkCount.toString()
-                    + "(512)",
-            getString(R.string.ImageCopy),
-            getString(R.string.ImageApp),
+            getString(R.string.MediaLink),
+            getString(R.string.MediaCopy),
+            getString(R.string.GrzLogLink),
             getString(R.string.Camera),
-            "Video",
             "Audio",
             "PDF <- /sdcard/Download",
             "TXT <- /sdcard/Download",
@@ -6230,11 +6256,11 @@ class MainActivity : AppCompatActivity(),
             // common intent
             var intent: Intent?
             when (item) {
-                0 -> { // IMAGE link to Android gallery
-                    if (childLinkImagesIsEnabled) {
+                0 -> { // GrzLog links MEDIA to Android gallery
+                    if (childLinkMediaIsEnabled) {
                         if (verifyMediaPermission()) {
-                            // launch the "Android Photo Picker" and let the user choose one image
-                            pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            // launch the "Android Photo Picker" and let the user choose one image or video
+                            pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
                             //
                             // Note:
                             // PICK.LINK & intent & onActivityResult(..) do not provide a reusable
@@ -6256,25 +6282,27 @@ class MainActivity : AppCompatActivity(),
                         )
                     }
                 }
-                1 -> { // IMAGE copy from Android gallery
+                1 -> { // copy MEDIA from Android gallery to GrzLog
                     if (verifyMediaPermission()) {
                         // resolves permission fail on documents, but generates issue with GooglePhoto
                         val getIntent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                        getIntent.type = "image/*"
+                        getIntent.type = "*/*"
+                        getIntent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
                         getIntent.addCategory(Intent.CATEGORY_OPENABLE)
                         // allow picking additional pictures from documents
                         val pickIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                        pickIntent.type = "image/*"
+                        pickIntent.type = "*/*"
+                        pickIntent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
                         val chooserIntent = Intent.createChooser(getIntent, getString(R.string.pickImage))
                         chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(pickIntent))
-                        startActivityForResult(chooserIntent, PICK.IMAGE)
+                        startActivityForResult(chooserIntent, PICK.MEDIA)
                     } else {
                         dialog.dismiss()
                         startFilePickerDialog()
                         return@OnClickListener
                     }
                 }
-                2 -> { // IMAGE re use from GrzLog gallery
+                2 -> { // link MEDIA to GrzLog gallery
                     // start app gallery activity, if scan process is finished - under normal conditions, it's done before someone comes here
                     if (appGalleryScanning) {
                         centeredToast(this, getString(R.string.waitForFinish), Toast.LENGTH_SHORT)
@@ -6321,25 +6349,7 @@ class MainActivity : AppCompatActivity(),
                         return@OnClickListener
                     }
                 }
-                4 -> { // VIDEO
-                    if (verifyMediaPermission()) {
-                        // resolves permission fail on documents, but generates issue with GooglePhoto
-                        val getIntent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                        getIntent.type = "video/*"
-                        getIntent.addCategory(Intent.CATEGORY_OPENABLE)
-                        // allow picking additional pictures from documents
-                        val pickIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                        pickIntent.type = "video/*"
-                        val chooserIntent = Intent.createChooser(getIntent, getString(R.string.pickImage))
-                        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(pickIntent))
-                        startActivityForResult(chooserIntent, PICK.VIDEO)
-                    } else {
-                        dialog.dismiss()
-                        startFilePickerDialog()
-                        return@OnClickListener
-                    }
-                }
-                5 -> { // AUDIO
+                4 -> { // AUDIO
                     if (verifyAudioPermission()) {
                         intent = Intent(Intent.ACTION_GET_CONTENT)
                         intent.type = "audio/*"
@@ -6351,19 +6361,19 @@ class MainActivity : AppCompatActivity(),
                         return@OnClickListener
                     }
                 }
-                6 -> { // PDF
+                5 -> { // PDF
                     intent = Intent(Intent.ACTION_GET_CONTENT)
                     intent.type = "application/pdf"
                     intent.addCategory(Intent.CATEGORY_OPENABLE)
                     startActivityForResult(intent, PICK.PDF)
                 }
-                7 -> { // TXT
+                6 -> { // TXT
                     intent = Intent(Intent.ACTION_GET_CONTENT)
                     intent.type = "text/plain"
                     intent.addCategory(Intent.CATEGORY_OPENABLE)
                     startActivityForResult(intent, PICK.TXT)
                 }
-                8 -> { // WWW link
+                7 -> { // WWW link
                     var wwwDialog: AlertDialog? = null
                     var tv = GrzEditText(this)
                     tv.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_UNIFORM)
@@ -6407,7 +6417,7 @@ class MainActivity : AppCompatActivity(),
                     tv.requestFocus()
                     showKeyboard(tv, 0, 0, 250)
                 }
-                9 -> { // link to a GrzLog folder
+                8 -> { // link to a GrzLog folder
                     var getFolderBuilder: AlertDialog.Builder? = null
                     getFolderBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
                     getFolderBuilder.setTitle(R.string.selectFolder)
@@ -6464,7 +6474,7 @@ class MainActivity : AppCompatActivity(),
                     listView?.dividerHeight = 2
                     getFolderDialog?.show()
                 }
-                10 -> { // geo location
+                9 -> { // geo location
                     val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
                     locationPermissionDenied = sharedPref.getInt("locationPermissionDenied", 0)
                     var execOk : Boolean = getLastKnownLocation(attachmentAllowed, linkText, adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
@@ -6487,7 +6497,7 @@ class MainActivity : AppCompatActivity(),
                         }
                     }
                 }
-                11 -> { // edit existing attachment
+                10 -> { // edit existing attachment
                     // edit dialog
                     var editLinkDialog: AlertDialog? = null
                     // text editor
@@ -6518,7 +6528,7 @@ class MainActivity : AppCompatActivity(),
                                 val result = m.group()
                                 val key = result.substring(1, result.length - 1)
                                 val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                                if (lnkParts != null && lnkParts.size == 2) {
+                                if (lnkParts != null && lnkParts.size >= 2) {
                                     // prepare replace link internals in full string
                                     var oldReplace = ""
                                     var oldFullText = fabPlus.inputAlertText
@@ -6529,10 +6539,62 @@ class MainActivity : AppCompatActivity(),
                                     oldFullText = oldFullText!!.replace(oldReplace, "[" + lnkParts[0] + "]")
                                     fabPlus.inputAlertText = oldFullText
                                     fabPlus.attachmentName = "[" + lnkParts[0] + "]"
-                                    fabPlus.attachmentUri = lnkParts[1]
-                                    fabPlus.attachmentUriUri = null
-                                    fabPlus.pickAttachment = true
-                                    fabPlusOnClick(adapterView, itemView, itemPosition, itemId, returnToSearchHits, function)
+                                    // distinguish linked media and copied media
+                                    if (lnkParts[1].startsWith("content://media")) {
+                                        // get the real file name of a "MediaStore Picker" Uri, which only provides a confusing MediaStore ID
+                                        var uriString = lnkParts[1]
+                                        var idMediaStore = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
+                                        val mediaInfo = GalleryInfo.getGalleryMediaInfo(this, idMediaStore)
+                                        if (mediaInfo == null) {
+                                            // no info, link is gone --> cancel
+                                            centeredToast(this, getString(R.string.linkDestroyed), 3000)
+                                            dialog.cancel()
+                                            return@OnClickListener
+                                        }
+                                        // handle the provided image link with fabPlus button
+                                        fabPlus.pickAttachment = true
+                                        // name as to be found via Gallery, Photos, TC
+                                        fabPlus.attachmentUri = mediaInfo?.name
+                                        // 'MediaStore Picker Uri' goes to attachmentUriUri
+                                        val testUri = Uri.parse(lnkParts[1])
+                                        if (testUri != null) {
+                                            fabPlus.attachmentUriUri = testUri
+                                        } else {
+                                            fabPlus.attachmentUriUri = mediaInfo?.uri
+                                        }
+                                        // distinguish two media types: image and video
+                                        fabPlus.attachmentImageLink = false
+                                        fabPlus.attachmentVideoLink = false
+                                        if (mediaInfo?.type == GalleryInfo.MediaType.IS_IMAGE) {
+                                            fabPlus.attachmentImageLink = true
+                                        }
+                                        if (mediaInfo?.type == GalleryInfo.MediaType.IS_VIDEO) {
+                                            fabPlus.attachmentVideoLink = true
+                                        }
+                                        // nothing to scale
+                                        fabPlus.attachmentImageScale = false
+                                        fabPlusOnClick(
+                                            adapterView,
+                                            itemView,
+                                            itemPosition,
+                                            itemId,
+                                            returnToSearchHits,
+                                            function
+                                        )
+                                    } else {
+                                        // no media links, only copied files
+                                        fabPlus.attachmentUri = lnkParts[1]
+                                        fabPlus.attachmentUriUri = null
+                                        fabPlus.pickAttachment = true
+                                        fabPlusOnClick(
+                                            adapterView,
+                                            itemView,
+                                            itemPosition,
+                                            itemId,
+                                            returnToSearchHits,
+                                            function
+                                        )
+                                    }
                                 } else {
                                     // no link --> cancel
                                     centeredToast(this, getString(R.string.linkDestroyed), 3000)
@@ -6593,21 +6655,21 @@ class MainActivity : AppCompatActivity(),
                     val itemIndex: Int = options.indexOf(text)
                     child.setEnabled(true)
                     if (attachmentAllowed) {
-                        if (itemIndex == 11) {
+                        if (itemIndex == 10) {
                             child.setEnabled(false)
                             child.setOnClickListener(null)
                         }
                     } else {
-                        if (itemIndex < 11) {
+                        if (itemIndex < 10) {
                             child.setEnabled(false)
                             child.setOnClickListener(null)
                         }
                     }
-                    // image link limit of 512 is reached --> disable it
-                    if (currentImageLinkCount >= 512) {
+                    // media link limit of 512 is reached --> disable it
+                    if (currentMediaLinkCount >= 512) {
                         if (itemIndex == 0) {
                             child.setEnabled(false)
-                            childLinkImagesIsEnabled = false
+                            childLinkMediaIsEnabled = false
                         }
                     }
                 }
@@ -6639,11 +6701,12 @@ class MainActivity : AppCompatActivity(),
         }
 
         // some init
-        fabPlus.imageCapture = false
-        fabPlus.attachmentImageScale = false
-        fabPlus.attachmentImageLink = false
-        var pickIsImageCopy = false
-        var pickIsImageLink = false
+        fabPlus.imageCapture = false         // camera capture needs a separate handling
+        fabPlus.attachmentImageLink = false  // handled in pickMedia = registerForActivityResult
+        fabPlus.attachmentVideoLink = false  // handled in pickMedia = registerForActivityResult
+        fabPlus.attachmentImageScale = false // transports the above rescale decision into fabPlusOnClick
+
+        // catch nonsense
         if (resultCode != RESULT_OK) {
             startFilePickerDialog()
             return
@@ -6664,30 +6727,48 @@ class MainActivity : AppCompatActivity(),
                 return
             }
         }
-        if (requestCode == PICK.IMAGE) {
+        if (requestCode == PICK.MEDIA) {
             try {
-                var uriOri = data!!.data
+                val uriOri = data!!.data
                 var uri = uriOri
-                var imageUriString: String? = uriOri.toString()
-                if (imageUriString!!.contains("com.google.android.apps.photos.contentprovider", ignoreCase = true)) {
+                // get a usable uri
+                var mediaUriString: String? = uriOri.toString()
+                if (mediaUriString!!.contains("com.google.android.apps.photos.contentprovider", ignoreCase = true)) {
                     // GooglePhoto needs extra care
                     val imagepath = FileUtils.getPath(this, uri!!)
                     val imagefile = File(imagepath.toString())
                     uri = Uri.fromFile(imagefile)
-                    imageUriString = uri.toString()
+                    mediaUriString = uri.toString()
                 } else {
-                    // documents & content
-                    if (imageUriString.startsWith("content://")) {
-                        imageUriString = getPath(this, uri!!)
+                    // documents & content & Gallery
+                    if (mediaUriString.startsWith("content://")) {
+                        mediaUriString = getPath(this, uri!!)
                     }
                 }
                 if (uri != null) {
-                    pickIsImageCopy = true
+                    // prepare final handling in fabPlusOnClick()
+                    var mimeType: String? = contentResolver.getType(uri)
+                    if (mimeType == null) {
+                        // GooglePhoto doesn't provide a mimeType --> needs extra care
+                        val ext = getFileExtension(mediaUriString)
+                        if (IMAGE_EXT.contains(ext, ignoreCase = true)) {
+                            mimeType = "image/"
+                        }
+                        if (VIDEO_EXT.contains(ext, ignoreCase = true)) {
+                            mimeType = "video/"
+                        }
+                    }
                     fabPlus.pickAttachment = true
-                    fabPlus.attachmentUri = imageUriString
+                    fabPlus.attachmentUri = mediaUriString
                     fabPlus.attachmentUriUri = uriOri
-                    fabPlus.attachmentName = getString(R.string.image)
+                    if (mimeType?.contains("video/") == true) {
+                        fabPlus.attachmentName = getString(R.string.video)
+                    }
+                    if (mimeType?.contains("image/") == true) {
+                        fabPlus.attachmentName = getString(R.string.image)
+                    }
                 } else {
+                    centeredToast(this, getString(R.string.no_media_info), 3000)
                     startFilePickerDialog()
                     return
                 }
@@ -6697,54 +6778,11 @@ class MainActivity : AppCompatActivity(),
                 return
             }
         }
-        if (requestCode == PICK.VIDEO) {
-            try {
-                var uriOri = data!!.data
-                var uri = uriOri
-                var imageUriString: String? = uriOri.toString()
-                if (imageUriString!!.contains("com.google.android.apps.photos.contentprovider", ignoreCase = true)) {
-                    // GooglePhoto needs extra care
-                    val imagepath = FileUtils.getPath(this, uri!!)
-                    val imagefile = File(imagepath.toString())
-                    uri = Uri.fromFile(imagefile)
-                    imageUriString = uri.toString()
-                } else {
-                    // documents & content
-                    if (imageUriString.startsWith("content://")) {
-                        imageUriString = getPath(this, uri!!)
-                    }
-                }
-                if (uri != null) {
-                    fabPlus.pickAttachment = true
-                    fabPlus.attachmentUri = imageUriString
-                    fabPlus.attachmentUriUri = uriOri
-                    fabPlus.attachmentName = getString(R.string.video)
-                } else {
-                    startFilePickerDialog()
-                    return
-                }
-            } catch (e: Exception) {
-                centeredToast(this, e.message.toString(), 5000)
-                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-                    okBox(
-                        this,
-                        getString(R.string.androidIssue),
-                        getString(R.string.useFilesPicker),
-                        {
-                            startFilePickerDialog()
-                        }
-                    )
-                } else {
-                    startFilePickerDialog()
-                }
-                return
-            }
-        }
         if (requestCode == PICK.AUDIO) {
-            var uriOri = data!!.data
+            val uriOri = data!!.data
             val uriPath = getPath(this, uriOri!!)
             val file = File(uriPath.toString())
-            var uri = Uri.fromFile(file)
+            val uri = Uri.fromFile(file)
             if (uri != null) {
                 fabPlus.pickAttachment = true
                 fabPlus.attachmentUri = uri.toString()
@@ -6756,11 +6794,11 @@ class MainActivity : AppCompatActivity(),
             }
         }
         if (requestCode == PICK.PDF) {
-            var uriOri = data!!.data
+            val uriOri = data!!.data
             try {
                 val uriPath = getPath(this, uriOri!!)
                 val file = File(uriPath.toString())
-                var uriNew = Uri.fromFile(file)
+                val uriNew = Uri.fromFile(file)
                 if (uriNew != null) {
                     fabPlus.pickAttachment = true
                     fabPlus.attachmentUri = uriNew.toString()
@@ -6783,11 +6821,11 @@ class MainActivity : AppCompatActivity(),
             }
         }
         if (requestCode == PICK.TXT) {
-            var uriOri = data!!.data
+            val uriOri = data!!.data
             try {
                 val uriPath = getPath(this, uriOri!!)
                 val file = File(uriPath.toString())
-                var uriNew = Uri.fromFile(file)
+                val uriNew = Uri.fromFile(file)
                 if (uriNew != null) {
                     fabPlus.pickAttachment = true
                     fabPlus.attachmentUri = uriNew.toString()
@@ -6810,72 +6848,26 @@ class MainActivity : AppCompatActivity(),
             }
         }
 
-        // back to main input with an image link to the phone gallery
-        if (pickIsImageLink) {
-            fabPlus.attachmentImageScale = false // nothing to scale
-            fabPlus.attachmentImageLink = true   // image link to phone gallery
-            fabPlusOnClick(
-                ReturnToDialogData.adapterView,
-                ReturnToDialogData.itemView,
-                ReturnToDialogData.itemPosition,
-                ReturnToDialogData.itemId!!,
-                ReturnToDialogData.returnToSearchHits,
-                ReturnToDialogData.function
-            )
-        } else {
-            // back to main input with the option to return there to the calling dialog
-            if (pickIsImageCopy) {
-                // special handling for images to offer a case by case downscaling option
-                var dialog: AlertDialog? = null
-                val items = arrayOf<CharSequence>(getString(R.string.match_to_phone_s_screen))
-                var checkedItems = BooleanArray(1) { true }
-                var builder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
-                builder.setTitle(getString(R.string.scale_image))
-                builder.setMultiChoiceItems(
-                    items,
-                    checkedItems,
-                    OnMultiChoiceClickListener { dlg, which, isChecked ->
-                        checkedItems[which] = isChecked
-                    })
-                // let fapPlus handle the copy image scenario
-                builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dlg, which ->
-                    fabPlus.attachmentImageScale = checkedItems[0]
-                    fabPlusOnClick(
-                        ReturnToDialogData.adapterView,
-                        ReturnToDialogData.itemView,
-                        ReturnToDialogData.itemPosition,
-                        ReturnToDialogData.itemId!!,
-                        ReturnToDialogData.returnToSearchHits,
-                        ReturnToDialogData.function
-                    )
+        //
+        // call main input dialog fabPlusOnClick()
+        //
+        if (fabPlus.attachmentName.equals(getString(R.string.image)) || fabPlus.attachmentName.equals(getString(R.string.capture))) {
+            // special handling for images to offer a case by case downscaling option
+            var dialog: AlertDialog? = null
+            val items = arrayOf<CharSequence>(getString(R.string.match_to_phone_s_screen))
+            val checkedItems = BooleanArray(1) { true }
+            val builder = AlertDialog.Builder(contextMainActivity, android.R.style.Theme_Material_Dialog)
+            builder.setTitle(getString(R.string.scale_image))
+            builder.setMultiChoiceItems(
+                items,
+                checkedItems,
+                OnMultiChoiceClickListener { dlg, which, isChecked ->
+                    checkedItems[which] = isChecked
                 })
-                // return to the attachment picker
-                builder.setNegativeButton(
-                    R.string.cancel,
-                    DialogInterface.OnClickListener { dlg, which ->
-                        startFilePickerDialog()
-                    })
-                // provide help info
-                builder.setNeutralButton(
-                    R.string.title_activity_help,
-                    DialogInterface.OnClickListener { dlg, which ->
-                        centeredToast(
-                            contextMainActivity,
-                            getString(R.string.reduces_data_storage_size),
-                            1
-                        )
-                        Handler().postDelayed({
-                            var dlgRestart = builder.create()
-                            dlgRestart.show()
-                            dlgRestart.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
-                        }, 300)
-                    })
-                dialog = builder.create()
-                dialog.show()
-                dialog.setCanceledOnTouchOutside(false)
-                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
-            } else {
-                // all picks but image
+            // let fapPlus handle the copy image scenario
+            builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dlg, which ->
+                // just a yes or no scaling
+                fabPlus.attachmentImageScale = checkedItems[0]
                 fabPlusOnClick(
                     ReturnToDialogData.adapterView,
                     ReturnToDialogData.itemView,
@@ -6884,7 +6876,48 @@ class MainActivity : AppCompatActivity(),
                     ReturnToDialogData.returnToSearchHits,
                     ReturnToDialogData.function
                 )
+            })
+            // return to the attachment picker
+            builder.setNegativeButton(
+                R.string.cancel,
+                DialogInterface.OnClickListener { dlg, which ->
+                    startFilePickerDialog()
+                })
+            // provide help info
+            builder.setNeutralButton(
+                R.string.title_activity_help,
+                DialogInterface.OnClickListener { dlg, which ->
+                    centeredToast(
+                        contextMainActivity,
+                        getString(R.string.reduces_data_storage_size),
+                        1
+                    )
+                    Handler().postDelayed({
+                        val dlgRestart = builder.create()
+                        dlgRestart.setOnShowListener {
+                            dlgRestart.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                        }
+                        dlgRestart.show()
+                        dlgRestart.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+                    }, 300)
+                })
+            dialog = builder.create()
+            dialog.setOnShowListener {
+                dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
             }
+            dialog.show()
+            dialog.setCanceledOnTouchOutside(false)
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
+        } else {
+            // all other picks but image
+            fabPlusOnClick(
+                ReturnToDialogData.adapterView,
+                ReturnToDialogData.itemView,
+                ReturnToDialogData.itemPosition,
+                ReturnToDialogData.itemId!!,
+                ReturnToDialogData.returnToSearchHits,
+                ReturnToDialogData.function
+            )
         }
     }
 
@@ -7425,12 +7458,12 @@ class MainActivity : AppCompatActivity(),
             var textLine = textLines[ndx]
             // check for a date header in the current line
             if (textLine.let { Pattern.matches("\\d{4}-\\d{2}-\\d{2}.*", it) } == true) {
-                textLine = trimEndAll(textLine)
+                textLine = "\\line\n" + trimEndAll(textLine)
                 if (textLine.length == 10) { // if week day name is missing, add it
                     textLine += dayNameOfWeek(textLine)
                 }
             }
-            // render a RTF line text directly to file (avoids utf8 / ANSI mess)
+            // render an RTF line text directly to file (avoids utf8 / ANSI mess)
             // java String textLine utf8 (2 bytes) is converted to ANSI (1 byte) - ok für German Umlauts
             val ascii8Bytes = textLine.toByteArray(StandardCharsets.ISO_8859_1)
             try {
@@ -7488,11 +7521,11 @@ class MainActivity : AppCompatActivity(),
                     sb.append("\\par\n")
                 } catch (ex: Exception) {
                     sb.append("}\\line\n")
-                    sb.append(getString(R.string.imageFailure)).append("\\line\n")
+                    sb.append(getString(R.string.mediaFailure)).append("\\line\n")
                     sb.append("\\par\n")
                 } catch (ex: OutOfMemoryError) {
                     sb.append("}\\line\n")
-                    sb.append(getString(R.string.imageFailure)).append("\\line\n")
+                    sb.append(getString(R.string.mediaFailure)).append("\\line\n")
                     sb.append("\\par\n")
                 }
                 // partial write operation
@@ -7624,7 +7657,9 @@ class MainActivity : AppCompatActivity(),
         }
         // generate PDF async in another thread
         try {
-            pw.show()
+            runOnUiThread(Runnable {
+                pw.show()
+            })
             Thread {
                 success = generatePdfFile(folderName, rawText, share, dpi, show, pw)
                 runOnUiThread(Runnable {
@@ -7783,7 +7818,7 @@ class MainActivity : AppCompatActivity(),
             var uriString: String
             try {
                 val lnkParts = lnkString.split("::::".toRegex()).toTypedArray()
-                if (lnkParts != null && lnkParts.size == 2) {
+                if (lnkParts != null && lnkParts.size >= 2) {
                     keyString = lnkParts[0]
                     uriString = lnkParts[1]
                     if (uriString.startsWith("/")) {
@@ -7796,15 +7831,32 @@ class MainActivity : AppCompatActivity(),
                         tn = getThumbnailBitmap(uri)
                         tn.uriString = uriString
                         if (tn.bmp == null) {
-                            // if no bmp, try video
+                            // if no bmp, try video file
                             if (VIDEO_EXT.contains(getFileExtension(uriString), ignoreCase = true)) {
+                                // video file
                                 try {
                                     val retriever = MediaMetadataRetriever()
                                     retriever.setDataSource(uriString)
                                     val bitmap = retriever.getFrameAtTime(0)
                                     tn.bmp = getDpiBitmap(bitmap, dpi)
-                                } catch(e: IllegalArgumentException) {
+                                } catch (iae: IllegalArgumentException) {
                                     tn.bmp = null
+                                }
+                            } else {
+                                if (lnkParts.size > 2 && lnkParts[2].equals("video")) {
+                                    // video link to phone gallery
+                                    try {
+                                        val retriever = MediaMetadataRetriever()
+                                        val uri = Uri.parse(uriString)
+                                        retriever.setDataSource(
+                                            MainActivity.contextMainActivity,
+                                            uri
+                                        )
+                                        val bitmap = retriever.getFrameAtTime(0)
+                                        tn.bmp = getDpiBitmap(bitmap, dpi)
+                                    } catch (e: Exception) {
+                                        tn.bmp = null
+                                    }
                                 }
                             }
                         } else {
@@ -8499,7 +8551,7 @@ class MainActivity : AppCompatActivity(),
         var returningFromAppGallery = false
         var showFolderMoreDialog = false
         var returnAttachmentFromAppGallery = ""
-        var appGalleryAdapter:  GalleryActivity.ThumbGridAdapter? = null
+        var appGalleryAdapter:  GalleryActivity.GridAdapter? = null
         var appGalleryScanning = false
         var appGallerySortedByDate = false
         var appScanCurrent = 0
@@ -8676,7 +8728,49 @@ class MainActivity : AppCompatActivity(),
             jumpFolderDialog.show()
         }
 
-        // find text in all dataSections (folders) and return a list
+        // find & remove linkText in all dataSections (folders) and return success
+        fun insideDataStoreSearchAndRemoveLink(linkText: String, pw: ProgressWindow, context: Context): Boolean {
+            var success = true
+            try {
+                // iterate all data sections of DataStore
+                for (dsNdx in ds.dataSection.indices) {
+                    // set progress
+                    if (pw != null) {
+                        (context as Activity).runOnUiThread {
+                            pw.incCount += 1
+                        }
+                    }
+                    // get text from DataStore folder
+                    var sectionText = ds.dataSection[dsNdx]
+                    // find linkText: it is a fragmented full link, it misses the starting [ and literal description of the link
+                    var pos = sectionText.indexOf(linkText)
+                    while (pos != -1) {
+                        // beginning from pos move lhs, find the next occurrence of "["
+                        var i = 0
+                        while (!sectionText[pos - i].equals('[')) {
+                            i++
+                            // sanity check, although not supposed to happen
+                            if (i == pos) {
+                                break
+                            }
+                        }
+                        // foundLink shall now contain the full link info: [bla::::bla]
+                        val foundLink = sectionText.substring(pos - i, pos + linkText.length)
+                        // exec replacement, leave <X> as a visual leftover
+                        sectionText = sectionText.replaceFirst(foundLink, "<X>")
+                        // find next occurrence of linkText in DataStore
+                        pos = sectionText.indexOf(linkText)
+                    }
+                    // put replaced data back into DataStore
+                    ds.dataSection[dsNdx] = sectionText
+                }
+            } catch (e: Exception) {
+                success = false
+            }
+            return success
+        }
+
+        // find & replace text in all dataSections (folders) and return success
         fun insideDataStoreSearchAndReplace(searchText: String, replaceText: String, pw: ProgressWindow, context: Context): Boolean {
             var success = true
             try {
@@ -8692,7 +8786,7 @@ class MainActivity : AppCompatActivity(),
                     var sectionText = ds.dataSection[dsNdx]
                     // search & replace action
                     sectionText = sectionText.replace(searchText, replaceText, false)
-                    // put replace action back to where it belongs
+                    // put replaced data back into DataStore
                     ds.dataSection[dsNdx] = sectionText
                 }
             } catch (e: Exception) {
@@ -9085,7 +9179,7 @@ class MainActivity : AppCompatActivity(),
                                         val lnkStr = lnkFull.substring(1, lnkFull.length - 1)
                                         try {
                                             val lnkParts = lnkStr.split("::::".toRegex()).toTypedArray()
-                                            if (lnkParts != null && lnkParts.size == 2) {
+                                            if (lnkParts != null && lnkParts.size >= 2) {
                                                 // get linked image uri
                                                 var uri = Uri.parse(lnkParts[1])
                                                 // check "needed" to be found in "granted"
@@ -9126,7 +9220,7 @@ class MainActivity : AppCompatActivity(),
                                         var uriLocOri = ""
                                         try {
                                             val lnkParts = lnkStr.split("::::".toRegex()).toTypedArray()
-                                            if (lnkParts != null && lnkParts.size == 2) {
+                                            if (lnkParts != null && lnkParts.size >= 2) {
                                                 keyStrOri = lnkParts[0]
                                                 uriStrOri = Uri.parse(lnkParts[1]).path!!
                                                 uriLocOri = uriStrOri
@@ -9631,7 +9725,7 @@ class GrzListView {
     var lstVisPos = 0                                        // memorize last item position
     var touchSelectItem = false                              // touch event x < 200 allows to select an item at single click
     var scrollWhileSearch = false                            // allows to skip search hits when scrolling before Up / Down
-    var touchEventPoint = Point(-1, -1)                // point coordinates of the latest touch event: needed to detect scrolling AND get word in string
+    var touchEventPoint = Point(-1, -1)                      // point coordinates of the latest touch event: needed to detect scrolling AND get word in string
     var singleClickHandler = Handler(Looper.getMainLooper()) // needed to distinguish between item's single and double click
     var itemLastClickTime: Long = 0                          // needed to distinguish between item's single and double click
 
@@ -9660,7 +9754,7 @@ class GrzListView {
                 var keyString = ""
                 try {
                     val lnkParts = lnkString.split("::::".toRegex()).toTypedArray()
-                    if (lnkParts != null && lnkParts.size == 2) {
+                    if (lnkParts != null && lnkParts.size >= 2) {
                         keyString = lnkParts[0]
                         uriString = lnkParts[1]
                         fullTitle = parts[i]
@@ -10409,19 +10503,46 @@ internal class LvAdapter : BaseAdapter {
             if (fileNameString[4] == 'c') {
                 // next check for picker uri
                 // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
-                var pos = fileNameString.indexOf("content://media")
+                val pos = fileNameString.indexOf("content://media")
                 if (pos != -1) {
-                    var uri = Uri.parse(fileNameString.substring(pos))
-                    if (listUriPermissionsGranted?.any { it.uri == uri } == true) {
-                        // linked images: filename is a PhotoPicker file name
-                        res = android.R.drawable.ic_menu_camera
+                    var uri: Uri
+                    // media type either image or video
+                    res = android.R.drawable.ic_dialog_alert
+                    val lnkParts = fileNameString.split("::::".toRegex()).toTypedArray()
+                    if (lnkParts.size == 3) {
+                        // back to normal uri string
+                        fileNameString = lnkParts[1]
+                        uri = Uri.parse(fileNameString)
+                    } else {
+                        uri = Uri.parse(fileNameString.substring(pos))
+                    }
+                    // uri permission check
+                    var uriPermitted = false
+                    for (item in listUriPermissionsGranted!!) {
+                        if (item.uri == uri) {
+                            uriPermitted = true
+                            break
+                        }
+                    }
+                    //if (listUriPermissionsGranted?.any { it.uri == uri } == true) {
+                    if (uriPermitted) {
+                        if (lnkParts.size > 2) {
+                            if (lnkParts[2].equals("image")) {
+                                res = android.R.drawable.ic_menu_camera
+                            }
+                            if (lnkParts[2].equals("video")) {
+                                res = R.drawable.ic_video
+                            }
+                        } else {
+                            res = android.R.drawable.ic_menu_camera
+                        }
                     } else {
                         // set a default: error --> uri not permitted or not found
                         res = android.R.drawable.ic_dialog_alert
                         // check for media id (just a number after the last '/'): special handling API < 35
-                        var pos = fileNameString.lastIndexOf('/')
-                        if (pos != -1) {
-                            var mediaId = fileNameString.substring(pos + 1)
+                        val posSlash = fileNameString.lastIndexOf('/')
+                        if (posSlash != -1 && Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                            val mediaId = fileNameString.substring(posSlash + 1)
                             mediaId.toIntOrNull()?.let {
                                 if (it > 0) {
                                     res = android.R.drawable.ic_menu_camera
@@ -10460,7 +10581,7 @@ internal class LvAdapter : BaseAdapter {
                                                 val result = m.group()
                                                 val key = result.substring(1, result.length - 1)
                                                 val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                                                if (lnkParts != null && lnkParts.size == 2) {
+                                                if (lnkParts != null && lnkParts.size >= 2) {
                                                     var fileName = lnkParts[1]
                                                     if (fileName.startsWith("/") == false) {
                                                         if (fileName.startsWith("geo:")) {
@@ -10490,7 +10611,7 @@ internal class LvAdapter : BaseAdapter {
                             val result = m.group()
                             val key = result.substring(1, result.length - 1)
                             val lnkParts = key.split("::::".toRegex()).toTypedArray()
-                            if (lnkParts != null && lnkParts.size == 2) {
+                            if (lnkParts != null && lnkParts.size >= 2) {
                                 var fileName = lnkParts[1]
                                 if (fileName.startsWith("folder/")) {
                                     res = android.R.drawable.ic_menu_agenda
@@ -10542,6 +10663,7 @@ class FabPlus {
     var attachmentName = ""                  // attachment link readable name
     var attachmentImageScale = false         // attachment is an image to scale down to screen dimensions
     var attachmentImageLink = false          // attachment is a link to an image from the phone gallery
+    var attachmentVideoLink = false          // attachment is a link to a video from the phone gallery
     var attachmentUriUri: Uri? = null        // attachment as original Uri from onActivityResult
     var inputAlertTextSelStart = -1          // insert position for attachment link
     var pickAttachment = false               // flag indicates, fabPlus was called from onActivityResult

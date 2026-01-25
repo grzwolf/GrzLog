@@ -59,7 +59,7 @@
     <string name="RTFcouldnotbecreated">RTF could not be created.</string>
     <string name="ChoosePrintQuality">choose print quality.</string>
     <string name="dontShowAgain">Don\'t show again.</string>
-    <string name="CleanupFiles">Cleanup orphaned images</string>
+    <string name="CleanupFiles">Cleanup orphaned files</string>
     <string name="unusedFilesDeleted">orphaned files deleted.</string>
     <string name="LockscreenReminder">Line as GrzLog reminder</string>
     <string name="Reminder">Reminder</string>
@@ -67,7 +67,7 @@
     <string name="Options">What to do with the current line?</string>
     <string name="ShowReminder">Reminder Options:</string>
     <string name="created_with">created with \"</string>
-    <string name="imageFailure">[Image failure]</string>
+    <string name="mediaFailure">[Media failure]</string>
 
     <!-- Settings Strings-->
     <string name="lastBackup">\nlast backup: \"</string>
@@ -152,9 +152,9 @@
     <string name="InsertNotAllowed">Insert line here is not allowed.</string>
     <string name="noCameraOp">cannot operate camera</string>
     <string name="Select">Select attachment</string>
-    <string name="ImageLink">Image: link to Phone Gallery</string>
-    <string name="ImageCopy">Image: copy from Phone Gallery</string>
-    <string name="ImageApp">Link to GrzLog Gallery</string>
+    <string name="MediaLink">Link to Phone Gallery</string>
+    <string name="MediaCopy">Copy from Phone Gallery</string>
+    <string name="GrzLogLink">Link to GrzLog Gallery</string>
     <string name="Camera">Camera</string>
     <string name="exportFolder">Export folder</string>
     <string name="notYetImplemented">Not yet implemented.</string>
@@ -328,7 +328,7 @@
     <string name="upload_error">Check GDrive manually</string>
     <string name="scale_image">Scale Image</string>
     <string name="match_to_phone_s_screen">Match to phone\'s screen</string>
-    <string name="reduces_data_storage_size">Reduces data storage size</string>
+    <string name="reduces_data_storage_size">Scaling images reduces data storage size</string>
     <string name="GrzLogGallery">GrzLog Gallery</string>
     <string name="rescale">Scale images to phone display</string>
     <string name="image_scaling_done">Image Scaling done</string>
@@ -389,13 +389,14 @@
     <string name="bak_smaller_slower">smaller file, but slower</string>
     <string name="type_in_the_pdf_title">PDF title</string>
     <string name="photo_picker_no_media_selected">photo picker: no media selected</string>
-    <string name="image_link_maximum_reached"><![CDATA[Maximum of 512 linked images is reached. Before adding further image links, you need to release links in Settings --> Release Image Links]]></string>
-    <string name="linked_images">Show linked images</string>
-    <string name="title_linked_images">Linked images</string>
-    <string name="scanLinkedImages">Scanning linked images</string>
-    <string name="removeUriPermission">The permission to access linked images will be removed.</string>
+    <string name="image_link_maximum_reached"><![CDATA[Maximum of 512 linked images/videos is reached. Before adding further links, you need to release links in Settings --> Release Media Links]]></string>
+    <string name="linked_images">Show linked images/videos</string>
+    <string name="title_linked_images">Linked images/videos</string>
+    <string name="scanLinkedMedia">Scanning linked images/videos</string>
+    <string name="removeUriPermission">Remove links NO update data</string>
+    <string name="delete_links">Remove links AND update data</string>
     <string name="copyToGrzLogGallery">Will be copied to GrzLog Gallery. Affected image links will be updated accordingly.</string>
-    <string name="copyLinkedImages">Copy linked images to GrzLog gallery</string>
+    <string name="copyLinkedMedia">Copy linked images to GrzLog gallery</string>
     <string name="no_permission_released">Permission release probably not needed.</string>
     <string name="calendar_event">Set Calendar event</string>
     <string name="grzlog_reminder">Set GrzLog reminder</string>
@@ -408,6 +409,12 @@
     <string name="no_inserting_skipped_days">Do not insert skipped days</string>
     <string name="input_sequence">Wrong input sequence</string>
     <string name="not_allowed">Date must be on top.</string>
+    <string name="no_media_info">pick media error</string>
+    <string name="non_of_the_selected_links_could_be_copied">Non of the selected links could be copied.</string>
+    <string name="remove_links">Links could be removed in two ways</string>
+    <string name="non_of_the_selected_links_could_be_deleted">Non of the selected links could be removed.</string>
+    <string name="remove_selected_links_folder_update"><![CDATA[Remove selected links and update folder data accordingly. Removed links are marked with <X>.]]></string>
+    <string name="remove_selected_links_only">Access permissions for selected links will be removed. Folder data are not changed.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

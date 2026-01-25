@@ -31,11 +31,10 @@ class HelpActivity : AppCompatActivity() {
         "         topmost item is allowed to be a valid date in near future\n" +
         "         weblinks are highlighted\n" +
         "   Attachment: 'Select attachment' dialog\n" +
-        "         image link to phone gallery (max. allowed is 512)\n" +
-        "         image copy from phone gallery\n" +
-        "         file link to GrzLog gallery\n" +
+        "         link (image, video) to phone gallery (max. allowed is 512)\n" +
+        "         copy (image, video) from phone gallery\n" +
+        "         link (image, video, file) to GrzLog gallery\n" +
         "         capture camera image\n" +
-        "         video from phone gallery\n" +
         "         audio from phone\n" +
         "         PDF file\n" +
         "         TXT file\n" +
@@ -134,8 +133,8 @@ class HelpActivity : AppCompatActivity() {
         "              delete orphaned files\n" +
         "       Scale images to phone display\n" +
         "              pro: reduces storage consumption\n" +
-        "       Show linked images\n" +
-        "              view, usages, upload, delete linked images\n" +
+        "       Show linked media (image, video)\n" +
+        "              view, usages, upload, delete linked media\n" +
         "   Reset\n" +
         "       Reset app preferences (data are not touched)\n\n" +
         "   Quit active services\n" +
@@ -177,13 +176,14 @@ class HelpActivity : AppCompatActivity() {
         "              New folder\n" +
         "e) tap Share -> share / copy data dialog\n" +
         "       selected items\n" +
+        "       selected items as PDF\n" +
         "       current folder\n" +
         "       folder as PDF\n" +
         "       folder as RTF\n\n\n" +
         "3 Miscellaneous\n" +
         "~~~~~~~~~~~~~~~\n" +
-        "Folder protection in GrzLog is very weak!\n" +
-        "Such protected folders are not encrypted in any way.\n\n" +
+        "Folder protection in GrzLog w/o encryption is very weak!\n" +
+        "Protected folders can be encrypted in Settings.\n\n" +
         "Updates could be manually downloaded from\n" +
         "   https://github.com/grzwolf/GrzLog/tags\n\n" +
         "GrzLog uses the following permissions\n" +

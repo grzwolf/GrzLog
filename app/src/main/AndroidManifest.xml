@@ -118,7 +118,7 @@
                 android:value="com.grzwolf.grzlog.MainActivity" />
         </activity>
         <activity
-            android:name="com.grzwolf.grzlog.LinkedImages"
+            android:name="com.grzwolf.grzlog.LinkedMedia"
             android:label="@string/title_linked_images"
             android:screenOrientation="portrait"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity">

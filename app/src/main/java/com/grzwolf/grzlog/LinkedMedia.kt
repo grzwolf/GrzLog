@@ -1,10 +1,10 @@
 package com.grzwolf.grzlog
 
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
-import android.content.UriPermission
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.graphics.Color
@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.text.Html
 import android.util.TypedValue
 import android.view.Gravity
@@ -21,6 +22,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.BaseAdapter
 import android.widget.GridView
@@ -28,18 +30,20 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import com.grzwolf.grzlog.MainActivity.Companion.ds
+import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
+import com.grzwolf.grzlog.MainActivity.Companion.deleteOrphans
+import com.grzwolf.grzlog.MainActivity.Companion.showAppGallery
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 
-class LinkedImages : AppCompatActivity() {
+class LinkedMedia : AppCompatActivity() {
 
     lateinit var gridView: GridView
-    var adapter : ThumbGridAdapter? = null
+    var adapter : GridViewAdapter? = null
     var galleryMenu: Menu? = null
-    lateinit var contextLinkedImages: Context
+    lateinit var contextLinkedMedia: Context
 
     // prepare visibility of action menu items
     lateinit var itemUpload: MenuItem
@@ -58,7 +62,7 @@ class LinkedImages : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
 
         // needed in a sub thread
-        contextLinkedImages = this
+        contextLinkedMedia = this
 
         // quit local app reminders
         MainActivity.showAppReminders = false
@@ -81,7 +85,19 @@ class LinkedImages : AppCompatActivity() {
                 return@OnItemClickListener
             }
             val fn = adapter!!.list[position].pickerUri.toString()
-            showAppLinkOrAttachment(this, "", fn)
+            var type = GalleryInfo.MediaType.IS_UNKNOWN
+            val idMediaStore = fn.substring(fn.lastIndexOf("/") + 1).toInt()
+            val mediaInfo = GalleryInfo.getGalleryMediaInfo(MainActivity.contextMainActivity, idMediaStore)
+            if (mediaInfo != null) {
+                // specific case for linked images & videos
+                if (mediaInfo.type == GalleryInfo.MediaType.IS_IMAGE) {
+                    type = GalleryInfo.MediaType.IS_IMAGE
+                }
+                if (mediaInfo.type == GalleryInfo.MediaType.IS_VIDEO) {
+                    type = GalleryInfo.MediaType.IS_VIDEO
+                }
+            }
+            showAppLinkOrAttachment(this, "", fn, type)
         }
 
         // long press shall select image item
@@ -105,7 +121,7 @@ class LinkedImages : AppCompatActivity() {
         // not supposed to happen: generate just dummy data
         if (adapter == null) {
             val listDummy = mutableListOf<GrzThumbNail>()
-            val adapterDummy = ThumbGridAdapter(this@LinkedImages, listDummy.toTypedArray())
+            val adapterDummy = GridViewAdapter(this@LinkedMedia, listDummy.toTypedArray())
             gridView.setAdapter(adapterDummy)
             adapterDummy.notifyDataSetChanged()
         }
@@ -285,8 +301,8 @@ class LinkedImages : AppCompatActivity() {
                     // ... 2nd Dialog: offer image downscaling option before copy
                     var dialog: AlertDialog? = null
                     val items = arrayOf<CharSequence>(getString(R.string.match_to_phone_s_screen))
-                    var checkedItems = BooleanArray(1) { true }
-                    var builder = AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+                    val checkedItems = BooleanArray(1) { true }
+                    val builder = AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
                     builder.setTitle(getString(R.string.scale_image))
                     builder.setMultiChoiceItems(
                         items,
@@ -315,17 +331,23 @@ class LinkedImages : AppCompatActivity() {
                         R.string.title_activity_help,
                         DialogInterface.OnClickListener { dlg, which ->
                             centeredToast(
-                                contextLinkedImages,
+                                contextLinkedMedia,
                                 getString(R.string.reduces_data_storage_size),
                                 1
                             )
-                            Handler().postDelayed({
-                                var dlgRestart = builder.create()
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                val dlgRestart = builder.create()
+                                dlgRestart.setOnShowListener {
+                                    dlgRestart.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                                }
                                 dlgRestart.show()
                                 dlgRestart.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
                             }, 300)
                         })
                     dialog = builder.create()
+                    dialog.setOnShowListener {
+                        dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                    }
                     dialog.show()
                     dialog.setCanceledOnTouchOutside(false)
                     dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
@@ -353,37 +375,62 @@ class LinkedImages : AppCompatActivity() {
                     }
                 }
             }
-            decisionBox(
-                this,
-                DECISION.YESNO,
-                getString(R.string.title_linked_images),
-                selected.toString()
-                        + "("
-                        + counter.toString()
-                        + ") "
-                        + getString(R.string.removeUriPermission),
-                {
-                    // loop adapter list
-                    for (item in adapter!!.list) {
-                        if (item.selected && item.fileName.isNotEmpty()) {
-                            try {
-                                // remove uri permission of selected list element
-                                MainActivity.contextMainActivity.contentResolver.releasePersistableUriPermission(
-                                    item.pickerUri!!,
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                )
-                            } catch (e: Exception) {
+
+            twoChoicesDialog(this,
+                this.getString(R.string.title_linked_images),
+                this.getString(R.string.remove_links),
+                this.getString(R.string.delete_links),
+                this.getString(R.string.removeUriPermission),
+                { // runner CANCEL
+                    null
+                },
+                { // runner delete links in DataStore
+                    decisionBox(
+                        this,
+                        DECISION.YESNO,
+                        getString(R.string.title_linked_images),
+                        getString(R.string.remove_selected_links_folder_update),
+                        {
+                            searchAndDestroyLinks()
+                        },
+                        { null }
+                    )
+                },
+                { // runner remove Uri permissions only
+                    decisionBox(
+                        this,
+                        DECISION.YESNO,
+                        getString(R.string.title_linked_images),
+                        getString(R.string.remove_selected_links_only),
+                        {
+                            var removedUriPermissionCount = 0
+                            // loop adapter list
+                            for (item in adapter!!.list) {
+                                if (item.selected && item.fileName.isNotEmpty()) {
+                                    try {
+                                        // remove uri permission of selected list element
+                                        MainActivity.contextMainActivity.contentResolver.releasePersistableUriPermission(
+                                            item.pickerUri!!,
+                                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        )
+                                        removedUriPermissionCount++
+                                    } catch (e: Exception) {
+                                        // leave un handled
+                                    }
+                                }
+                            }
+                            if (removedUriPermissionCount == 0) {
                                 centeredToast(this,getString(R.string.no_permission_released), 2000)
                             }
-                        }
-                    }
-                    // update LinkedImages gallery
-                    getLinkGalleryThumbs()
-                    MainActivity.deleteAppDataCache(MainActivity.contextMainActivity)
-                    MainActivity.reReadAppFileData = true
-                    updateMenuStatus()
-                },
-                { null }
+                            // update LinkedMedia gallery
+                            getLinkGalleryThumbs()
+                            MainActivity.deleteAppDataCache(MainActivity.contextMainActivity)
+                            MainActivity.reReadAppFileData = true
+                            updateMenuStatus()
+                        },
+                        { null }
+                    )
+                }
             )
         }
 
@@ -410,7 +457,7 @@ class LinkedImages : AppCompatActivity() {
             }
             if (searchText.length > 0) {
                 // to search in DataStore, which stores PickerUri --> so we need a "PhotoPicker Uri"
-                var searchFinally = pickerUri.toString()
+                val searchFinally = pickerUri.toString()
                 // find all search hits in DataStore
                 val searchHitList: MutableList<MainActivity.GlobalSearchHit> = MainActivity.findTextInDataStore(this, searchFinally, MainActivity.lvMain)
                 // nothing found --> get out
@@ -443,20 +490,27 @@ class LinkedImages : AppCompatActivity() {
     fun searchAndReplace(attachmentImageScale: Boolean) {
 
         // GrzLog images folder is beyond of its absolute path
-        var appStoragePath = MainActivity.contextMainActivity.getExternalFilesDir(null)!!.absolutePath
+        val appStoragePath = MainActivity.contextMainActivity.getExternalFilesDir(null)!!.absolutePath
 
         // progress related
+        var countOfCopiedFiles = 0
         var success = false
-        val pw = ProgressWindow(this, getString(R.string.copyLinkedImages))
+        val pw = ProgressWindow(this, getString(R.string.copyLinkedMedia))
         pw.dialog?.setOnDismissListener {
-            if (success) {
+            if (success && countOfCopiedFiles > 0) {
                 // write modified DataStore to disk
                 MainActivity.writeAppData(appStoragePath, MainActivity.ds, MainActivity.appName)
-                // update LinkedImages gallery
+                // update LinkedMedia gallery
                 getLinkGalleryThumbs()
                 MainActivity.deleteAppDataCache(MainActivity.contextMainActivity)
                 MainActivity.reReadAppFileData = true
                 updateMenuStatus()
+            }
+            if (success && countOfCopiedFiles == 0) {
+                runOnUiThread {
+                    centeredToast(contextLinkedMedia,
+                        getString(R.string.non_of_the_selected_links_could_be_copied), 3000)
+                }
             }
         }
         pw.show()
@@ -466,22 +520,22 @@ class LinkedImages : AppCompatActivity() {
             Thread {
                 // prepare progress
                 pw.incCount = 0
-                pw.absCount = (ds.dataSection.size).toFloat()
+                pw.absCount = (MainActivity.ds.dataSection.size).toFloat()
                 pw.absFakeCount = pw.absCount
 
                 // loop linked images adapter list
                 for (item in adapter!!.list) {
 
                     // item shall be selected and containing a valid file name
-                    if (item.selected && item.fileName.isNotEmpty()) {
+                    if (item.selected && item.fileName.isNotEmpty() && !item.fileDate.equals("19700101")) {
 
                         // prepare copy uri from "Android's Photo Picker" to app
-                        var appImagesPath = appStoragePath + "/Images"
-                        var appImagesFolder = File(appImagesPath)
+                        val appImagesPath = appStoragePath + "/Images"
+                        val appImagesFolder = File(appImagesPath)
                         if (!appImagesFolder.exists()) {
                             appImagesFolder.mkdirs()
                         }
-                        var appImageFileName = item.fileName.substring(item.fileName.lastIndexOf("/") + 1)
+                        val appImageFileName = item.fileName.substring(item.fileName.lastIndexOf("/") + 1)
                         val appImageFullPath = appImagesPath + "/" + appImageFileName
 
                         // exec image copy
@@ -492,35 +546,49 @@ class LinkedImages : AppCompatActivity() {
                             )
                         ) {
                             runOnUiThread {
-                                centeredToast(contextLinkedImages, "Error copy Picker Uri", 1000)
+                                centeredToast(contextLinkedMedia, "Error copy Picker Uri", 1000)
+                            }
+                        }
+
+                        // find out if video vs. image
+                        var extraInfo = ""
+                        val mediaInfo = GalleryInfo.getGalleryMediaInfo(MainActivity.contextMainActivity, item.mediaId)
+                        if (mediaInfo != null) {
+                            if (mediaInfo.type == GalleryInfo.MediaType.IS_IMAGE) {
+                                extraInfo = "::::image"
+                            }
+                            if (mediaInfo.type == GalleryInfo.MediaType.IS_VIDEO) {
+                                extraInfo = "::::video"
                             }
                         }
 
                         // rescale image
-                        if (attachmentImageScale) {
+                        if (attachmentImageScale && mediaInfo!!.type == GalleryInfo.MediaType.IS_IMAGE) {
                             if (!resizeImageAndSave(appImageFullPath, appImageFullPath)) {
                                 runOnUiThread {
-                                    centeredToast(contextLinkedImages, "Error copy scaled", 1000)
+                                    centeredToast(contextLinkedMedia, "Error copy scaled image", 1000)
                                 }
                             }
                         }
 
                         // build search text
-                        var searchText = "::::" + item.pickerUri!!.toString()
+                        val searchText = "::::" + item.pickerUri!!.toString() + extraInfo
                         // build replace text
-                        var replaceText = "::::/" + appImageFileName
+                        val replaceText = "::::/" + appImageFileName
                         // update DataStore with progress
                         if (!MainActivity.insideDataStoreSearchAndReplace(
                                 searchText,
                                 replaceText,
                                 pw,
-                                contextLinkedImages
+                                contextLinkedMedia
                             )
                         ) {
                             runOnUiThread {
-                                centeredToast(contextLinkedImages, "Error DataStore", 1000)
+                                centeredToast(contextLinkedMedia, "Error DataStore", 1000)
                             }
                         }
+
+                        countOfCopiedFiles++
 
                         // remove uri permission of selected list element
                         try {
@@ -531,7 +599,7 @@ class LinkedImages : AppCompatActivity() {
                         } catch (e: Exception) {
                             // it is acceptable to not handle this exception
 //                            runOnUiThread {
-//                                centeredToast(contextLinkedImages, "Ups ...", 1000)
+//                                centeredToast(contextLinkedMedia, "Ups ...", 1000)
 //                            }
                         }
                     }
@@ -545,12 +613,92 @@ class LinkedImages : AppCompatActivity() {
         }
     }
 
+    // execute link removal in DataStore in a separate thread
+    fun searchAndDestroyLinks() {
+
+        // GrzLog images folder is beyond of its absolute path
+        val appStoragePath = MainActivity.contextMainActivity.getExternalFilesDir(null)!!.absolutePath
+
+        // progress related
+        var countOfRemovedLinks = 0
+        var success = false
+        val pw = ProgressWindow(this, getString(R.string.copyLinkedMedia))
+        pw.dialog?.setOnDismissListener {
+            if (success && countOfRemovedLinks > 0) {
+                // write modified DataStore to disk
+                MainActivity.writeAppData(appStoragePath, MainActivity.ds, MainActivity.appName)
+                // update LinkedMedia gallery
+                getLinkGalleryThumbs()
+                MainActivity.deleteAppDataCache(MainActivity.contextMainActivity)
+                MainActivity.reReadAppFileData = true
+                updateMenuStatus()
+            }
+            if (success && countOfRemovedLinks == 0) {
+                runOnUiThread {
+                    centeredToast(contextLinkedMedia,
+                        getString(R.string.non_of_the_selected_links_could_be_deleted), 3000)
+                }
+            }
+        }
+        pw.show()
+
+        // do the lengthy work in another thread
+        try {
+            Thread {
+                // prepare progress
+                pw.incCount = 0
+                pw.absCount = (MainActivity.ds.dataSection.size).toFloat()
+                pw.absFakeCount = pw.absCount
+
+                // loop linked images adapter list
+                for (item in adapter!!.list) {
+
+                    // item shall be selected and containing a valid file name
+                    if (item.selected && item.fileName.isNotEmpty()) {
+
+                        // build search text
+                        val searchText = "::::" + item.pickerUri!!.toString() + "]"
+                        // build replace text
+                        val replaceText = ""
+                        // update DataStore with progress
+                        if (!MainActivity.insideDataStoreSearchAndRemoveLink(
+                                searchText,
+                                pw,
+                                contextLinkedMedia
+                            )
+                        ) {
+                            runOnUiThread {
+                                centeredToast(contextLinkedMedia, "Error DataStore", 1000)
+                            }
+                        }
+
+                        countOfRemovedLinks++
+
+                        // remove uri permission of selected list element
+                        try {
+                            MainActivity.contextMainActivity.contentResolver.releasePersistableUriPermission(
+                                item.pickerUri!!,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        } catch (e: Exception) {
+                            // it is acceptable to not handle this exception
+                        }
+                    }
+                }
+                success = true
+                runOnUiThread {
+                    pw.close()
+                }
+            }.start()
+        } catch (e: Exception) {
+        }
+    }
+
     // GridView adapter
-    class ThumbGridAdapter(private val context: Context, var list: Array<GrzThumbNail>) : BaseAdapter() {
-        var inflater: LayoutInflater? = null
-        var cv: View? = null
-        var tv: TextView? = null
-        var iv: ImageView? = null
+    class GridViewAdapter(private val context: Context, var list: Array<GrzThumbNail>) : BaseAdapter() {
+
+        val inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+
         override fun getCount(): Int {
             return list.size
         }
@@ -561,64 +709,72 @@ class LinkedImages : AppCompatActivity() {
             return 0
         }
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View? {
-            // this var doesn't change, no need to get again and again
-            if (inflater == null) {
-                inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+
+            // if possible, get view set from memory
+            if (list[position].cv == null) {
+                // time-consuming tasks to be stored in view holder as part of data list
+                list[position].cv = inflater.inflate(R.layout.gallery_item, null)
+                list[position].iv = list[position].cv!!.findViewById(R.id.galleryImage) as ImageView
+                list[position].tv = list[position].cv!!.findViewById(R.id.galleryText) as TextView
             }
-            cv = inflater!!.inflate(R.layout.gallery_item, null)
-            tv = cv!!.findViewById(R.id.galleryText) as TextView
-            iv = cv!!.findViewById(R.id.galleryImage) as ImageView
+
             // item has two options: fileName == "" indicates a date entry, which needs to be shown
             if (list[position].fileName.isEmpty()) {
                 // show the date as HEADER
-                tv!!.text = list[position].fileDate
+                list[position].tv!!.text = list[position].fileDate
                 // fileDate is not empty (it is empty in case of an item right next to an image in case of a date change)
                 if (!list[position].fileDate.isEmpty()) {
-                    iv!!.layoutParams.height = 80
-                    tv!!.setTextSize(TypedValue.COMPLEX_UNIT_SP,16f)
-                    tv!!.setTextColor(Color.BLACK)
-                    tv!!.gravity = Gravity.CENTER
-                    tv!!.setBackgroundColor(Color.WHITE)
+                    list[position].iv!!.layoutParams.height = 80
+                    list[position].tv!!.setTextSize(TypedValue.COMPLEX_UNIT_SP,16f)
+                    list[position].tv!!.setTextColor(Color.BLACK)
+                    list[position].tv!!.gravity = Gravity.CENTER
+                    list[position].tv!!.setBackgroundColor(Color.WHITE)
                     if (list[position].fileDate.equals(" ")) {
-                        tv!!.setAlpha(0f)
+                        list[position].tv!!.setAlpha(0f)
                     }
                 } else {
-                    tv!!.setAlpha(0f)
+                    list[position].tv!!.setAlpha(0f)
                 }
             } else {
                 // set text and thumbnail
-                tv!!.text = list[position].fileName + "\n" + bytesToHumanReadableSize(list[position].fileSize.toDouble())
-                iv!!.setImageDrawable(list[position].thumbNail)
+                list[position].tv!!.text = buildString {
+                    append(list[position].fileName)
+                    append("\n")
+                    append(bytesToHumanReadableSize(list[position].fileSize.toDouble()))
+                }
+                list[position].iv!!.setImageDrawable(list[position].thumbNail)
                 // how to render an item depends on its selection status
                 if (list[position].selected) {
-                    cv!!.setBackgroundColor(Color.YELLOW)
+                    list[position].cv!!.setBackgroundColor(Color.YELLOW)
                 } else {
-                    cv!!.setBackgroundColor(Color.WHITE)
+                    list[position].cv!!.setBackgroundColor(Color.WHITE)
                 }
             }
-            return cv
+            return list[position].cv
         }
     }
 
     // GrzThumbNail data set
-    class GrzThumbNail(pickerUri: Uri?, mediaId: Int, fileName: String, fileDate: String, thumbNail: Drawable?, selected: Boolean = false, fileSize: Long = 0) {
-        var pickerUri = pickerUri
-        var mediaId   = mediaId
-        var fileName  = fileName
-        var fileDate  = fileDate
-        var thumbNail = thumbNail
-        var selected  = selected
-        var fileSize  = fileSize
-    }
+    class GrzThumbNail(var pickerUri: Uri?,
+                       var mediaId: Int,
+                       var fileName: String,
+                       var fileDate: String,
+                       var thumbNail: Drawable?,
+                       var cv: View?,      // adapter view holder as part data set
+                       var tv: TextView?,  //  - " -
+                       var iv: ImageView?, //  - " -
+                       var selected: Boolean = false,
+                       var fileSize: Long = 0)
+    {}
 
     // show a list of thumbnail images
     fun getLinkGalleryThumbs() {
         var success = false
-        var thumbsList = mutableListOf<GrzThumbNail>()
-        val pw = ProgressWindow(this, getString(R.string.scanLinkedImages))
+        val thumbsList = mutableListOf<GrzThumbNail>()
+        val pw = ProgressWindow(this, getString(R.string.scanLinkedMedia))
         pw.dialog?.setOnDismissListener {
             if (success) {
-                adapter = ThumbGridAdapter(this@LinkedImages, thumbsList.toTypedArray())
+                adapter = GridViewAdapter(this@LinkedMedia, thumbsList.toTypedArray())
                 if (adapter != null) {
                     // appearance of action menu items
                     itemUpload.isVisible = true
@@ -642,21 +798,21 @@ class LinkedImages : AppCompatActivity() {
                 // prepare 1st progress
                 pw.incCount = 0
                 var lineCount = 0
-                for (dsNdx in ds.dataSection.indices) {
+                for (dsNdx in MainActivity.ds.dataSection.indices) {
                     lineCount += 1
-                    lineCount += ds.dataSection[dsNdx].count { c -> c == '\n' }
+                    lineCount += MainActivity.ds.dataSection[dsNdx].count { c -> c == '\n' }
                 }
                 pw.absCount = lineCount.toFloat()
                 pw.absFakeCount = -1F
                 // iterate all data sections of DataStore to search for the patterns of linked images & build a list
-                var neededPermissionList: MutableList<Uri> = arrayListOf()
-                for (dsNdx in ds.dataSection.indices) {
+                val neededPermissionList: MutableList<Uri> = arrayListOf()
+                for (dsNdx in MainActivity.ds.dataSection.indices) {
                     // set progress
                     runOnUiThread {
                         pw.incCount += 1
                     }
                     // get one data section as string
-                    var sectionText = ds.dataSection[dsNdx]
+                    val sectionText = MainActivity.ds.dataSection[dsNdx]
                     // loop the split text line
                     val textLines = sectionText.split("\\n+".toRegex()).toTypedArray()
                     for (i in textLines.indices) {
@@ -665,7 +821,7 @@ class LinkedImages : AppCompatActivity() {
                             pw.incCount += 1
                         }
                         // deal with one line containing a link pattern
-                        var textLine = textLines[i]
+                        val textLine = textLines[i]
                         val m = PATTERN.UriLink.matcher(textLine)
                         if (m.find()) {
                             val lnkFull = m.group()
@@ -676,9 +832,9 @@ class LinkedImages : AppCompatActivity() {
                                 val lnkStr = lnkFull.substring(1, lnkFull.length - 1)
                                 try {
                                     val lnkParts = lnkStr.split("::::".toRegex()).toTypedArray()
-                                    if (lnkParts != null && lnkParts.size == 2) {
+                                    if (lnkParts != null && lnkParts.size >= 2) {
                                         // get linked image uri
-                                        var uri = Uri.parse(lnkParts[1])
+                                        val uri = Uri.parse(lnkParts[1])
                                         // check "needed" to be found in "granted"
                                         var found = false
                                         for (item in grantedPermissionList) {
@@ -726,7 +882,7 @@ class LinkedImages : AppCompatActivity() {
                     val sdfIn = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
                     val sdfOutDate = SimpleDateFormat("yyyy MMM dd, EEE", Locale.getDefault())
                     var lastDateStamp = ""
-                    var fileSize: Long = 0
+                    val fileSize: Long = 0
                     var index = 0
                     for (item in listGrzThumbNail) {
                         // set progress
@@ -735,61 +891,70 @@ class LinkedImages : AppCompatActivity() {
                         }
                         try {
                             // now drawable
-                            var drawable = item.thumbNail
+                            val drawable = item.thumbNail
                             // check date stamp: generate a date stamp header, if date changes
                             if (!lastDateStamp.equals(item.fileDate)) {
                                 // insert fully empty entry, the one right beneath an image
                                 if (index % 2 != 0) {
                                     thumbsList.add(
-                                        LinkedImages.GrzThumbNail(
+                                        LinkedMedia.GrzThumbNail(
                                             null,
                                             -1,
                                             "",
                                             "",
-                                            getDrawable(android.R.drawable.gallery_thumb)!!
+                                            getDrawable(android.R.drawable.gallery_thumb)!!,
+                                            null,
+                                            null,
+                                            null
                                         )
                                     )
                                     index++
                                 }
                                 // next line shall show the current date (!!the item right next to it carries a " ")
-                                var date = sdfIn.parse(item.fileDate)
+                                val date = sdfIn.parse(item.fileDate)
                                 thumbsList.add(
-                                    LinkedImages.GrzThumbNail(
+                                    LinkedMedia.GrzThumbNail(
                                         null,
                                         -1,
                                         "",
                                         sdfOutDate.format(date),
-                                        getDrawable(android.R.drawable.gallery_thumb)!!
+                                        getDrawable(android.R.drawable.gallery_thumb)!!,
+                                        null,
+                                        null,
+                                        null
                                     )
                                 )
                                 index++
                                 thumbsList.add(
-                                    LinkedImages.GrzThumbNail(
+                                    LinkedMedia.GrzThumbNail(
                                         null,
                                         -1,
                                         "",
                                         " ",
-                                        getDrawable(android.R.drawable.gallery_thumb)!!
+                                        getDrawable(android.R.drawable.gallery_thumb)!!,
+                                        null,
+                                        null,
+                                        null
                                     )
                                 )
                                 index++
                                 lastDateStamp = item.fileDate
                             }
-                            // set image thumbnail
-                            if (drawable != null) {
-                                // covers all files providing a Bitmap thumbnail
-                                thumbsList.add(
-                                    LinkedImages.GrzThumbNail(
-                                        item.pickerUri,
-                                        item.mediaId,
-                                        item.fileName,
-                                        item.fileDate,
-                                        drawable,
-                                        false,
-                                        item.fileSize
-                                    )
+                            // set image thumbnail: covers all files providing a Bitmap thumbnail
+                            thumbsList.add(
+                                LinkedMedia.GrzThumbNail(
+                                    item.pickerUri,
+                                    item.mediaId,
+                                    item.fileName,
+                                    item.fileDate,
+                                    if (drawable != null) drawable else this.getDrawable(android.R.drawable.gallery_thumb)!!,
+                                    null,
+                                    null,
+                                    null,
+                                    false,
+                                    item.fileSize
                                 )
-                            }
+                            )
                         } catch (e: Exception) {
                             thumbsList.add(
                                 GrzThumbNail(
@@ -798,6 +963,9 @@ class LinkedImages : AppCompatActivity() {
                                     item.fileName,
                                     item.fileDate,
                                     this.getDrawable(android.R.drawable.gallery_thumb)!!,
+                                    null,
+                                    null,
+                                    null,
                                     false,
                                     fileSize
                                 )

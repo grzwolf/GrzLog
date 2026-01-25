@@ -208,7 +208,7 @@
         <Preference
             android:title="@string/linked_images"
             android:summary="@string/clickHere"
-            android:key="ShowLinkedImages" />
+            android:key="ShowLinkedMedia" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Reset">

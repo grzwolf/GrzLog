@@ -59,7 +59,6 @@ import com.bumptech.glide.request.transition.Transition
 import com.grzwolf.grzlog.DataStore.TIMESTAMP
 import com.grzwolf.grzlog.MainActivity.Companion.appPwdPub
 import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
-import com.grzwolf.grzlog.SettingsActivity.Companion.appContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.BufferedReader
@@ -940,13 +939,12 @@ internal object CenteredCloseableToast {
 
 // https://stackoverflow.com/questions/59351273/how-to-get-the-mimetype-of-a-file-with-special-character-in-android
 fun getFileExtension(fileName: String?): String {
-    val encoded: String?
-    encoded = try {
-        URLEncoder.encode(fileName, "UTF-8").replace("+", "%20")
+    try {
+        val encoded = URLEncoder.encode(fileName, "UTF-8").replace("+", "%20")
+        return MimeTypeMap.getFileExtensionFromUrl(encoded).lowercase(Locale.getDefault())
     } catch (e: UnsupportedEncodingException) {
-        fileName
+        return fileName!!
     }
-    return MimeTypeMap.getFileExtensionFromUrl(encoded).lowercase(Locale.getDefault())
 }
 
 // copy "Android's Photo Picker Uri" to fullFilePath, here:  GrzLog files images
@@ -1062,10 +1060,16 @@ fun resizeImageAndSaveBMF(context: Context, fileInp: String, fileOut: String): B
 // common phone Gallery info helper
 class GalleryInfo() {
 
+    enum class MediaType {
+        IS_UNKNOWN,
+        IS_IMAGE,
+        IS_VIDEO
+    }
+
     companion object {
 
-        // phone Gallery image info class
-        class GalleryImageInfo(
+        // phone Gallery visual media info class
+        class GalleryMediaInfo(
             var id: Int,
             var name: String,
             var uri: Uri,
@@ -1073,12 +1077,13 @@ class GalleryInfo() {
             var relativePath: String,
             var absolutePath: String,
             var dateAdded: String,
-            var size: String
+            var size: String,
+            var type: MediaType
         ) {}
 
         // get info about all phone Gallery images
-        fun getGalleryImagesInfo(context: Context): List<GalleryImageInfo> {
-            var list: MutableList<GalleryImageInfo> = java.util.ArrayList()
+        fun getGalleryImagesInfo(context: Context): List<GalleryMediaInfo> {
+            val list: MutableList<GalleryMediaInfo> = java.util.ArrayList()
             val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
             val projection = arrayOf(
                 MediaStore.Images.Media._ID,
@@ -1091,7 +1096,8 @@ class GalleryInfo() {
             val cursor = context.contentResolver.query(
                 collection,
                 projection,
-                null, null,
+                null,
+                null,
                 MediaStore.Images.Media.DATE_ADDED + " DESC"
             )
             if (cursor != null) {
@@ -1102,11 +1108,11 @@ class GalleryInfo() {
                     val bucket = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME))
                     val relativePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.RELATIVE_PATH))
                     val dateAdded = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED))
-                    val absolutePath = getFileRealPath(context.contentResolver, imageUri)
-                    var ndx = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
+                    val absolutePath = getFileRealPath(context.contentResolver, imageUri, MediaType.IS_IMAGE)
+                    val ndx = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
                     val size = if (cursor.getString(ndx) == null) "null" else cursor.getString(ndx)
                     list.add(
-                        GalleryImageInfo(
+                        GalleryMediaInfo(
                             id,
                             name,
                             imageUri,
@@ -1114,7 +1120,8 @@ class GalleryInfo() {
                             relativePath,
                             absolutePath,
                             dateAdded,
-                            size
+                            size,
+                            MediaType.IS_IMAGE
                         )
                     )
                 }
@@ -1123,11 +1130,13 @@ class GalleryInfo() {
             return list
         }
 
-        // get info about one phone Gallery image according to requested  ID
-        fun getGalleryImageInfo(context: Context, idMediaStore: Int): GalleryImageInfo? {
-            var info: GalleryImageInfo? = null
-            val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            val projection = arrayOf(
+        // get info about one phone Gallery image or video according to requested  ID
+        fun getGalleryMediaInfo(context: Context, idMediaStore: Int): GalleryMediaInfo? {
+            // return value
+            var info: GalleryMediaInfo? = null
+            // check all about images
+            var collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            var projection = arrayOf(
                 MediaStore.Images.Media._ID,
                 MediaStore.Images.Media.DISPLAY_NAME,
                 MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
@@ -1135,10 +1144,11 @@ class GalleryInfo() {
                 MediaStore.Images.Media.DATE_ADDED,
                 MediaStore.Images.Media.SIZE
             )
-            val cursor = context.contentResolver.query(
+            var cursor = context.contentResolver.query(
                 collection,
                 projection,
-                null, null,
+                null,
+                null,
                 MediaStore.Images.Media.DATE_ADDED + " DESC"
             )
             if (cursor != null) {
@@ -1151,10 +1161,10 @@ class GalleryInfo() {
                         val bucket = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME))
                         val relativePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.RELATIVE_PATH))
                         val dateAdded = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED))
-                        val absolutePath = getFileRealPath(context.contentResolver, imageUri)
-                        var ndx = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
+                        val absolutePath = getFileRealPath(context.contentResolver, imageUri, MediaType.IS_IMAGE)
+                        val ndx = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
                         val size = if (cursor.getString(ndx) == null) "null" else cursor.getString(ndx)
-                        info = GalleryImageInfo(
+                        info = GalleryMediaInfo(
                             id,
                             name,
                             imageUri,
@@ -1162,57 +1172,148 @@ class GalleryInfo() {
                             relativePath,
                             absolutePath,
                             dateAdded,
-                            size
+                            size,
+                            MediaType.IS_IMAGE
                         )
                         break
                     }
                 }
                 cursor.close()
             }
+            // check all about videos
+            if (info == null) {
+                collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                projection = arrayOf(
+                    MediaStore.Video.Media._ID,
+                    MediaStore.Video.Media.DISPLAY_NAME,
+                    MediaStore.Video.Media.BUCKET_DISPLAY_NAME,
+                    MediaStore.Video.Media.RELATIVE_PATH,
+                    MediaStore.Video.Media.DATE_ADDED,
+                    MediaStore.Video.Media.SIZE
+                )
+                cursor = context.contentResolver.query(
+                    collection,
+                    projection,
+                    null, null,
+                    MediaStore.Video.Media.DATE_ADDED + " DESC"
+                )
+                if (cursor != null) {
+                    while (cursor.moveToNext()) {
+                        val id = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID))
+                        if (id == idMediaStore) {
+                            // the id was found
+                            val name = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME))
+                            val videoUri = Uri.withAppendedPath(collection, id.toString())
+                            val bucket = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.BUCKET_DISPLAY_NAME))
+                            val relativePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.RELATIVE_PATH))
+                            val dateAdded = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_ADDED))
+                            val absolutePath = getFileRealPath(context.contentResolver, videoUri, MediaType.IS_VIDEO)
+                            var ndx = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE)
+                            val size = if (cursor.getString(ndx) == null) "null" else cursor.getString(ndx)
+                            info = GalleryMediaInfo(
+                                id,
+                                name,
+                                videoUri,
+                                bucket,
+                                relativePath,
+                                absolutePath,
+                                dateAdded,
+                                size,
+                                MediaType.IS_VIDEO
+                            )
+                            break
+                        }
+                    }
+                    cursor.close()
+                }
+            }
             return info
         }
 
-        // get info about one phone Gallery image according to a provided "MediaStore Picker Uri"
-        fun getGalleryImageRealPath(context: Context, pickerUri: Uri): String {
+        // get info about one phone Gallery image or video according to a provided "MediaStore Picker Uri"
+        fun getGalleryMediaRealPath(context: Context, pickerUri: Uri): String {
             // return value
             var realPath = ""
             // get MediaStore ID
-            var pickerUriString = pickerUri.toString()
-            var idMediaStore = pickerUriString.substring(pickerUriString.lastIndexOf("/") + 1).toInt()
-            val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            val projection = arrayOf(
-                MediaStore.Images.Media._ID
-            )
-            val cursor = context.contentResolver.query(
-                collection,
-                projection,
-                null, null,
-                null
-            )
-            if (cursor != null) {
-                while (cursor.moveToNext()) {
-                    val id = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
-                    // check, whether the id was found
-                    if (id == idMediaStore) {
-                        // get the real image uri: differs from uri provided as parameter
-                        val imageUri = Uri.withAppendedPath(collection, id.toString())
-                        // continue with a new inner cursor
-                        val innerCursor = context.contentResolver.query(imageUri, null, null, null, null)
-                        if (innerCursor != null) {
-                            if (innerCursor.moveToFirst()) {
-                                // MediaStore.Images.Media.DATA is read only
-                                var columnName = MediaStore.Images.Media.DATA
-                                // innerCursor column index
-                                val filePathColumnIndex = innerCursor.getColumnIndex(columnName)
-                                // innerCursor column value is what we are looking for
-                                realPath = innerCursor.getString(filePathColumnIndex)
+            val pickerUriString = pickerUri.toString()
+            val idMediaStore = pickerUriString.substring(pickerUriString.lastIndexOf("/") + 1).toInt()
+            // images
+                val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                val projection = arrayOf(
+                    MediaStore.Images.Media._ID
+                )
+                val cursor = context.contentResolver.query(
+                    collection,
+                    projection,
+                    null, null,
+                    null
+                )
+                if (cursor != null) {
+                    while (cursor.moveToNext()) {
+                        val id =
+                            cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
+                        // check, whether the id was found
+                        if (id == idMediaStore) {
+                            // get the real image uri: differs from uri provided as parameter
+                            val imageUri = Uri.withAppendedPath(collection, id.toString())
+                            // continue with a new inner cursor
+                            val innerCursor =
+                                context.contentResolver.query(imageUri, null, null, null, null)
+                            if (innerCursor != null) {
+                                if (innerCursor.moveToFirst()) {
+                                    // MediaStore.Images.Media.DATA is read only
+                                    var columnName = MediaStore.Images.Media.DATA
+                                    // innerCursor column index
+                                    val filePathColumnIndex = innerCursor.getColumnIndex(columnName)
+                                    // innerCursor column value is what we are looking for
+                                    realPath = innerCursor.getString(filePathColumnIndex)
+                                }
+                                innerCursor.close()
                             }
-                            innerCursor.close()
+                            break
                         }
-                        break
                     }
+                    cursor.close()
                 }
-                cursor.close()
+            // videos
+            if (realPath.isEmpty()) {
+                val collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                val projection = arrayOf(
+                    MediaStore.Video.Media._ID
+                )
+                val cursor = context.contentResolver.query(
+                    collection,
+                    projection,
+                    null, null,
+                    null
+                )
+                if (cursor != null) {
+                    while (cursor.moveToNext()) {
+                        val id =
+                            cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID))
+                        // check, whether the id was found
+                        if (id == idMediaStore) {
+                            // get the real image uri: differs from uri provided as parameter
+                            val imageUri = Uri.withAppendedPath(collection, id.toString())
+                            // continue with a new inner cursor
+                            val innerCursor =
+                                context.contentResolver.query(imageUri, null, null, null, null)
+                            if (innerCursor != null) {
+                                if (innerCursor.moveToFirst()) {
+                                    // MediaStore.Images.Media.DATA is read only
+                                    var columnName = MediaStore.Video.Media.DATA
+                                    // innerCursor column index
+                                    val filePathColumnIndex = innerCursor.getColumnIndex(columnName)
+                                    // innerCursor column value is what we are looking for
+                                    realPath = innerCursor.getString(filePathColumnIndex)
+                                }
+                                innerCursor.close()
+                            }
+                            break
+                        }
+                    }
+                    cursor.close()
+                }
             }
             return realPath
         }
@@ -1221,25 +1322,47 @@ class GalleryInfo() {
         // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
         private fun getFileRealPath(
             contentResolver: ContentResolver,
-            uri: Uri
+            uri: Uri,
+            type: MediaType
         ): String {
             var filePath = ""
-            val cursor = contentResolver.query(uri, null, null, null, null)
-            if (cursor != null) {
-                if (cursor.moveToFirst()) {
-                    // column name by uri type
-                    var columnName = MediaStore.Images.Media.DATA
-                    when (uri) {
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI -> {
-                            columnName = MediaStore.Images.Media.DATA
+            if (type == MediaType.IS_IMAGE) {
+                val cursor = contentResolver.query(uri, null, null, null, null)
+                if (cursor != null) {
+                    if (cursor.moveToFirst()) {
+                        // column name by uri type
+                        var columnName = MediaStore.Images.Media.DATA
+                        when (uri) {
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI -> {
+                                columnName = MediaStore.Images.Media.DATA
+                            }
                         }
+                        // column index
+                        val filePathColumnIndex = cursor.getColumnIndex(columnName)
+                        // column value is the uri related file local path
+                        filePath = cursor.getString(filePathColumnIndex)
                     }
-                    // column index
-                    val filePathColumnIndex = cursor.getColumnIndex(columnName)
-                    // column value is the uri related file local path
-                    filePath = cursor.getString(filePathColumnIndex)
+                    cursor.close()
                 }
-                cursor.close()
+            }
+            if (type == MediaType.IS_VIDEO) {
+                val cursor = contentResolver.query(uri, null, null, null, null)
+                if (cursor != null) {
+                    if (cursor.moveToFirst()) {
+                        // column name by uri type
+                        var columnName = MediaStore.Video.Media.DATA
+                        when (uri) {
+                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI -> {
+                                columnName = MediaStore.Video.Media.DATA
+                            }
+                        }
+                        // column index
+                        val filePathColumnIndex = cursor.getColumnIndex(columnName)
+                        // column value is the uri related file local path
+                        filePath = cursor.getString(filePathColumnIndex)
+                    }
+                    cursor.close()
+                }
             }
             return filePath
         }
@@ -1282,9 +1405,9 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
         val textTv = dialog.findViewById(R.id.textViewImgPop) as TextView
         if (imagePath.isEmpty()) {
             // applies to all image links to Gallery: imageUri is a "PickerUri"
-            var uriString = imageUri.toString()
-            var idMediaStore = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
-            val imageInfo = GalleryInfo.getGalleryImageInfo(context, idMediaStore)
+            val uriString = imageUri.toString()
+            val idMediaStore = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
+            val imageInfo = GalleryInfo.getGalleryMediaInfo(context, idMediaStore)
             if (imageInfo != null) {
                 textTv.text = imageInfo.absolutePath + "\nMedia Store Id: " + idMediaStore.toString()
                 // !! only if coming from linked images gallery !!
@@ -1430,10 +1553,10 @@ fun loadThumbnailFromUri(context: Context, uri: Uri): Bitmap? {
 }
 
 // show image in default gallery viewer: https://stackoverflow.com/questions/13209494/how-to-get-the-full-file-path-from-uri
-fun showImageInAndroidGalleryViewer(context: Context, imageUri: Uri) {
+fun showImageInAndroidGalleryViewer(context: Context, imageUri: Uri, mimeType: String = "image/*") {
     // get ext
-    var type = "image/*"
-    var mimeExt = getFileExtension(imageUri.path)
+    var type = mimeType
+    val mimeExt = getFileExtension(imageUri.path)
     if (mimeExt.equals("gif", ignoreCase = true)) {
         type = "image/gif"
     }
@@ -1445,7 +1568,7 @@ fun showImageInAndroidGalleryViewer(context: Context, imageUri: Uri) {
     // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
     if (imageUri.toString().startsWith("content://media")) {
         // applies to image links to Gallery: convert "MediaStore Picker Uri" to "Google Photos Uri"
-        val realPath = GalleryInfo.getGalleryImageRealPath(context, imageUri)
+        val realPath = GalleryInfo.getGalleryMediaRealPath(context, imageUri)
         val realUri = FileProvider.getUriForFile(
             context,
             context.packageName + ".provider",
@@ -1480,7 +1603,7 @@ fun showImageInAndroidGalleryViewer(context: Context, imageUri: Uri) {
     }
 }
 
-// pretty tricky way to get a file out of an uri
+// pretty tricky way to get a file out of a uri
 fun getFileFromUri(context: Context, imageUriOri: Uri): File? {
     var imageUri = imageUriOri
     var file: File?
@@ -1551,21 +1674,36 @@ fun urlExists(uri: String) : Boolean {
 }
 
 // show linked attachment
-fun showAppLinkOrAttachment(context: Context, title: String, fileName: String?) {
+fun showAppLinkOrAttachment(context: Context,
+                            title: String,
+                            fileName: String?,
+                            type: GalleryInfo.MediaType = GalleryInfo.MediaType.IS_UNKNOWN ) {
     // sake of mind
     if (fileName!!.isEmpty()) {
         return
     }
 
     //
-    // only image links to the phone Gallery provided by "Android Photo Picker"
+    // media links to the phone Gallery provided by "Android Photo Picker"
     // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
     //
     if (fileName.startsWith("content://media") == true) {
         // get uri from filename
         val uri = Uri.parse(fileName)
-        // start popup with empty imagePath --> showImagePopup(..) converts this case into a real file name from uri
-        showImagePopup(context, "", title, uri)
+        // surely not to happen
+        if (type == GalleryInfo.MediaType.IS_UNKNOWN) {
+            // start popup with empty imagePath --> showImagePopup(..) converts this case into a real file name from uri
+            showImagePopup(context, "", title, uri)
+        }
+        // Android Gallery linked image
+        if (type == GalleryInfo.MediaType.IS_IMAGE) {
+            // start popup with empty imagePath --> showImagePopup(..) converts this case into a real file name from uri
+            showImagePopup(context, "", title, uri)
+        }
+        // Android Gallery linked video
+        if (type == GalleryInfo.MediaType.IS_VIDEO) {
+            showImageInAndroidGalleryViewer(context, uri, "video/*")
+        }
         // all done, get out
         return
     }
@@ -1618,7 +1756,7 @@ fun showAppLinkOrAttachment(context: Context, title: String, fileName: String?) 
     }
 
     //
-    // all other media are show with their usually connected apps
+    // all other media are shown with their usually connected apps
     //
     val file = getFileFromUri(context, uri)
     if (file == null) {
@@ -1747,14 +1885,14 @@ class ProgressWindow(context: Context, message: String) {
 // get list of linked phone files
 fun getLinkedFilesInfo(
     context: Context,
-    linkedImagesList: MutableList<Uri>,
+    LinkedMediaList: MutableList<Uri>,
     pw: ProgressWindow? = null
-): List<LinkedImages.GrzThumbNail> {
+): List<LinkedMedia.GrzThumbNail> {
     // retVal
-    var retVal = mutableListOf<LinkedImages.GrzThumbNail>()
+    val retVal = mutableListOf<LinkedMedia.GrzThumbNail>()
 
     // create list from scratch
-    for (pickerUri in linkedImagesList) {
+    for (pickerUri in LinkedMediaList) {
         // set progress
         if (pw != null) {
             (context as Activity).runOnUiThread {
@@ -1769,11 +1907,11 @@ fun getLinkedFilesInfo(
         var fileDate = ""
 
         // get MediaStore ID from uri
-        var uriString = pickerUri.toString()
-        var id = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
+        val uriString = pickerUri.toString()
+        val id = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
 
         // get linked image info
-        var galleryItem = GalleryInfo.getGalleryImageInfo(context, id)
+        val galleryItem = GalleryInfo.getGalleryMediaInfo(context, id)
         if (galleryItem != null) {
             // MediaStore id
             mediaId = id
@@ -1783,21 +1921,26 @@ fun getLinkedFilesInfo(
             fileSize = galleryItem.size.toLong()
             // get date added
             fileDate = SimpleDateFormat("yyyyMMdd").format(Date(galleryItem.dateAdded.toLong() * 1000))
+            // get thumbnail directly from uri
+            var bmp = loadThumbnailFromUri(context, pickerUri)
+            if (bmp == null) {
+                // supposed to happen if uri is video
+                bmp = ThumbnailUtils.createVideoThumbnail(File(fileName), Size(128, 128), null)
+            }
+            val dwb = BitmapDrawable(context.resources, bmp)
+            // add to return value list retVal
+            retVal.add((LinkedMedia.GrzThumbNail(pickerUri, mediaId, fileName, fileDate, dwb, null, null, null,false, fileSize)))
+        } else {
+            // add a broken link
+            retVal.add((LinkedMedia.GrzThumbNail(pickerUri, id, uriString, "19700101", null, null, null, null,false, 0)))
         }
-
-        // get thumbnail directly from uri
-        var bmp = loadThumbnailFromUri(context, pickerUri)
-        var dwb = BitmapDrawable(context.resources, bmp)
-
-        // add to return value list retVal
-        retVal.add((LinkedImages.GrzThumbNail(pickerUri, mediaId, fileName, fileDate, dwb, false, fileSize)))
     }
 
     // sort list in descending order by date stamp
-    val cmp = compareBy<LinkedImages.GrzThumbNail> {
+    val cmp = compareBy<LinkedMedia.GrzThumbNail> {
         LocalDate.parse(
             it.fileDate,
-            DateTimeFormatter.ofPattern("yyyMMdd")
+            DateTimeFormatter.ofPattern("yyyyMMdd")
         )
     }
     retVal.sortWith(cmp.reversed())
@@ -2088,7 +2231,7 @@ fun getAppGalleryThumbsSilent(context: Context, sortByDate: Boolean) {
                 // just the current index
                 index++
             }
-            MainActivity.appGalleryAdapter = GalleryActivity.ThumbGridAdapter(context, list.toTypedArray())
+            MainActivity.appGalleryAdapter = GalleryActivity.GridAdapter(context, list.toTypedArray())
             MainActivity.appGalleryAdapter!!.notifyDataSetChanged()
             MainActivity.appGallerySortedByDate = sortByDate
             MainActivity.appGalleryScanning = false

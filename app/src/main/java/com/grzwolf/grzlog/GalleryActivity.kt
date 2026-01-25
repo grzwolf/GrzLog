@@ -25,7 +25,7 @@ import kotlin.io.path.fileSize
 class GalleryActivity : AppCompatActivity() {
 
     lateinit var gridView: GridView
-    var adapter : ThumbGridAdapter? = null
+    var adapter : GridAdapter? = null
     var galleryMenu: Menu? = null
     var returnPayload = true
     var showOrphans = false
@@ -167,7 +167,7 @@ class GalleryActivity : AppCompatActivity() {
         // not supposed to happen: generate just dummy data
         if (adapter == null) {
             val listDummy = mutableListOf<GrzThumbNail>()
-            val adapterDummy = ThumbGridAdapter(this@GalleryActivity, listDummy.toTypedArray())
+            val adapterDummy = GridAdapter(this@GalleryActivity, listDummy.toTypedArray())
             gridView.setAdapter(adapterDummy)
             adapterDummy.notifyDataSetChanged()
         }
@@ -428,7 +428,7 @@ class GalleryActivity : AppCompatActivity() {
     }
 
     // GridView adapter
-    class ThumbGridAdapter(private val context: Context, var list: Array<GrzThumbNail>) : BaseAdapter() {
+    class GridAdapter(private val context: Context, var list: Array<GrzThumbNail>) : BaseAdapter() {
         var inflater: LayoutInflater? = null
         var cv: View? = null
         var tv: TextView? = null
@@ -537,7 +537,7 @@ class GalleryActivity : AppCompatActivity() {
                 }
             }
             // set adapter
-            adapter = ThumbGridAdapter(context, thumbsList.toTypedArray())
+            adapter = GridAdapter(context, thumbsList.toTypedArray())
             if (adapter != null) {
                 // update view
                 gridView.setAdapter(adapter)
@@ -552,7 +552,7 @@ class GalleryActivity : AppCompatActivity() {
         val pw = ProgressWindow(context, getString(R.string.scanAppGallery))
         pw.dialog?.setOnDismissListener {
                 if (success) {
-                    adapter = ThumbGridAdapter(this@GalleryActivity, thumbsList.toTypedArray())
+                    adapter = GridAdapter(this@GalleryActivity, thumbsList.toTypedArray())
                     if (adapter != null) {
                         // visibility of two action menu items
                         var itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
