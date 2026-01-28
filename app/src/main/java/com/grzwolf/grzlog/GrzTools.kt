@@ -1051,7 +1051,8 @@ fun resizeImageAndSaveBMF(context: Context, fileInp: String, fileOut: String): B
 }
 
 // show "embedded photo picker" as dialog
-// not working in AS LadyBug TBD after switching to AS Otter with AGP 4.0
+// defer photo picker implementation until min SDK >=34
+// https://android-developers.googleblog.com/2026/01/httpsandroid-developers.googleblog.com202506android-embedded-photo-picker.html%20.html
 //fun showEmbeddedPhotoPicker(context: Context) {
 //    // have dialog
 //    val dialog = Dialog(context)
