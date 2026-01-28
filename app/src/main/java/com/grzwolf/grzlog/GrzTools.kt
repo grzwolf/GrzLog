@@ -807,7 +807,10 @@ fun decisionBoxCustom(
             dialog.dismiss()
         })
     try {
-        var dlg = builder.create()
+        val dlg = builder.create()
+        dlg.setOnShowListener {
+            dlg.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
         dlg.show()
         dlg.getButton(AlertDialog.BUTTON_POSITIVE).setAllCaps(false)
         dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setAllCaps(false)
@@ -823,7 +826,7 @@ fun dontShowAgain(context: Context, title: String?, sharedPreferencesString: Str
         return
     }
     val items = arrayOf<CharSequence>(context.getString(R.string.dontShowAgain))
-    var builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+    val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
     builder.setTitle(title)
     builder.setMultiChoiceItems(
         items,
@@ -836,7 +839,11 @@ fun dontShowAgain(context: Context, title: String?, sharedPreferencesString: Str
             }
         })
     builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dialog, which -> })
-    builder.create().show()
+    val dialog = builder.create()
+    dialog.setOnShowListener {
+        dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+    }
+    dialog.show()
 }
 
 // https://stackoverflow.com/questions/12616124/get-number-of-files-in-a-directory-and-its-subdirectories

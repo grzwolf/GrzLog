@@ -21,6 +21,7 @@ import android.os.Environment
 import android.os.Handler
 import android.provider.Settings
 import android.view.MenuItem
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -789,6 +790,9 @@ public class SettingsActivity :
                             return@OnClickListener
                         })
                     val alert = builder.create()
+                    alert.setOnShowListener {
+                        alert.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                    }
                     alert.show()
                     true
                 }
@@ -986,6 +990,9 @@ public class SettingsActivity :
                             return@OnClickListener
                         })
                     val alert = builder.create()
+                    alert.setOnShowListener {
+                        alert.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                    }
                     alert.show()
                     true
                 }
@@ -1026,6 +1033,9 @@ public class SettingsActivity :
                             return@OnClickListener
                         })
                     val alert = builder.create()
+                    alert.setOnShowListener {
+                        alert.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                    }
                     alert.show()
                     true
                 }
@@ -1825,6 +1835,9 @@ public class SettingsActivity :
                 dialog.cancel()
             }
             val alert = adYesNo.create()
+            alert.setOnShowListener {
+                alert.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+            }
             alert.show()
             alert.setCanceledOnTouchOutside(false)
         }

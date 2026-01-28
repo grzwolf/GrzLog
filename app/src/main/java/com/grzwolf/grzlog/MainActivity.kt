@@ -937,7 +937,10 @@ class MainActivity : AppCompatActivity(),
                     // restart toggle dialog after toggling is done to show new status
                     Handler().postDelayed({
                         (titleView.parent as? ViewGroup)?.removeView(titleView)
-                        var dlg = builder.create()
+                        val dlg = builder.create()
+                        dlg.setOnShowListener {
+                            dlg.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                        }
                         dlg.show()
                         dlg.getWindow()?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
                         dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
@@ -945,7 +948,10 @@ class MainActivity : AppCompatActivity(),
                     }, 300)
                 }
             }
-            var dlg = builder.create()
+            val dlg = builder.create()
+            dlg.setOnShowListener {
+                dlg.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+            }
             dlg.show()
             dlg.getWindow()?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
             dlg.getButton(AlertDialog.BUTTON_NEUTRAL).setAllCaps(false)
@@ -1847,6 +1853,9 @@ class MainActivity : AppCompatActivity(),
                             })
                         val dlg = bld.create()
                         dlg.setCanceledOnTouchOutside(false)
+                        dlg.setOnShowListener {
+                            dlg.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                        }
                         dlg.show()
                     } else {
                         // new reminder
@@ -1934,6 +1943,9 @@ class MainActivity : AppCompatActivity(),
                                         startActivity(intent)
                                         // back to the item reminder dlg
                                         Handler().postDelayed({
+                                            reminderDlg!!.setOnShowListener {
+                                                reminderDlg!!.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                                            }
                                             reminderDlg!!.show()
                                         }, 300)
                                     }
@@ -2132,6 +2144,9 @@ class MainActivity : AppCompatActivity(),
                         })
                     val youSureDlg = youSureBld.create()
                     youSureDlg.setCanceledOnTouchOutside(false)
+                    youSureDlg.setOnShowListener {
+                        youSureDlg.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                    }
                     youSureDlg.show()
                 }
             })
@@ -2562,6 +2577,9 @@ class MainActivity : AppCompatActivity(),
                 dialog.dismiss()
                 // restart input search phrase dialog: needs searchDialog to be global
                 Handler().postDelayed({
+                    searchDialog!!.setOnShowListener {
+                        searchDialog!!.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                    }
                     searchDialog!!.show()
                     searchDialog!!.setCanceledOnTouchOutside(false)
                     sText.requestFocus()
@@ -2794,12 +2812,12 @@ class MainActivity : AppCompatActivity(),
                         }, 10)
                     }
                 }
-                var dlg = builder.create()
+                val dlg = builder.create()
                 dlg.setOnShowListener {
                     // scroll listview
                     dlg.listView.smoothScrollToPosition(0)
                     // final dialog layout dimensions
-                    var alertTitle = builder.context.getResources().getIdentifier("alertTitle", "id", "android")
+                    val alertTitle = builder.context.getResources().getIdentifier("alertTitle", "id", "android")
                     dlg.findViewById<TextView>(alertTitle)?.let {
                         titleTextLinesHeight = it.lineHeight
                     }
@@ -4572,6 +4590,9 @@ class MainActivity : AppCompatActivity(),
         // + button long click options dialog
         optionsBuilder.setNegativeButton(R.string.cancel) { dialog, which -> }
         optionsDialog = optionsBuilder.create()
+        optionsDialog.setOnShowListener {
+            optionsDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
         optionsDialog?.show()
     }
 
@@ -4818,10 +4839,13 @@ class MainActivity : AppCompatActivity(),
             }
         )
         // run dialog
-        var dialog = builder?.create()
+        val dialog = builder?.create()
         val listView = dialog?.getListView()
         listView?.divider = ColorDrawable(Color.GRAY)
         listView?.dividerHeight = 2
+        dialog?.setOnShowListener {
+            dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
         dialog?.show()
         dialog?.setCanceledOnTouchOutside(false)
     }
@@ -5237,7 +5261,11 @@ class MainActivity : AppCompatActivity(),
                             // build PDF from selected items
                             generatePdf(pdfTitle.text.toString(), lvMain.folderSelectedItems, true, null)
                         }
-                        pdfTitleBuilder.create().show()
+                        val dialog = pdfTitleBuilder.create()
+                        dialog.setOnShowListener {
+                            dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                        }
+                        dialog.show()
                         pdfTitle.requestFocus()
                         showKeyboard(pdfTitle, 0, 0, 250)
                         pdfTitle.postDelayed({ pdfTitle.selectAll() }, 500)
@@ -5273,6 +5301,9 @@ class MainActivity : AppCompatActivity(),
             val listView = shareDialog.listView
             listView.divider = ColorDrawable(Color.GRAY)
             listView.dividerHeight = 2
+            shareDialog.setOnShowListener {
+                shareDialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+            }
             shareDialog.show()
             shareDialog.setCanceledOnTouchOutside(false)
         }
@@ -5380,6 +5411,9 @@ class MainActivity : AppCompatActivity(),
         listView?.dividerHeight = 2
         // CHANGE FOLDER finally show change folder dialog
         try {
+            MainActivity.changeFolderDialog?.setOnShowListener {
+                MainActivity.changeFolderDialog?.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+            }
             MainActivity.changeFolderDialog?.show()
         } catch (ex: Exception) {
             // not nice, but no further handling needed
@@ -5398,9 +5432,9 @@ class MainActivity : AppCompatActivity(),
             getString(R.string.removeFolder),                          // 4 Remove
             getString(R.string.moveFolderTop),                     // 5 Move top
             getString(R.string.moveFolderBottom),                  // 6 Move top
-            getString(R.string.moreSetting),                       // 7 Folder setting
+            getString(R.string.moreSetting),                        // 7 Folder setting
             "",                                // 8 empty ITEM as separator
-            getString(R.string.newFolder)                       // 9 New
+            getString(R.string.newFolder)              // 9 New
         )
         var folderMoreBuilder = AlertDialog.Builder(
                 changeFileBuilderContext,
