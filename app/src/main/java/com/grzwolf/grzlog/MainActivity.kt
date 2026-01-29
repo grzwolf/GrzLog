@@ -3950,13 +3950,15 @@ class MainActivity : AppCompatActivity(),
                     //
                     // loop oriParts date headers to be able to insert newText for a today's date
                     // --> oriParts might contain date headers younger as today
+                    // --> oriParts might miss a date header from today
+                    // --> oriParts might be empty (aka an empty new folder or app 1st start)
                     //
                     var spacers = 0           // spacers needed to translate offset in ds into lvMain
                     var newTextInsertPos = -1 // offset in ds
                     val todayDate = LocalDate.now()
                     var itemHeaderDate: LocalDate? = null
                     for (ndx in 0 until oriParts.size) {
-                        // any date header contains a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
+                        // any date header contains a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR 2020-03-03
                         val m1 = PATTERN.DateDay.matcher(oriParts[ndx])
                         if (m1.find()) {
                             try {
@@ -3973,10 +3975,20 @@ class MainActivity : AppCompatActivity(),
                                 )
                             }
                             if (itemHeaderDate != null) {
-                                // compare to find a date match
+                                // compare to find a date match between today and an already existing date header
                                 if (todayDate.year == itemHeaderDate.year && todayDate.dayOfYear == itemHeaderDate.dayOfYear) {
+                                    // that means, today has an existing date header in ds --> insert newText after header
                                     newTextInsertPos = ndx         // ds offset to insert newText
                                     insertStartPos = ndx + spacers // lvMain pos for highlighting
+                                    break
+                                }
+                                // as soon as an older date header  as today is found, break loop
+                                if (todayDate.year == itemHeaderDate.year && todayDate.dayOfYear > itemHeaderDate.dayOfYear) {
+                                    // that means, today does not yet have an existing date header in ds --> add it to newText
+                                    newText = todayDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")) + "\n" + newText
+                                    // insert newText one position before the older date header
+                                    newTextInsertPos = ndx - 1              // ds offset to insert newText
+                                    insertStartPos = ndx - 1 + spacers - 1  // lvMain pos for highlighting
                                     break
                                 }
                                 // for highlighting
