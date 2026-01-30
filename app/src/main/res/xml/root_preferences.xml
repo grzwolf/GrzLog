@@ -27,6 +27,11 @@
             android:summary="@string/signature_summary" />
 
         <Preference
+            android:title="@string/appWhatsNew"
+            android:summary="@string/clickHere"
+            android:key="WhatsNew" />
+
+        <Preference
             android:title="@string/appHelp"
             android:summary="@string/clickHere"
             android:key="AppHelp" />

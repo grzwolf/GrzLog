@@ -414,6 +414,7 @@
     <string name="non_of_the_selected_links_could_be_deleted">Keiner der ausgewählten Links konnte entfernt werden.</string>
     <string name="remove_selected_links_folder_update"><![CDATA[Entfernen der gewählten Links und Update der Ordner Daten. Entfernte Links hinterlassen ein <X>.]]></string>
     <string name="remove_selected_links_only">Zugriffsberechtigungen für gewählte Links werden entfernt. Ordner Daten werden nicht geändert.</string>
+    <string name="appWhatsNew">GrzLog: Was ist neu?</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

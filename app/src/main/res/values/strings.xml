@@ -415,6 +415,7 @@
     <string name="non_of_the_selected_links_could_be_deleted">Non of the selected links could be removed.</string>
     <string name="remove_selected_links_folder_update"><![CDATA[Remove selected links and update folder data accordingly. Removed links are marked with <X>.]]></string>
     <string name="remove_selected_links_only">Access permissions for selected links will be removed. Folder data are not changed.</string>
+    <string name="appWhatsNew">GrzLog: What\'s New?</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

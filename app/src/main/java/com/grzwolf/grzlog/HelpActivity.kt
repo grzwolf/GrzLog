@@ -89,6 +89,7 @@ class HelpActivity : AppCompatActivity() {
         "   About GrzLog\n" +
         "       About\n" +
         "       Developer contact data\n" +
+        "       GrzLog: What's new?\n" +
         "       Help pages\n" +
         "       GrzLog limitations\n" +
         "       Check GrzLog update at start\n" +

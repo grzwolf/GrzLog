@@ -486,6 +486,17 @@ public class SettingsActivity :
                 true
             }
 
+            // action after click show GrzLog What's New
+            showHelp = findPreference("WhatsNew") as Preference?
+            showHelp!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                try {
+                    requireActivity().startActivity(Intent(context, WhatsNewActivity::class.java))
+                } catch (e: Exception) {
+                    centeredToast(appContext!!, "What's New error: " + e.message.toString(), 3000)
+                }
+                true
+            }
+
             // show last update check date
             val startCheckPref = findPreference("AppAtStartCheckUpdateFlag") as SwitchPreferenceCompat?
             if (BuildConfig.DEBUG) {
