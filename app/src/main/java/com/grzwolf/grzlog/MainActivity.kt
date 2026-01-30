@@ -3089,6 +3089,36 @@ class MainActivity : AppCompatActivity(),
         } catch ( e:Exception) {}
     }
 
+    // a date picker dialog to insert a selected date into fabPlus input area
+    fun setFabPlusDialogDateInput() {
+        // show date picker dialog
+        val cal = Calendar.getInstance()
+        val yNow = cal.get(Calendar.YEAR)
+        val mNow = cal.get(Calendar.MONTH)
+        val dNow = cal.get(Calendar.DAY_OF_MONTH)
+        val dpd = DatePickerDialog(
+            this,
+            AlertDialog.THEME_DEVICE_DEFAULT_DARK,
+            DatePickerDialog.OnDateSetListener { view, year, monthOfYear, dayOfMonth ->
+
+            }, yNow, mNow, dNow)
+        dpd.show()
+        // date picker dialog OK button listener
+        val okButton = dpd.getButton(DialogInterface.BUTTON_POSITIVE)
+        okButton.setOnClickListener {
+            // get selected date
+            val year = dpd.datePicker.year
+            val month = dpd.datePicker.month + 1
+            val day = dpd.datePicker.dayOfMonth
+            // set date into fabPlus input area
+            val dateStr = String.format("%d-%02d-%02d", year, month, day)
+            fabPlus.inputAlertView!!.setText(dateStr)
+            fabPlus.inputAlertView!!.setSelection(dateStr.length, dateStr.length)
+            // close date picker
+            dpd.dismiss()
+        }
+    }
+
     // dynamic size of fabPlus input dialog is called by "(fabPlus.mainDialog)?.setOnShowListener"
     fun setFabPlusDialogSize() {
         if (fabPlus.mainDialog != null) {
@@ -3102,6 +3132,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     // input button click --> simple input of data
+    @SuppressLint("ClickableViewAccessibility")
     private fun fabPlusOnClick(
         adapterView: AdapterView<*>? = null,
         itemView: View? = null,
@@ -4238,6 +4269,31 @@ class MainActivity : AppCompatActivity(),
         customTitleView.setPadding(50, 50, 50, 50)
         fabPlusBuilder.setCustomTitle(customTitleView)
         // input editor
+        fabPlus.inputAlertView!!.setOnTouchListener(OnTouchListener { v, event, ->
+            // detect double click to allow additional functionality --> insert a date
+            if (fabPlus.inputAlertView!!.text.isEmpty()) {
+                if (event.action == MotionEvent.ACTION_DOWN) {
+                    if (fabPlus.waitForDoubleClick) {
+                        val deltaMs = System.currentTimeMillis() - fabPlus.downClickTime
+                        if (deltaMs in 50..400) {
+                            // do the double click functionality
+                            setFabPlusDialogDateInput()
+                            // unconditionally reset the wait flag
+                            fabPlus.waitForDoubleClick = false
+                        }
+                    } else {
+                        fabPlus.downClickTime = System.currentTimeMillis()
+                    }
+                }
+                if (event.action == MotionEvent.ACTION_UP) {
+                    fabPlus.waitForDoubleClick = true
+                    Handler().postDelayed({
+                        fabPlus.waitForDoubleClick = false
+                    }, 3000)
+                }
+            }
+            false
+        })
         fabPlus.inputAlertView!!.setBackgroundColor(Color.rgb(80, 80, 80))
         fabPlusBuilder.setView(fabPlus.inputAlertView)
         // >= Android 12: default filter limit is set to 10k chars --> remove filters
@@ -6186,6 +6242,9 @@ class MainActivity : AppCompatActivity(),
     //
     @SuppressLint("AppCompatCustomView")
     inner class GrzEditText(context: Context) : EditText(context) {
+        override fun performClick(): Boolean {
+            return super.performClick()
+        }
         override fun onTextContextMenuItem(id: Int): Boolean {
             val consumed = super.onTextContextMenuItem(id)
             when (id) {
@@ -10745,6 +10804,8 @@ class FabPlus {
     var imageCapture = false                 // flag indicates, an image was captured
     var mainDialog: AlertDialog? = null      // main edit dlg after click on button +
     var mainDialogInitHeight = 100000        // main edit dlg initial height with one line text
+    var downClickTime = 0L                   // detect double click
+    var waitForDoubleClick = false           // detect double click
 }
 
 // compile regex patterns once in advance to detect: "blah[uriLink]blah", "YYYY-MM-DD", "YYYY-MM-DD Mon"

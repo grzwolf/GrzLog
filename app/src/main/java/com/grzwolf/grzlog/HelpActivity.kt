@@ -30,6 +30,7 @@ class HelpActivity : AppCompatActivity() {
         "         multi line input is ok\n" +
         "         topmost item is allowed to be a valid date in near future\n" +
         "         weblinks are highlighted\n" +
+        "         double tap empty input opens a date picker dialog\n" +
         "   Attachment: 'Select attachment' dialog\n" +
         "         link (image, video) to phone gallery (max. allowed is 512)\n" +
         "         copy (image, video) from phone gallery\n" +
