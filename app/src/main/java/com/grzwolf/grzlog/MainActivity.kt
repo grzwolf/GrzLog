@@ -3683,9 +3683,9 @@ class MainActivity : AppCompatActivity(),
                             )
                         } catch(e: DateTimeParseException) {
                             try {
-                                // it can happen, that topmost header does not have a week day name
+                                // it can happen, that topmost header does not have a week day name or a wrong one
                                 topMostHeaderDate = LocalDate.parse(
-                                    m0.group(),
+                                    m0.group().substring(0, 10),
                                     DateTimeFormatter.ofPattern("yyyy-MM-dd")
                                 )
                             } catch(e: DateTimeParseException) {
@@ -3807,10 +3807,10 @@ class MainActivity : AppCompatActivity(),
                                             DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
                                         )
                                     } catch (e: DateTimeParseException) {
-                                        // "yyyy-MM-dd" pattern, if data were not yet saved and reloaded
+                                        // "yyyy-MM-dd" pattern, if data were not yet saved and reloaded or wrong day name
                                         try {
                                             itemHeaderDate = LocalDate.parse(
-                                                m1.group(),
+                                                m1.group().substring(0, 10),
                                                 DateTimeFormatter.ofPattern("yyyy-MM-dd")
                                             )
                                         } catch (e: DateTimeParseException) {
@@ -3840,10 +3840,10 @@ class MainActivity : AppCompatActivity(),
                                                         DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
                                                     )
                                                 } catch (e: DateTimeParseException) {
-                                                    // "yyyy-MM-dd" pattern, if data were not yet saved and reloaded
+                                                    // "yyyy-MM-dd" pattern, if data were not yet saved and reloaded or wrong day name
                                                     try {
                                                         fstNewerHeaderDate = LocalDate.parse(
-                                                            m2.group(),
+                                                            m2.group().substring(0, 10),
                                                             DateTimeFormatter.ofPattern("yyyy-MM-dd")
                                                         )
                                                     } catch (e: DateTimeParseException) {
@@ -3999,11 +3999,15 @@ class MainActivity : AppCompatActivity(),
                                     DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
                                 )
                             } catch (e: Exception) {
-                                // build a date from oriParts
-                                itemHeaderDate = LocalDate.parse(
-                                    m1.group(),
-                                    DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                                )
+                                try {
+                                    // build a date from oriParts
+                                    itemHeaderDate = LocalDate.parse(
+                                        m1.group().substring(0, 10),
+                                        DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                                    )
+                                } catch (e: Exception) {
+                                    // leaving unhandled is ok
+                                }
                             }
                             if (itemHeaderDate != null) {
                                 // compare to find a date match between today and an already existing date header
@@ -10121,7 +10125,7 @@ class GrzListView {
             var dayEnd = -1
             // climb ListView up until a Sunday is found
             for (i in position downTo 0) {
-                // check '2020-03-03 Thu' pattern
+                // check '2020-03-03' pattern
                 if ( arrayList[i].isSection ) {
                     // a regex pattern for "yyyy-mm-dd
                     val curText = arrayList[i].title
@@ -10146,7 +10150,7 @@ class GrzListView {
             // climb ListView down until a valid date is found
             dayChanges = 0
             for (i in position until arrayList.size) {
-                // check '2020-03-03 Thu' pattern and extract name of day
+                // check '2020-03-03' pattern and extract name of day
                 if ( arrayList[i].isSection ) {
                     var splitArr = arrayList[i].title?.split(" ")
                     if (splitArr?.size == 2) {
