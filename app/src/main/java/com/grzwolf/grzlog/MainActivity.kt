@@ -163,6 +163,9 @@ class MainActivity : AppCompatActivity(),
     // global 'search dialog' to allow to restart it, if search phrase has no hit
     var searchDialog: AlertDialog? = null
 
+    // double tap detector, only used in fabPlus.inputAlertView to open a date picker dialog
+    lateinit var doubleTapDetector: GestureDetector
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         // dark mode OR light mode; call before super.onCreate
@@ -521,13 +524,28 @@ class MainActivity : AppCompatActivity(),
             true
         })
 
-        // user input button has two use scenarios: click and long press
+        // user input button has two use scenarios:
+        // 1.) click
         (fabPlus.button)?.setOnClickListener(View.OnClickListener { view ->
             fabPlusOnClick()
         })
+        // 2.) long press
         (fabPlus.button)?.setOnLongClickListener(OnLongClickListener { view ->
             fabPlusOnLongClick(view, lvMain.listView)
             true
+        })
+        // once input button opened the main user input dialog.
+        // a double tap detector used in fabPlus.inputAlertView
+        // to open a date picker dialog
+        doubleTapDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent): Boolean {
+                return true
+            }
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                Log.d("myApp", "double tap")
+                setFabPlusDialogDateInput()
+                return true
+            }
         })
 
         // switch back to previous folder: a) after following an attachment to a GrzLog folder b) after following a search hit into another folder
@@ -4276,25 +4294,7 @@ class MainActivity : AppCompatActivity(),
         fabPlus.inputAlertView!!.setOnTouchListener(OnTouchListener { v, event, ->
             // detect double click to allow additional functionality --> insert a date
             if (fabPlus.inputAlertView!!.text.isEmpty()) {
-                if (event.action == MotionEvent.ACTION_DOWN) {
-                    if (fabPlus.waitForDoubleClick) {
-                        val deltaMs = System.currentTimeMillis() - fabPlus.downClickTime
-                        if (deltaMs in 50..400) {
-                            // do the double click functionality
-                            setFabPlusDialogDateInput()
-                            // unconditionally reset the wait flag
-                            fabPlus.waitForDoubleClick = false
-                        }
-                    } else {
-                        fabPlus.downClickTime = System.currentTimeMillis()
-                    }
-                }
-                if (event.action == MotionEvent.ACTION_UP) {
-                    fabPlus.waitForDoubleClick = true
-                    Handler().postDelayed({
-                        fabPlus.waitForDoubleClick = false
-                    }, 3000)
-                }
+                doubleTapDetector.onTouchEvent(event)
             }
             false
         })
