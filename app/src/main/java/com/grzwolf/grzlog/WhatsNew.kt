@@ -21,7 +21,8 @@ class WhatsNewActivity : AppCompatActivity() {
         "~~~~~~~\n" +
         "fix: date parsing in a specific scenario\n" +
         "new: straight forward double tap detector for main input\n" +
-        "fix: possible double date input via date picker\n\n" +
+        "fix: possible double date input via date picker\n" +
+        "new: if a future date already exists, allow to add previous skipped dates\n\n" +
         "v1.1.55\n" +
 		"~~~~~~~\n" +
         "convenience: double tap empty main input to open a date picker -> makes it easy to add a future date, see v1.1.53\n" +

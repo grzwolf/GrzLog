@@ -89,7 +89,9 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.*
 import java.util.regex.Pattern
+import kotlin.arrayOf
 import kotlin.properties.Delegates
+import kotlin.toString
 
 
 // permission constants
@@ -4052,10 +4054,13 @@ class MainActivity : AppCompatActivity(),
                     // --> oriParts might miss a date header from today
                     // --> oriParts might be empty (aka an empty new folder or app 1st start)
                     //
-                    var spacers = 0           // spacers needed to translate offset in ds into lvMain
-                    var newTextInsertPos = -1 // offset in ds
+                    var spacers = 0                // spacers needed to translate offset in ds into lvMain
+                    var newTextInsertPos = -1      // offset in ds
+                    var skippedDatesInsertPos = -1 // offset in ds
                     val todayDate = LocalDate.now()
                     var itemHeaderDate: LocalDate? = null
+                    var nearestOlderHeaderDate = LocalDate.now()
+                    var checkInsertPos = true
                     for (ndx in 0 until oriParts.size) {
                         // any date header contains a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR 2020-03-03
                         val m1 = PATTERN.DateDay.matcher(oriParts[ndx])
@@ -4077,13 +4082,23 @@ class MainActivity : AppCompatActivity(),
                                     // leaving unhandled is ok
                                 }
                             }
-                            if (itemHeaderDate != null) {
+                            // find nearest older date to today
+                            if (itemHeaderDate != null && !checkInsertPos) {
+                                // memorize the nearest older header date to today
+                                nearestOlderHeaderDate = itemHeaderDate
+                                // one index above would be the right insert pos for skipped dates
+                                skippedDatesInsertPos = ndx - 1
+                                // break loop
+                                break
+                            }
+                            // find insert position for newText
+                            if (itemHeaderDate != null && checkInsertPos) {
                                 // compare to find a date match between today and an already existing date header
                                 if (todayDate.year == itemHeaderDate.year && todayDate.dayOfYear == itemHeaderDate.dayOfYear) {
                                     // that means, today has an existing date header in ds --> insert newText after header
                                     newTextInsertPos = ndx         // ds offset to insert newText
                                     insertStartPos = ndx + spacers // lvMain pos for highlighting
-                                    break
+                                    checkInsertPos = false
                                 }
                                 // as soon as an older date header as today is found, break loop
                                 if (todayDate.year == itemHeaderDate.year && todayDate.dayOfYear > itemHeaderDate.dayOfYear) {
@@ -4092,7 +4107,7 @@ class MainActivity : AppCompatActivity(),
                                     // insert newText one position before the older date header
                                     newTextInsertPos = ndx - 1              // ds offset to insert newText
                                     insertStartPos = ndx - 1 + spacers - 1  // lvMain pos for highlighting
-                                    break
+                                    checkInsertPos = false
                                 }
                                 // for highlighting
                                 spacers++
@@ -4104,15 +4119,50 @@ class MainActivity : AppCompatActivity(),
                         // newText goes right behind insertPos
                         //
 
+                        // skipped dates?
+                        var skippedDatesList = mutableListOf<String>()
+                        if (todayDate.dayOfYear == itemHeaderDate!!.dayOfYear + 1) {
+                            // no skipped dates
+                            fillWithSkippedDates = false
+                        } else {
+                            fillWithSkippedDates = true
+                            val defaultZoneId = ZoneId.systemDefault()
+                            val startDate = Date.from(nearestOlderHeaderDate.plusDays(1).atStartOfDay(defaultZoneId).toInstant())
+                            val stopDate = Date.from(todayDate.atStartOfDay(defaultZoneId).toInstant())
+                            skippedDatesList = getDaysBetweenDates(startDate, stopDate).asReversed().toMutableList()
+                        }
+                        // build finalStr
                         for (ndx in 0 until oriParts.size) {
+                            // just take over oriParts[i]
                             finalStr += oriParts[ndx] + "\n"
+                            finalStrWithSkippedDates += oriParts[ndx] + "\n"
+                            // magic insert pos for newText
                             if (ndx == newTextInsertPos) {
                                 finalStr += newText + "\n"
+                                finalStrWithSkippedDates += newText + "\n"
+                                newTextWithSkippedDates += newText + "\n"
+                            }
+                            // skipped dates are inserted after all oriParts[i] belonging to existing date
+                            if (ndx == skippedDatesInsertPos) {
+                                // add skipped dates
+                                if (fillWithSkippedDates) {
+                                    if (skippedDatesList.size > 0) {
+                                        for (dateStr in skippedDatesList) {
+                                            finalStrWithSkippedDates += dateStr + "\n"
+                                            newTextWithSkippedDates += dateStr + "\n"
+                                        }
+                                    } else {
+                                        fillWithSkippedDates = false
+                                        finalStrWithSkippedDates = ""
+                                        newTextWithSkippedDates = ""
+                                    }
+                                } else {
+                                    fillWithSkippedDates = false
+                                    finalStrWithSkippedDates = ""
+                                    newTextWithSkippedDates = ""
+                                }
                             }
                         }
-                        // no skipped dates
-                        fillWithSkippedDates = false
-
                     } else {
                         //
                         // newText goes to top
@@ -4341,7 +4391,7 @@ class MainActivity : AppCompatActivity(),
         customTitleView.setPadding(50, 50, 50, 50)
         fabPlusBuilder.setCustomTitle(customTitleView)
         // input editor
-        fabPlus.inputAlertView!!.setOnTouchListener(OnTouchListener { v, event, ->
+        fabPlus.inputAlertView!!.setOnTouchListener(OnTouchListener { v, event ->
             // detect double click to allow additional functionality --> insert a date
             if (fabPlus.inputAlertView!!.text.isEmpty()) {
                 doubleTapDetector.onTouchEvent(event)
