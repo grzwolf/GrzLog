@@ -3693,32 +3693,16 @@ class MainActivity : AppCompatActivity(),
                     // get topmost header date
                     // topMostHeaderDate keeps null, if it is a non date header
                     var topMostHeaderDate: LocalDate? = null
-                    val m0 = PATTERN.DateDay.matcher(oriParts[0])
-                    if (m0.find()) {
-                        try {
-                            // build a date from oriParts
-                            topMostHeaderDate = LocalDate.parse(
-                                m0.group(),
-                                DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
-                            )
-                        } catch(e: DateTimeParseException) {
-                            try {
-                                // it can happen, that topmost header does not have a week day name or a wrong one
-                                topMostHeaderDate = LocalDate.parse(
-                                    m0.group().substring(0, 10),
-                                    DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                                )
-                            } catch(e: DateTimeParseException) {
-                                topMostHeaderDate = null
-                            }
-                        }
+                    val m = PATTERN.DateDay.matcher(oriParts[0])
+                    if (m.find()) {
+                        topMostHeaderDate = dateHeaderParser(m.group())
                     }
 
                     // search newText, precisely newTextParts[0], as header in oriParts
                     val newTextHeaderString = newTextParts[0] + dayNameOfWeek(newText)
                     val foundString = oriParts.find { it?.equals(newTextHeaderString) ?: false }
 
-                    // error out, if newText only contains a date
+                    // verify newText
                     if (newTextParts.size == 1) {
                         // if newTextHeaderString was found --> error duplicate and get out
                         if (foundString?.isNotEmpty() ?: false) {
@@ -3830,71 +3814,51 @@ class MainActivity : AppCompatActivity(),
                             //    newText goes to this matching position
                             var itemHeaderDate: LocalDate? = null
                             var fstOlderHeaderDate: LocalDate? = null
-                            var fstOlderHeaderPos = -1
-                            var newTextInsertPos = -1
+                            var inputInsertPos = -1
+                            var skipppedDatesInsertPos = -1
                             var fstNewerHeaderDate: LocalDate? = null
                             // loop oriParts
                             for (ndx in 0 until oriParts.size) {
                                 // any date header contains a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu
-                                val m1 = PATTERN.DateDay.matcher(oriParts[ndx])
-                                if (m1.find()) {
+                                val m = PATTERN.DateDay.matcher(oriParts[ndx])
+                                if (m.find()) {
                                     // index offset for highlighting inserted items
                                     insertStartPos++
-                                    try {
-                                        // build a date from oriParts
-                                        itemHeaderDate = LocalDate.parse(
-                                            m1.group(),
-                                            DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
-                                        )
-                                    } catch (e: DateTimeParseException) {
-                                        // "yyyy-MM-dd" pattern, if data were not yet saved and reloaded or wrong day name
-                                        try {
-                                            itemHeaderDate = LocalDate.parse(
-                                                m1.group().substring(0, 10),
-                                                DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                                            )
-                                        } catch (e: DateTimeParseException) {
-                                            // no issue to leave it unhandled
-                                        }
-                                    }
+                                    // build a date from oriParts[i]
+                                    itemHeaderDate = dateHeaderParser(m.group())
                                     // compare itemHeaderDate date with newTextDate:
                                     //     isBefore == isOlder
                                     if (itemHeaderDate != null && itemHeaderDate.isBefore(newTextDate) ?: false) {
-                                        // this is the 1st header date, which is older as our newTextDate
-                                        //    aka lower index of skipped dates
+                                        //
+                                        // this is the 1st header date, which is older as newTextDate
+                                        //
+                                        // for now: this is the insert index of newText
+                                        //          this insert index needs correction, if newTextDate
+                                        //          exists and has at least one entry
+                                        //          bc. newText needs to appear right after header
+                                        // newText must be inserted before adding oriParts[i]
+                                        // newText must be inserted before inserting skipped dates
+                                        inputInsertPos = ndx
+                                        // this is the insert index of skipped dates
+                                        // skipped dates must be inserted after newText
+                                        // skipped dates must be inserted before oriParts[i]
+                                        skipppedDatesInsertPos = ndx
+                                        //    this is the start date of skipped dates
                                         fstOlderHeaderDate = itemHeaderDate
-                                        fstOlderHeaderPos = ndx
                                         // next look up from here the position of a younger header date
-                                        //    this info gives us the upper index skipped dates
+                                        //    this info gives us the upper index/date skipped dates
                                         val indexUpStart = Math.max(ndx - 1, 0)
                                         for (idx in indexUpStart downTo 0) {
                                             // check for date = header
-                                            val m2 = PATTERN.DateDay.matcher(oriParts[idx])
-                                            if (m2.find()) {
-                                                // since newText shall go right after its date header
-                                                // --> wait for the next header
-                                                // --> since header pos is 1 step to far, correct it
-                                                if (newTextInsertPos == -1) {
-                                                    newTextInsertPos = idx + 1
-                                                }
+                                            val m = PATTERN.DateDay.matcher(oriParts[idx])
+                                            if (m.find()) {
                                                 // index offset for highlighting inserted items
                                                 insertStartPos--
-                                                try {
-                                                    // build a date from oriParts
-                                                    fstNewerHeaderDate = LocalDate.parse(
-                                                        m2.group(),
-                                                        DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
-                                                    )
-                                                } catch (e: DateTimeParseException) {
-                                                    // "yyyy-MM-dd" pattern, if data were not yet saved and reloaded or wrong day name
-                                                    try {
-                                                        fstNewerHeaderDate = LocalDate.parse(
-                                                            m2.group().substring(0, 10),
-                                                            DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                                                        )
-                                                    } catch (e: DateTimeParseException) {
-                                                        // no issue to leave it unhandled
-                                                    }
+                                                // build a date from oriParts
+                                                fstNewerHeaderDate = dateHeaderParser(m.group())
+                                                // inputInsertPos correction
+                                                if (fstNewerHeaderDate!!.year == newTextDate!!.year && fstNewerHeaderDate.dayOfYear == newTextDate.dayOfYear) {
+                                                    inputInsertPos = idx + 1
                                                 }
                                                 // compare oriParts date with newTextDate:
                                                 //     isAfter == isYounger
@@ -3947,23 +3911,39 @@ class MainActivity : AppCompatActivity(),
                             // build finalStr and alternatives
                             finalStr = ""
                             for (i in 0 until oriParts.size) {
-
-                                // fstOlderHeaderPos is larger than newTextInsertPos, therefor ...
-                                if (i == fstOlderHeaderPos) {
-                                    // ... skipped dates are inserted after newText
+                                // insert user input at given pos
+                                if (i == inputInsertPos) {
+                                    // add newText to finalStr
+                                    if (finalStr.isEmpty()) {
+                                        finalStr += newText + "\n"
+                                    } else {
+                                        finalStr += "\n" + newText
+                                    }
+                                    // handle vars for skipped dates
                                     if (fillWithSkippedDates) {
-                                        // handle skipped dates
+                                        // inset newText to finalStrWithSkippedDates
+                                        if (finalStrWithSkippedDates.isEmpty()) {
+                                            finalStrWithSkippedDates += newText + "\n"
+                                        } else {
+                                            finalStrWithSkippedDates += "\n" + newText
+                                        }
+                                        // set newText to newTextWithSkippedDates
+                                        if (newTextWithSkippedDates.isEmpty()) {
+                                            newTextWithSkippedDates += newText + "\n"
+                                        } else {
+                                            newTextWithSkippedDates += "\n" + newText
+                                        }
+                                    }
+                                }
+                                // insert skipped dates
+                                if (i == skipppedDatesInsertPos) {
+                                    if (fillWithSkippedDates) {
+                                        // insert skipped dates
                                         if (skippedDatesList.size > 0) {
-                                            // add skipped dates
+                                            // loop skipped dates
                                             for (dateStr in skippedDatesList) {
                                                 finalStrWithSkippedDates += "\n" + dateStr
                                                 newTextWithSkippedDates += dateStr + "\n"
-                                            }
-                                            // add oriParts[i] after the skipped dates
-                                            if (finalStrWithSkippedDates.isEmpty()) {
-                                                finalStrWithSkippedDates += oriParts[i]
-                                            } else {
-                                                finalStrWithSkippedDates += "\n" + oriParts[i]
                                             }
                                         } else {
                                             fillWithSkippedDates = false
@@ -3975,69 +3955,18 @@ class MainActivity : AppCompatActivity(),
                                         finalStrWithSkippedDates = ""
                                         newTextWithSkippedDates = ""
                                     }
-                                    // finally add oriParts[i] after the skipped dates to finalStr
-                                    if (finalStr.isEmpty()) {
-                                        finalStr += oriParts[i]
-                                    } else {
-                                        finalStr += "\n" + oriParts[i]
-                                    }
+                                }
+                                // add oriParts[i] as normal loop
+                                if (finalStr.isEmpty()) {
+                                    finalStr += oriParts[i]
                                 } else {
-                                    if (i == newTextInsertPos) {
-                                        //
-                                        // here is the newText insert position match
-                                        //
-                                        // add newText to finalStr
-                                        if (finalStr.isEmpty()) {
-                                            finalStr += newText + "\n"
-                                        } else {
-                                            finalStr += "\n" + newText
-                                        }
-                                        // add oriParts[i] to finalStr after newText
-                                        if (finalStr.isEmpty()) {
-                                            finalStr += oriParts[i]
-                                        } else {
-                                            finalStr += "\n" + oriParts[i]
-                                        }
-                                        // add newText and oriPars[i] to finalStrWithSkippedDates & newTextWithSkippedDates
-                                        if (fillWithSkippedDates) {
-                                            if (finalStrWithSkippedDates.isEmpty()) {
-                                                finalStrWithSkippedDates += newText + "\n"
-                                            } else {
-                                                finalStrWithSkippedDates += "\n" + newText
-                                            }
-                                            if (finalStrWithSkippedDates.isEmpty()) {
-                                                finalStrWithSkippedDates += oriParts[i]
-                                            } else {
-                                                finalStrWithSkippedDates += "\n" + oriParts[i]
-                                            }
-                                            if (newTextWithSkippedDates.isEmpty()) {
-                                                newTextWithSkippedDates += newText + "\n"
-                                            } else {
-                                                newTextWithSkippedDates += "\n" + newText
-                                            }
-                                        } else {
-                                            fillWithSkippedDates = false
-                                            finalStrWithSkippedDates = ""
-                                            newTextWithSkippedDates = ""
-                                        }
+                                    finalStr += "\n" + oriParts[i]
+                                }
+                                if (fillWithSkippedDates) {
+                                    if (finalStrWithSkippedDates.isEmpty()) {
+                                        finalStrWithSkippedDates += oriParts[i]
                                     } else {
-                                        //
-                                        // normal loop
-                                        //
-                                        // finalStr
-                                        if (finalStr.isEmpty()) {
-                                            finalStr += oriParts[i]
-                                        } else {
-                                            finalStr += "\n" + oriParts[i]
-                                        }
-                                        // alternative final string with skipped dates
-                                        if (fillWithSkippedDates) {
-                                            if (finalStrWithSkippedDates.isEmpty()) {
-                                                finalStrWithSkippedDates += oriParts[i]
-                                            } else {
-                                                finalStrWithSkippedDates += "\n" + oriParts[i]
-                                            }
-                                        }
+                                        finalStrWithSkippedDates += "\n" + oriParts[i]
                                     }
                                 }
                             }
@@ -4063,25 +3992,10 @@ class MainActivity : AppCompatActivity(),
                     var checkInsertPos = true
                     for (ndx in 0 until oriParts.size) {
                         // any date header contains a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR 2020-03-03
-                        val m1 = PATTERN.DateDay.matcher(oriParts[ndx])
-                        if (m1.find()) {
-                            try {
-                                // build a date from oriParts
-                                itemHeaderDate = LocalDate.parse(
-                                    m1.group(),
-                                    DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
-                                )
-                            } catch (e: Exception) {
-                                try {
-                                    // build a date from oriParts
-                                    itemHeaderDate = LocalDate.parse(
-                                        m1.group().substring(0, 10),
-                                        DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                                    )
-                                } catch (e: Exception) {
-                                    // leaving unhandled is ok
-                                }
-                            }
+                        val m = PATTERN.DateDay.matcher(oriParts[ndx])
+                        if (m.find()) {
+                            // build a date from oriParts
+                            itemHeaderDate = dateHeaderParser(m.group())
                             // find nearest older date to today
                             if (itemHeaderDate != null && !checkInsertPos) {
                                 // memorize the nearest older header date to today

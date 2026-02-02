@@ -82,6 +82,7 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Calendar
 import java.util.Date
 import java.util.GregorianCalendar
@@ -626,6 +627,29 @@ fun dayNumberOfWeek(dateStr: String?): Int {
     val cal = Calendar.getInstance()
     cal.time = date
     return cal[Calendar.DAY_OF_WEEK]
+}
+
+// DataStore date header parser
+fun dateHeaderParser(dateStr: String): LocalDate? {
+    var headerDate: LocalDate? = null
+    try {
+        // build a date from dateStr
+        headerDate = LocalDate.parse(
+            dateStr,
+            DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")
+        )
+    } catch(e: DateTimeParseException) {
+        try {
+            // it can happen, that header does not have a week day name or a wrong one
+            headerDate = LocalDate.parse(
+                dateStr.substring(0, 10),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            )
+        } catch(e: DateTimeParseException) {
+            headerDate = null
+        }
+    }
+    return headerDate
 }
 
 // convert a date string "yyyy-MM-dd" into Name Day of Week
