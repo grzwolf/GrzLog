@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.io.path.fileSize
+import com.grzwolf.grzlog.MainActivity.Companion.AttachmentStorage
 
 
 class GalleryActivity : AppCompatActivity() {
@@ -318,9 +319,9 @@ class GalleryActivity : AppCompatActivity() {
         // take selection and go back to MainActivity
         if (item.itemId == R.id.action_Payload) {
             if (prevSelGridItem != -1 && gridItemSelected) {
-                var fn = adapter!!.list[prevSelGridItem].fileName
-                val appImagesPath = applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/"
-                val fullFilePath = appImagesPath + fn
+                val fn = adapter!!.list[prevSelGridItem].fileName
+                val appImagesPath = AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
+                val fullFilePath = appImagesPath + "/" + fn
                 MainActivity.returnAttachmentFromAppGallery = fullFilePath
                 MainActivity.returningFromAppGallery = true
                 prevSelGridItem = -1
@@ -356,8 +357,8 @@ class GalleryActivity : AppCompatActivity() {
                     for (item in adapter!!.list) {
                         if (item.selected) {
                             // delete selected list element
-                            val appImagesPath = applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/"
-                            val fullFilePath = appImagesPath + item.fileName
+                            val appImagesPath = AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
+                            var fullFilePath = appImagesPath + "/" + item.fileName
                             val delFile = File(fullFilePath)
                             if (delFile.exists()) {
                                 delFile.delete()
@@ -508,7 +509,7 @@ class GalleryActivity : AppCompatActivity() {
             for (str in stringOrphans!!) {
                 var drawable: BitmapDrawable? = null
                 var bmp: Bitmap? = null
-                var file = File(applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/" + str)
+                val file = File(AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal], str)
                 val mimeExt = getFileExtension(str)
                 if (IMAGE_EXT.contains(mimeExt, ignoreCase = true)) {
                     bmp = ThumbnailUtils.createImageThumbnail(file, Size(128, 128), null)
@@ -573,8 +574,9 @@ class GalleryActivity : AppCompatActivity() {
         pw.show()
         // generate thumbnails in another thread
         try {
+            // GrzLog gallery can be in two different places
+            val appImagesPath = AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
             Thread {
-                val appImagesPath = applicationContext.getExternalFilesDir(null)!!.absolutePath + "/Images/"
                 val fileList: Array<File> = File(appImagesPath).listFiles()
                 pw.absCount = fileList.size.toFloat() * 3 // keeps progress more agile
                 pw.absFakeCount = fileList.size.toFloat() // count to show in pw
@@ -592,7 +594,7 @@ class GalleryActivity : AppCompatActivity() {
                         }
                         try {
                             // get file size
-                            var file = File(appImagesPath + item.fileName)
+                            var file = File(appImagesPath, item.fileName)
                             fileSize = Paths.get(file.absolutePath).fileSize()
                             // now drawable
                             var drawable = item.thumbNail

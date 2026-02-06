@@ -130,13 +130,15 @@ class HelpActivity : AppCompatActivity() {
         "       Show GrzLog gallery - by size\n" +
         "              find GrzLog gallery usages\n" +
         "              delete from GrzLog gallery\n" +
+        "       Show linked media (image, video)\n" +
+        "              view, usages, upload, delete linked media\n" +
+        "       GrzLog gallery location\n" +
+        "              choose 'private to GrzLog' or public in /sdcard/Pictures/GrzLog\n" +
         "       Tidy orphaned files from GrzLog gallery\n" +
         "              show orphaned files\n" +
         "              delete orphaned files\n" +
         "       Scale images to phone display\n" +
         "              pro: reduces storage consumption\n" +
-        "       Show linked media (image, video)\n" +
-        "              view, usages, upload, delete linked media\n" +
         "   Reset\n" +
         "       Reset app preferences (data are not touched)\n\n" +
         "   Quit active services\n" +

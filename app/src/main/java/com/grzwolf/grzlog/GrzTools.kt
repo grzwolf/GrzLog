@@ -57,6 +57,7 @@ import com.bumptech.glide.request.target.SimpleTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import com.grzwolf.grzlog.DataStore.TIMESTAMP
+import com.grzwolf.grzlog.MainActivity.Companion.AttachmentStorage
 import com.grzwolf.grzlog.MainActivity.Companion.appPwdPub
 import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
 import java.io.BufferedInputStream
@@ -78,6 +79,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileTime
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -163,6 +165,38 @@ fun unpackZipArchive(
         return false
     }
 
+    // in case attachments are so far set to be stored in public folder --> handle it
+    if (AttachmentStorage.activeType == AttachmentStorage.Type.PUBLIC) {
+        try {
+            // clear public attachments folder but leave it existing
+            // reason: Restore always puts all attachments back to the private folder
+            val directory = File(AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal])
+            if (directory.exists() && directory.isDirectory) {
+                directory.listFiles()?.forEach { file ->
+                    if (file.isFile) {
+                        file.delete()
+                    }
+                }
+                directory.delete()
+            }
+            // set attachment storage to private
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+            val spe = sharedPref.edit()
+            spe.putString(AttachmentStorage::class.simpleName, AttachmentStorage.Type.PRIVATE.name)
+            spe.apply()
+            // all info regarding attachment mode & location is kept inside AttachmentStorage.activeType
+            val storageModeName = sharedPref.getString(
+                AttachmentStorage::class.simpleName,
+                AttachmentStorage.Type.PRIVATE.name
+            )
+            AttachmentStorage.activeType = AttachmentStorage.Type.entries.find {
+                it.name.equals(storageModeName, ignoreCase = true)
+            }!!
+        } catch (e: Exception) {
+            retVal = false
+        }
+    }
+
     return retVal
 }
 
@@ -175,7 +209,8 @@ fun createZipArchive(
     pw: ProgressWindow?,
     nm: NotificationManagerCompat?,
     n: NotificationCompat.Builder?,
-    maxProgress: Int
+    maxProgress: Int,
+    includePublicAttachments: Boolean = true
 ): Boolean {
     val BUFFER = 2048
     try {
@@ -194,18 +229,53 @@ fun createZipArchive(
         }
         val data = ByteArray(BUFFER)
         val subDir = File(srcFolder)
-        val subdirList = subDir.list()
-        subdirList!!.forEach { sd ->
+        var subdirList = subDir.list()
+        // in case attachments are stored in public folder, add it for full backup
+        if (includePublicAttachments) {
+            if (AttachmentStorage.activeType == AttachmentStorage.Type.PUBLIC) {
+                if (subdirList != null) {
+                    subdirList = subdirList.plus(AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal])
+                }
+            }
+        }
+        subdirList!!.forEach { sdItem ->
             // srv was forced stopped; nm != null indicates service operation
             if (nm != null) {
                 if (BackupService.Companion.getServiceState(context) == BackupService.Companion.ServiceState.STOPPED) {
                     return false
                 }
             }
+            // sdItem is a folder or file name
+            var sdItemOut = sdItem
+            var f: File? = null
+            // special handling for public attachments
+            if (sdItem.startsWith("/")) {
+                // if sdItem starts with a "/", then it is a folder to the public attachment storage
+                f = File(sdItem)
+                // introduce a sdItemOut zo point for these public files to "Images"
+                sdItemOut = "Images"
+            } else {
+                f = File("$srcFolder/$sdItem")
+            }
+
             // get a list of files from current directory
-            val f = File("$srcFolder/$sd")
             if (f.isDirectory) {
+                // base foöder for later use
+                var baseFolder = srcFolder + "/"
+                // a list of file names
                 val files = f.list()
+                // increase number of file to operate
+                if (!sdItem.equals(sdItemOut)) {
+                    // set progress via pw in foreground
+                    if (pw != null) {
+                        (context as Activity).runOnUiThread(Runnable {
+                            pw.absCount += files.size
+                        })
+                    }
+                    // don't need that
+                    baseFolder = ""
+                }
+                // loop file list
                 for (i: Int in files?.indices!!) {
                     // srv was forced stopped; nm != null indicates service operation
                     if (nm != null) {
@@ -232,10 +302,10 @@ fun createZipArchive(
                         }
                     }
                     // streams
-                    val fis = FileInputStream(srcFolder + "/" + sd + "/" + files[i])
+                    val fis = FileInputStream(baseFolder + sdItem + "/" + files[i])
                     origin = BufferedInputStream(fis, BUFFER)
-                    val entry = ZipEntry(sd + "/" + files[i])
-                    val fi = File(srcFolder + "/" + sd + "/" + files[i])
+                    val entry = ZipEntry(sdItemOut + "/" + files[i])
+                    val fi = File(srcFolder + "/" + sdItemOut + "/" + files[i])
                     entry.time = fi.lastModified()
                     zipOut.putNextEntry(entry)
                     var count: Int
@@ -248,7 +318,7 @@ fun createZipArchive(
             } else {
                 val fis = FileInputStream(f)
                 origin = BufferedInputStream(fis, BUFFER)
-                val entry = ZipEntry(sd)
+                val entry = ZipEntry(sdItemOut)
                 entry.time = f.lastModified()
                 zipOut.putNextEntry(entry)
                 var count: Int
@@ -293,7 +363,7 @@ fun createZipArchive(
 fun execImageScaling(): Boolean {
     try {
         // GrzLog storage folder for attachments
-        var appAttachmentStoragePath = contextMainActivity.getExternalFilesDir(null)!!.absolutePath + "/Images"
+        var appAttachmentStoragePath = AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
         val subDir = File(appAttachmentStoragePath)
         // get a list of all files from directory and loop it
         var counter = 0
@@ -1764,16 +1834,15 @@ fun showAppLinkOrAttachment(context: Context,
     }
 
     //
-    // all media previously copied to app files, aka local attachments
+    // all media previously copied to GrzLog attachments location
     //
-    var appAttachmentStoragePath = context.getExternalFilesDir(null)!!.absolutePath + "/Images"
     var fullFileName = fileName
     if (fileName.startsWith("file") == false) {
-        fullFileName = "file://" + appAttachmentStoragePath + fileName
+        fullFileName = "file://" + AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal] + fileName
     }
 
     // parse uri from fullFileName
-    val uri = Uri.parse(fullFileName)
+    var uri = Uri.parse(fullFileName)
 
     // MIME type file extension
     val mimeExt = getFileExtension(uri.toString())
@@ -1787,12 +1856,19 @@ fun showAppLinkOrAttachment(context: Context,
     }
 
     //
-    // all other media are shown with their usually connected apps
+    // all other media are shown with their usually connected Android apps
     //
-    val file = getFileFromUri(context, uri)
-    if (file == null) {
-        okBox(context, context.getString(R.string.FileNotFound), fullFileName)
-        return
+    var file = getFileFromUri(context, uri)
+    if (file == null || !file.exists()) {
+        // pdf, txt, audio cannot be copied to /sdcard/Pictures/GrzLog, so let's give it a try with the private attachments folder
+        fullFileName = "file://" + AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal] + fileName
+        uri = Uri.parse(fullFileName)
+        file = getFileFromUri(context, uri)
+        if (file == null || !file.exists()) {
+            // now give up
+            okBox(context, context.getString(R.string.FileNotFound), fullFileName)
+            return
+        }
     }
     val uriFile = FileProvider.getUriForFile(
         context,
@@ -2107,20 +2183,64 @@ fun getFolderFiles(context: Context, path: String, sortByDate: Boolean, fileList
     return retVal
 }
 
-// copy GrzLog local file into an external folder beyond /sdcard/Pictures
-fun copyGrzLogLocalFileToExternal(localFileName: String, externalFolder: String) {
+// move GrzLog gallery files from ... to ... and update DataStore attachment info
+fun moveGrzLogGallery(context: Context, sourceFolder: File, destinationFolder: File, direction: AttachmentStorage.Type): MutableList<String> {
+    val errorList: MutableList<String> = ArrayList()
+    // destination folder
+    if (!destinationFolder.exists()) {
+        destinationFolder.mkdir();
+    }
+    // get files from source folder
+    val fileList: Array<File> = sourceFolder.listFiles()
+    // init progress
+    var pw: ProgressWindow? = null
+    var title = ""
+    if (direction == AttachmentStorage.Type.PRIVATE) {
+        title = context.getString(R.string.PicturesToAppGallery)
+    }
+    if (direction == AttachmentStorage.Type.PUBLIC) {
+        title = context.getString(R.string.AppGalleryToPictures)
+    }
+    (context as Activity).runOnUiThread({
+        pw = ProgressWindow(context, title)
+        pw.absCount = fileList.size.toFloat()
+        pw.dialog?.setCancelable(true)
+        pw.show()
+    })
+    // 1st entry in errorList is total number of files to move
+    errorList.add(fileList.size.toString())
+    // loop file list
+    for (item in fileList) {
+        // build out file
+        val outFile = File(destinationFolder, item.name)
+        // exec copy
+        val errorStr = copyFile(item, outFile, true)
+        // check error
+        if (errorStr.isNotEmpty()) {
+            // keep name of rror file in list
+            errorList.add(errorStr)
+        } else {
+            // if no error, delete file from GrzLog folder
+            item.delete()
+        }
+        // update progress
+        (context as Activity).runOnUiThread {
+            pw!!.incCount += 1
+        }
+    }
+    (context as Activity).runOnUiThread({
+        pw!!.close()
+    })
+    return errorList
+}
+// copy file into an external folder
+fun copyFile(appSourceFile: File, destinationFile: File, broadcastMediaChange: Boolean): String {
+    var errorStr = ""
     try {
         // input
-        val appAttachmentsPath = MainActivity.contextMainActivity.getExternalFilesDir(null)!!.absolutePath + "/Images"
-        val inpFile = File(appAttachmentsPath, localFileName)
-        var inpStream: InputStream? = FileInputStream(inpFile)
+        var inpStream: InputStream? = FileInputStream(appSourceFile)
         // output
-        val outPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES + externalFolder);
-        if (!outPath.exists()) {
-            outPath.mkdir();
-        }
-        val outFile = File(outPath, localFileName)
-        var outStream: OutputStream? = FileOutputStream(outFile)
+        var outStream: OutputStream? = FileOutputStream(destinationFile)
         // copy
         val buffer = ByteArray(1024)
         var read: Int
@@ -2137,17 +2257,46 @@ fun copyGrzLogLocalFileToExternal(localFileName: String, externalFolder: String)
         outStream!!.flush()
         outStream.close()
         outStream = null
+        // set file time stamp
+        val date = parseFileDateFromFileName(destinationFile.name)
+        val outPath = Paths.get(destinationFile.absolutePath)
+        Files.setLastModifiedTime(outPath, date)
+        if (broadcastMediaChange) {
+            // let Gallery know about a change
+            MainActivity.contextMainActivity.sendBroadcast(
+                Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(destinationFile))
+            )
+        }
     } catch (e: Exception) {
-        e.printStackTrace()
+        // add fails to error list
+        errorStr = appSourceFile.name
     }
+    return errorStr
+}
+// try to get a date out of the filename
+fun parseFileDateFromFileName(fileName: String): FileTime {
+    val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+    var fileTime = FileTime.fromMillis(System.currentTimeMillis())
+    val m = PATTERN.DatePattern.matcher(fileName)
+    if (m.find()) {
+        try {
+            val group = m.group()
+            val fileDateStr = group.substring(1, group.length - 1)
+            fileTime = FileTime.fromMillis(sdf.parse(fileDateStr).time)
+        } catch (e: Exception) {
+            // ok to leave unhandled
+        }
+    }
+    return fileTime
 }
 
 // get list of thumbnail images silently - called from MainActivity ideally before GalleryActivity is called
 fun getAppGalleryThumbsSilent(context: Context, sortByDate: Boolean) {
     MainActivity.appGalleryScanning = true
     try {
+        // GrzLog gallery can be in two different places
+        val appImagesPath = MainActivity.Companion.AttachmentStorage.pathList[MainActivity.Companion.AttachmentStorage.activeType.ordinal]
         Thread {
-            val appImagesPath = context.getExternalFilesDir(null)!!.absolutePath + "/Images/"
             val fileList: Array<File> = File(appImagesPath).listFiles()
             val listGrzThumbNail = getFolderFiles(context, appImagesPath, sortByDate, fileList, null)
             MainActivity.appScanTotal = listGrzThumbNail.size
@@ -2162,7 +2311,7 @@ fun getAppGalleryThumbsSilent(context: Context, sortByDate: Boolean) {
                 try {
                     var drawable = item.thumbNail
                     if (drawable == null) {
-                        var file = File(appImagesPath + item.fileName)
+                        var file = File(appImagesPath, item.fileName)
                         var bmp: Bitmap? = null
                         val mimeExt = getFileExtension(item.fileName)
                         if (IMAGE_EXT.contains(mimeExt, ignoreCase = true)) {

@@ -296,8 +296,8 @@
     <string name="x_found">x found</string>
     <string name="jump_to_phrase">Jump to phrase</string>
     <string name="search_phrase">search phrase</string>
-    <string name="appLimitations">GrzLog limitations</string>
-    <string name="no_pen_support">No Gboard pen support, see Settings -> Limitations</string>
+    <string name="appNotes"><![CDATA[GrzLog notes & FAQ]]></string>
+    <string name="no_pen_support">No Gboard pen support, see Settings -> Notes</string>
     <string name="edited_items">edited items</string>
     <string name="type_in_the_search_phrase">Type search phrase</string>
     <string name="type_in_the_replace_phrase">Type replace phrase</string>
@@ -416,6 +416,16 @@
     <string name="remove_selected_links_folder_update"><![CDATA[Remove selected links and update folder data accordingly. Removed links are marked with <X>.]]></string>
     <string name="remove_selected_links_only">Access permissions for selected links will be removed. Folder data are not changed.</string>
     <string name="appWhatsNew">GrzLog: What\'s New?</string>
+    <string name="following_no_touch">the following files were not moved:</string>
+    <string name="AppGalleryToPictures">Move private GrzLog Gallery to /sdcard/Pictures/GrzLog</string>
+    <string name="PicturesToAppGallery">Move /sdcard/Pictures/GrzLog to private GrzLog folder</string>
+    <string name="attachments_location">GrzLog gallery location</string>
+    <string name="private_folder">GrzLog\'s private folder</string>
+    <string name="public_folder">/sdcard/Pictures/GrzLog</string>
+    <string name="files_moved">files successfully moved</string>
+    <string name="out_of">"Out of "</string>
+    <string name="move_public">Moving files to /sdcard/Pictures/GrzLog</string>
+    <string name="move_private">Moving files to GrzLog\'s private folder</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
@@ -439,5 +449,13 @@
     <string-array name="backupModeArray_Values">
         <item>manually</item>
         <item>automated</item>
+    </string-array>
+    <string-array name="attachmentsArray_Names">
+        <item>@string/private_folder</item>
+        <item>@string/public_folder</item>
+    </string-array>
+    <string-array name="attachmentsArray_Values">
+        <item>private</item>
+        <item>public</item>
     </string-array>
 </resources>

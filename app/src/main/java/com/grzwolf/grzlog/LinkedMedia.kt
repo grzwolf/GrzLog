@@ -1,6 +1,5 @@
 package com.grzwolf.grzlog
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.DialogInterface
@@ -30,12 +29,10 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
-import com.grzwolf.grzlog.MainActivity.Companion.deleteOrphans
-import com.grzwolf.grzlog.MainActivity.Companion.showAppGallery
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.grzwolf.grzlog.MainActivity.Companion.AttachmentStorage
 
 
 class LinkedMedia : AppCompatActivity() {
@@ -489,7 +486,7 @@ class LinkedMedia : AppCompatActivity() {
     // execute link copy to GrzLog locally & search and replace DataStore in a separate thread
     fun searchAndReplace(attachmentImageScale: Boolean) {
 
-        // GrzLog images folder is beyond of its absolute path
+        // GrzLog absolute path
         val appStoragePath = MainActivity.contextMainActivity.getExternalFilesDir(null)!!.absolutePath
 
         // progress related
@@ -530,7 +527,7 @@ class LinkedMedia : AppCompatActivity() {
                     if (item.selected && item.fileName.isNotEmpty() && !item.fileDate.equals("19700101")) {
 
                         // prepare copy uri from "Android's Photo Picker" to app
-                        val appImagesPath = appStoragePath + "/Images"
+                        val appImagesPath = AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
                         val appImagesFolder = File(appImagesPath)
                         if (!appImagesFolder.exists()) {
                             appImagesFolder.mkdirs()

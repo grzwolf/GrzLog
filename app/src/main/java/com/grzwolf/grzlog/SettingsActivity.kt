@@ -46,6 +46,7 @@ import com.android.volley.VolleyError
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
+import com.grzwolf.grzlog.MainActivity.Companion.AttachmentStorage
 import com.grzwolf.grzlog.MainActivity.Companion.appPwdPub
 import com.grzwolf.grzlog.MainActivity.Companion.appStoragePath
 import com.grzwolf.grzlog.MainActivity.Companion.ds
@@ -475,13 +476,13 @@ public class SettingsActivity :
                 true
             }
 
-            // action after show GrzLog limitations
-            showHelp = findPreference("AppLimitations") as Preference?
+            // action after show GrzLog notes
+            showHelp = findPreference("AppNotes") as Preference?
             showHelp!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 try {
-                    requireActivity().startActivity(Intent(context, LimitationsActivity::class.java))
+                    requireActivity().startActivity(Intent(context, NotesActivity::class.java))
                 } catch (e: Exception) {
-                    centeredToast(appContext!!, "Limitations error: " + e.message.toString(), 3000)
+                    centeredToast(appContext!!, "Notes error: " + e.message.toString(), 3000)
                 }
                 true
             }
@@ -910,7 +911,7 @@ public class SettingsActivity :
             val tidyOrphanes = findPreference("TidyOrphanes") as Preference?
             tidyOrphanes!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 val appName = appContext!!.applicationInfo.loadLabel(appContext!!.packageManager).toString()
-                val appAttachmentsPath = appContext!!.getExternalFilesDir(null)!!.absolutePath + "/Images"
+                val appAttachmentsPath = AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
                 MainActivity.generateTidyOrphansProgress(this.context as Context, appAttachmentsPath, appName)
                 true
             }
@@ -965,6 +966,78 @@ public class SettingsActivity :
                 true
             }
 
+            // GrzLog attachments storage location
+            val asl = findPreference<ListPreference>("attachmentsLocation")
+            // until v1.1.55 we only had the private folder --> so this has to be the default value
+            // that means, as soon as >= v1.1.56 is 1st time started, all begins with GrzLog private folder
+            asl!!.setValueIndex(AttachmentStorage.activeType.ordinal)
+            asl.summary = asl.entry
+            asl.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
+                    var msg = ""
+                    // get to know old value
+                    val oldValue = asl.value
+                    var oldValBool = false
+                    var oldValNdx = -1
+                    var activeTypeOld: AttachmentStorage.Type = AttachmentStorage.Type.PRIVATE
+                    // parse change
+                    var newValBool = false
+                    if (newValue == "private") {
+                        newValBool = true
+                        oldValBool = false
+                        oldValNdx = 1
+                        asl.setValueIndex(0)
+                        msg = getString(R.string.PicturesToAppGallery)
+                        AttachmentStorage.activeType = AttachmentStorage.Type.PRIVATE
+                        activeTypeOld = AttachmentStorage.Type.PUBLIC
+                    }
+                    if (newValue == "public") {
+                        newValBool = false
+                        oldValBool = true
+                        oldValNdx = 0
+                        asl.setValueIndex(1)
+                        msg = getString(R.string.AppGalleryToPictures)
+                        AttachmentStorage.activeType = AttachmentStorage.Type.PUBLIC
+                        activeTypeOld = AttachmentStorage.Type.PRIVATE
+                    }
+                    // update summary
+                    asl.summary = asl.entry
+                    // update shared preference
+                    val spe = sharedPref.edit()
+                    spe.putString(AttachmentStorage::class.simpleName, AttachmentStorage.activeType.name)
+                    spe.apply()
+                    // if there was a change, apply the related action
+                    if (oldValue != newValue) {
+                        // ask
+                        decisionBox(
+                            requireContext(),
+                            DECISION.YESNO,
+                            getString(R.string.note),
+                            msg,
+                            // YES
+                            {
+                                if (AttachmentStorage.activeType == AttachmentStorage.Type.PRIVATE) {
+                                    MainActivity.moveExternalPicturesGrzLogToPrivateGallery(requireContext())
+                                }
+                                if (AttachmentStorage.activeType == AttachmentStorage.Type.PUBLIC) {
+                                    MainActivity.movePrivateGalleryToExternalPicturesGrzLog(requireContext())
+                                }
+                            },
+                            // NO
+                            {
+                                // reset selected index
+                                asl.setValueIndex(oldValNdx)
+                                // update summary
+                                asl.summary = asl.entry
+                                // update shared preference
+                                val spe = sharedPref.edit()
+                                spe.putString(AttachmentStorage::class.simpleName, activeTypeOld.name)
+                                spe.apply()
+                            }
+                        )
+                    }
+                    true
+                }
+
             // action after reset shared preferences
             val reset = findPreference("Reset") as Preference?
             reset!!.onPreferenceClickListener =
@@ -978,6 +1051,8 @@ public class SettingsActivity :
                         DialogInterface.OnClickListener { dialog, which ->
                             // keep the app's own password
                             var appPwdPub = sharedPref.getString("app_pwd", "")!!
+                            // keep the app's storage mode & location
+                            val attStoreModeName = sharedPref.getString(AttachmentStorage::class.simpleName, AttachmentStorage.Type.PRIVATE.name)
                             // clear all shared preferences
                             try {
                                 val spe = sharedPref.edit()
@@ -985,6 +1060,8 @@ public class SettingsActivity :
                                 spe.apply()
                                 // restore the app's own pwd
                                 spe.putString("app_pwd", appPwdPub)
+                                // restore the app's storage mode & location
+                                spe.putString(AttachmentStorage::class.simpleName, attStoreModeName)
                                 spe.apply()
                             } catch (e: Exception) {
                             }

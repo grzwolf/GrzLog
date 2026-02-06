@@ -295,8 +295,8 @@
     <string name="x_found">x Treffer</string>
     <string name="jump_to_phrase">Springe zu Text</string>
     <string name="search_phrase">Suchbegriff</string>
-    <string name="appLimitations">GrzLog Einschränkungen</string>
-    <string name="no_pen_support">Kein Gboard Pen Support, Settings -> Beschränkungen</string>
+    <string name="appNotes">GrzLog Anmerkungen und FAQ</string>
+    <string name="no_pen_support">Kein Gboard Pen Support, Settings -> Notes</string>
     <string name="edited_items">Editierte Items</string>
     <string name="type_in_the_search_phrase">Eingabe Suchphrase</string>
     <string name="type_in_the_replace_phrase">Eingabe Ersetzungsphrase</string>
@@ -415,6 +415,16 @@
     <string name="remove_selected_links_folder_update"><![CDATA[Entfernen der gewählten Links und Update der Ordner Daten. Entfernte Links hinterlassen ein <X>.]]></string>
     <string name="remove_selected_links_only">Zugriffsberechtigungen für gewählte Links werden entfernt. Ordner Daten werden nicht geändert.</string>
     <string name="appWhatsNew">GrzLog: Was ist neu?</string>
+    <string name="following_no_touch">wurden die folgenden Dateien nicht verschoben:</string>
+    <string name="AppGalleryToPictures">Verschiebe private GrzLog Galerie nach /sdcard/Pictures/GrzLog</string>
+    <string name="PicturesToAppGallery">Verschiebe /sdcard/Pictures/GrzLog in die private GrzLog Galerie</string>
+    <string name="attachments_location">GrzLog Galerie Speicherort</string>
+    <string name="private_folder">GrzLog\'s privater Ordner</string>
+    <string name="public_folder">/sdcard/Pictures/GrzLog</string>
+    <string name="files_moved">Dateien erfolgreich verschoben</string>
+    <string name="out_of">"Von "</string>
+    <string name="move_public">Verschiebe Dateien nach /sdcard/Pictures/GrzLog</string>
+    <string name="move_private">Verschiebe Dateien in GrzLog\'s privaten Ordner</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
@@ -434,6 +444,14 @@
     <string-array name="backupModeArray_Values">
         <item>manually</item>
         <item>automated</item>
+    </string-array>
+    <string-array name="attachmentsArray_Names">
+        <item>@string/private_folder</item>
+        <item>@string/public_folder</item>
+    </string-array>
+    <string-array name="attachmentsArray_Values">
+        <item>private</item>
+        <item>public</item>
     </string-array>
 </resources>
 

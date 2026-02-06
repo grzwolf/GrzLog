@@ -37,9 +37,9 @@
             android:key="AppHelp" />
 
         <Preference
-            android:title="@string/appLimitations"
+            android:title="@string/appNotes"
             android:summary="@string/clickHere"
-            android:key="AppLimitations" />
+            android:key="AppNotes" />
 
         <SwitchPreferenceCompat
             android:title="@string/AppAtStartCheckUpdateTxt"
@@ -203,6 +203,15 @@
             android:summary="@string/clickHere"
             android:key="ShowAppGalleryBySize" />
         <Preference
+            android:title="@string/linked_images"
+            android:summary="@string/clickHere"
+            android:key="ShowLinkedMedia" />
+        <ListPreference
+            android:title="@string/attachments_location"
+            android:key="attachmentsLocation"
+            android:entries="@array/attachmentsArray_Names"
+            android:entryValues="@array/attachmentsArray_Values" />
+        <Preference
             android:title="@string/tidyOrphanes"
             android:summary="@string/clickHere"
             android:key="TidyOrphanes" />
@@ -210,10 +219,6 @@
             android:title="@string/rescale"
             android:summary="@string/clickHere"
             android:key="RescaleImages" />
-        <Preference
-            android:title="@string/linked_images"
-            android:summary="@string/clickHere"
-            android:key="ShowLinkedMedia" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Reset">

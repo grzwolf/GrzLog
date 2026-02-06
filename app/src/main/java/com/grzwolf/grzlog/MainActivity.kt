@@ -311,12 +311,23 @@ class MainActivity : AppCompatActivity(),
         if (!folder.exists()) {
             folder.mkdirs()
         }
-        // GrzLog has its own Attachments folder: need to make sure it exists, no matter what else happened
-        val storagePathAppAttachments = "$appStoragePath/Images"
-        folder = File(storagePathAppAttachments)
+
+        // GrzLog attachments can be in two different places
+        AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal] = "$appStoragePath/Images"
+        folder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal])
         if (!folder.exists()) {
             folder.mkdirs()
         }
+        AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal] = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES + "/GrzLog").absolutePath
+        folder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal])
+        if (!folder.exists()) {
+            folder.mkdirs()
+        }
+        // all info regarding attachment mode & location is kept inside AttachmentStorage.activeType
+        val storageModeName = sharedPref.getString(AttachmentStorage::class.simpleName, AttachmentStorage.Type.PRIVATE.name)
+        AttachmentStorage.activeType = AttachmentStorage.Type.entries.find {
+            it.name.equals(storageModeName, ignoreCase = true)
+        }!!
 
         // we need these controls in so many places ...
         lvMain.listView = findViewById(R.id.lvMain)
@@ -3494,7 +3505,7 @@ class MainActivity : AppCompatActivity(),
                                 fabPlus.attachmentUri!!,
                                 fabPlus.attachmentUriUri,
                                 fabPlus.attachmentImageScale,
-                                appStoragePath + "/Images"
+                                AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
                             )
                             if (fabPlus.attachmentUri!!.endsWith(appUriFileString)) {
                                 // success
@@ -4436,7 +4447,7 @@ class MainActivity : AppCompatActivity(),
         val dsText = ds.dataSection[ds.selectedSection]                        // get raw data text from DataStore section/folder
         title = ds.namesSection[ds.selectedSection]                            // set app title to folder Name
         lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder)      // convert & format raw text to array
-        lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList) // set adapter and populate main listview
+        lvMain.adapter = LvAdapter(this@MainActivity, lvMain.arrayList)        // set adapter and populate main listview
         lvMain.listView!!.adapter = lvMain.adapter
 
         // temporarily highlight edited items
@@ -7974,7 +7985,8 @@ class MainActivity : AppCompatActivity(),
                     keyString = lnkParts[0]
                     uriString = lnkParts[1]
                     if (uriString.startsWith("/")) {
-                        val storagePathAppImages = "file://$appStoragePath/Images"
+                        val corePath = AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
+                        val storagePathAppImages = "file://$corePath"
                         uriString = storagePathAppImages + uriString
                     }
                     if (uriString.length > 0) {
@@ -8676,8 +8688,19 @@ class MainActivity : AppCompatActivity(),
         var appVersionMain = 0
         // app has a menu bar: Search, Folder, Share, Settings
         var appMenu: Menu? = null
-        // app external storage location
+        // app main storage location
         var appStoragePath = ""
+        // app attachments storage location
+        class AttachmentStorage {
+            enum class Type() {
+                PRIVATE, // StorageType.PRIVATE.name    --> PRIVATE
+                PUBLIC   // StorageT ype.PUBLIC.ordinal --> 1
+            }
+            companion object {
+                var activeType = Type.PRIVATE
+                val pathList = arrayOf("", "")
+            }
+        }
         // ListView shows data according to SHOW_ORDER
         @JvmField
         var lvMain = GrzListView()
@@ -8923,7 +8946,7 @@ class MainActivity : AppCompatActivity(),
         }
 
         // find & replace text in all dataSections (folders) and return success
-        fun insideDataStoreSearchAndReplace(searchText: String, replaceText: String, pw: ProgressWindow, context: Context): Boolean {
+        fun insideDataStoreSearchAndReplace(searchText: String, replaceText: String, pw: ProgressWindow?, context: Context): Boolean {
             var success = true
             try {
                 // iterate all data sections of DataStore
@@ -9383,7 +9406,7 @@ class MainActivity : AppCompatActivity(),
                                             }
                                         } finally {
                                         }
-                                        // copy file to local app storage, or skip copy if file is already there
+                                        // copy file to app attachment storage, or skip copy if file is already there
                                         val localUriStr = copyAttachmentToApp(context, uriStrOri, null, false, appAttachmentsPath)
                                         // set new link in current line (only needed if compared strings deviate)
                                         if (localUriStr != uriLocOri) {
@@ -9717,14 +9740,14 @@ class MainActivity : AppCompatActivity(),
             } else {
                 return uriString + "." + ERROR_EXT
             }
-            var outputPath = appAttachmentPath + fileName
+            var outputPath = appAttachmentPath + "/" + fileName
             // no override if file already exists
             val file = File(outputPath)
             if (file.exists()) {
                 // return the filename of the existing file with a leading /
                 return fileName
             }
-            // create /Images folder if needed
+            // create folder if needed
             val folder = File(appAttachmentPath)
             if (!folder.exists()) {
                 folder.mkdirs()
@@ -9760,12 +9783,19 @@ class MainActivity : AppCompatActivity(),
                     out = null
                 } catch (fnfe: FileNotFoundException) {
                     // measure of last resort: alien PDF files didn't copy to Images, perhaps this method helps
-                    var secondTryOk = false
+                    var nextTryOk = false
                     if (uri != null) {
-                        secondTryOk = copyUriToAppImages(context, uri, outputPath)
+                        nextTryOk = copyUriToAppImages(context, uri, outputPath)
                     }
-                    if (!secondTryOk) {
-                        return uriString + "." + ERROR_EXT
+                    if (!nextTryOk) {
+                        // pdf, txt, audio cannot be copied to /sdcard/Pictures/GrzLog so use private attachments folder
+                        val outPathStr = AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal]
+                        outputPath = outPathStr + "/" + fileName
+                        nextTryOk = copyUriToAppImages(context, uri, outputPath)
+                        if (!nextTryOk) {
+                            // now give up
+                            return uriString + "." + ERROR_EXT
+                        }
                     }
                 } catch (e: Exception) {
                     return uriString + "." + ERROR_EXT
@@ -9852,6 +9882,85 @@ class MainActivity : AppCompatActivity(),
                 galleryIntent.putExtra("SortByDate", sortByDate)
                 activity.startActivity(galleryIntent)
             }
+        }
+
+        //
+        // move all visual media from GrzLog gallery to /storage/emulated/0/Pictures/GrzLog
+        //
+        fun movePrivateGalleryToExternalPicturesGrzLog(context: Context) {
+            Thread {
+                val sourceFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal])
+                val destinationFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal])
+                val errorList = moveGrzLogGallery(context, sourceFolder, destinationFolder, AttachmentStorage.Type.PUBLIC)
+                ds.clear()                                                        // clear DataStore
+                ds = readAppData(appStoragePath)                                  // un serialize DataStore from GrzLog.ser
+                val dsText = ds.dataSection[ds.selectedSection]                   // get raw data text from DataStore section/folder
+                lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder) // convert & format raw text to array
+                lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList) // set adapter and populate main listview
+                (context as Activity).runOnUiThread({
+                    lvMain.listView!!.adapter = lvMain.adapter
+                    if (errorList.size > 1) {
+                        val numFiles = errorList[0].toInt()
+                        errorList.removeAt(0)
+                        val listStr = TextUtils.join("\n", errorList)
+                        okBox(
+                            context,
+                            context.getString(R.string.note),
+                            context.getString(R.string.out_of) +
+                                    numFiles.toString() +
+                                    " " +
+                                    context.getString(R.string.following_no_touch) +
+                                    "\n\n" +
+                                    listStr
+                        )
+                    } else {
+                        centeredToast(
+                            context,
+                            errorList[0] + " " + context.getString(R.string.files_moved),
+                            3000
+                        )
+                    }
+                })
+            }.start()
+        }
+        //
+        // move all visual media from /storage/emulated/0/Pictures/GrzLog to GrzLog gallery
+        //
+        fun moveExternalPicturesGrzLogToPrivateGallery(context: Context) {
+            Thread {
+                val sourceFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal])
+                val destinationFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal])
+                val errorList = moveGrzLogGallery(context, sourceFolder, destinationFolder, AttachmentStorage.Type.PRIVATE)
+                ds.clear()                                                        // clear DataStore
+                ds = readAppData(appStoragePath)                                  // un serialize DataStore from GrzLog.ser
+                val dsText = ds.dataSection[ds.selectedSection]                   // get raw data text from DataStore section/folder
+                lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder) // convert & format raw text to array
+                lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList) // set adapter and populate main listview
+                (context as Activity).runOnUiThread({
+                    lvMain.listView!!.adapter = lvMain.adapter
+                    if (errorList.size > 1) {
+                        val numFiles = errorList[0].toInt()
+                        errorList.removeAt(0)
+                        val listStr = TextUtils.join("\n", errorList)
+                        okBox(
+                            context,
+                            context.getString(R.string.note),
+                            context.getString(R.string.out_of) +
+                                    numFiles.toString() +
+                                    " " +
+                                    context.getString(R.string.following_no_touch) +
+                                    "\n\n" +
+                                    listStr
+                        )
+                    } else {
+                        centeredToast(
+                            context,
+                            errorList[0] + " " + context.getString(R.string.files_moved),
+                            3000
+                        )
+                    }
+                })
+            }.start()
         }
     }
 
@@ -10536,7 +10645,7 @@ internal class LvAdapter : BaseAdapter {
     private var items: ArrayList<ListViewItem>? = null
     private var iconColor: Int = 0
     private var res = android.R.drawable.ic_dialog_alert
-    private var pathGrzLogImages = MainActivity.appStoragePath + "/Images/"
+    private var pathGrzLogImages = MainActivity.Companion.AttachmentStorage.pathList[MainActivity.Companion.AttachmentStorage.activeType.ordinal] + "/"
 
     constructor() : super() {}
     constructor(context: Context?, items: ArrayList<ListViewItem>?) {
@@ -10706,10 +10815,16 @@ internal class LvAdapter : BaseAdapter {
             } else {
                 if (mime.length > 0) {
                     if (IMAGE_EXT.contains(mime, ignoreCase = true)) {
+                        // check GrzLog gallery
                         if (File(pathGrzLogImages + fileNameString.substring(5)).exists()) {
                             res = android.R.drawable.ic_menu_camera
                         } else {
-                            res = android.R.drawable.ic_dialog_alert
+                            // check file in a shared location
+                            if (File(fileNameString.substring(5)).exists()) {
+                                res = android.R.drawable.ic_menu_camera
+                            } else {
+                                res = android.R.drawable.ic_dialog_alert
+                            }
                         }
                     } else {
                         if (AUDIO_EXT.contains(mime, ignoreCase = true)) {
