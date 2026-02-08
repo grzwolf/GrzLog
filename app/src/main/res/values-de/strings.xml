@@ -207,7 +207,7 @@
     <string name="inputOneSpace">Minimaler Input ist ein Leerzeichen</string>
     <string name="appHelp">Hilfe Seiten</string>
     <string name="title_activity_help">Hilfe</string>
-    <string name="title_activity_limits">Beschränkungen</string>
+    <string name="title_activity_notes"><![CDATA[Anmerkungen & FAQ]]></string>
     <string name="appCheckUpdate">Check GrzLog Update</string>
     <string name="available">verfügbar</string>
     <string name="availableUpdate">Update verfügbar</string>

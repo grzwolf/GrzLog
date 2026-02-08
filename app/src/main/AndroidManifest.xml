@@ -83,7 +83,6 @@
         <activity
             android:name="com.grzwolf.grzlog.SettingsActivity"
             android:label="@string/title_activity_settings"
-            android:screenOrientation="portrait"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity"
             android:enableOnBackInvokedCallback="true">
             <meta-data
@@ -93,7 +92,6 @@
         <activity
             android:name="com.grzwolf.grzlog.GalleryActivity"
             android:label="@string/title_activity_gallery"
-            android:screenOrientation="portrait"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -102,7 +100,7 @@
         <activity
             android:name="com.grzwolf.grzlog.HelpActivity"
             android:label="@string/title_activity_help"
-            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -111,7 +109,7 @@
         <activity
             android:name="com.grzwolf.grzlog.WhatsNewActivity"
             android:label="What's new"
-            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -119,8 +117,8 @@
         </activity>
         <activity
             android:name="com.grzwolf.grzlog.NotesActivity"
-            android:label="@string/title_activity_limits"
-            android:screenOrientation="portrait"
+            android:label="@string/title_activity_notes"
+            android:configChanges="orientation|screenSize"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -129,7 +127,6 @@
         <activity
             android:name="com.grzwolf.grzlog.LinkedMedia"
             android:label="@string/title_linked_images"
-            android:screenOrientation="portrait"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -164,7 +161,6 @@
             android:name="com.grzwolf.grzlog.MainActivity"
             android:launchMode="singleInstance"
             android:label="@string/app_name"
-            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar"
             android:exported="true">
             <intent-filter>

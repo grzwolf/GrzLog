@@ -208,7 +208,7 @@
     <string name="inputOneSpace">Input at least one space</string>
     <string name="appHelp">Help pages</string>
     <string name="title_activity_help">Help</string>
-    <string name="title_activity_limits">Limitations</string>
+    <string name="title_activity_notes"><![CDATA[Notes & FAQ]]></string>
     <string name="AppAtStartCheckUpdateTxt">Check GrzLog update at start</string>
     <string name="appCheckUpdate">Check GrzLog update</string>
     <string name="available">available</string>
