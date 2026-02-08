@@ -425,6 +425,7 @@
     <string name="out_of">"Von "</string>
     <string name="move_public">Verschiebe Dateien nach /sdcard/Pictures/GrzLog</string>
     <string name="move_private">Verschiebe Dateien in GrzLog\'s privaten Ordner</string>
+    <string name="restore_changed_attachments_storage">Die Wiederherstellung änderte den Speicherort der GrzLog Galerie zum privaten Ordner.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

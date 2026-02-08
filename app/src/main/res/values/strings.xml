@@ -426,6 +426,7 @@
     <string name="out_of">"Out of "</string>
     <string name="move_public">Moving files to /sdcard/Pictures/GrzLog</string>
     <string name="move_private">Moving files to GrzLog\'s private folder</string>
+    <string name="restore_changed_attachments_storage">Restore changed attachments storage location to GrzLog private folder.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

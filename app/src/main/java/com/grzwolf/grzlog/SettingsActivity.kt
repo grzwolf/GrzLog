@@ -1694,6 +1694,14 @@ public class SettingsActivity :
             var progressWindow = ProgressWindow(context, context.getString(R.string.restoreZIP) )
             progressWindow.absCount = maxProgressCount.toFloat()
             progressWindow.show()
+            
+            // remember attachment storage location mode before Restore:
+            // --> Restore will change it back to Type.PRIVATE
+            //     reason: Backup keeps all attachments in one place, which is private .../Images
+            var changedAttatchmentStoreLocation = false
+            if (AttachmentStorage.activeType == AttachmentStorage.Type.PUBLIC) {
+                changedAttatchmentStoreLocation = true
+            }
 
             // dialog dismiss listener
             fun Dialog?.setOnDismissListener(success: Boolean) {
@@ -1709,7 +1717,20 @@ public class SettingsActivity :
                         context,
                         context.getString(R.string.ZIPrestored) + " = " + context.getString(R.string.success),
                         context.getString(R.string.returnToMain),
-                        { settingsActivity!!.onBackPressed() }
+                        {
+                            if (changedAttatchmentStoreLocation) {
+                                // note: change attachments storage
+                                okBox(
+                                    context,
+                                    context.getString(R.string.note),
+                                    context.getString(R.string.restore_changed_attachments_storage),
+                                    { settingsActivity!!.onBackPressed() }
+                                )
+                            } else {
+                                // nothing else to do
+                                settingsActivity!!.onBackPressed()
+                            }    
+                        }
                     )
                 } else {
                     // if anything went wrong, delete the folder, which failed during restore
