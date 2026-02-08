@@ -3693,7 +3693,9 @@ class MainActivity : AppCompatActivity(),
                         newTextIsDatePattern = false
                     }
                 }
+
                 if (newTextIsDatePattern) {
+
                     //
                     // add a future date header
                     //
@@ -3984,197 +3986,136 @@ class MainActivity : AppCompatActivity(),
                         }
                     }
                 } else {
+
                     //
                     // standard text input
                     //
+
+                    // add time at the beginning of the newText
+                    if (timestampType != TIMESTAMP.OFF && newText.split("\n").size == 1) {
+                        var timeStr = ""
+                        if (timestampType == TIMESTAMP.HHMM) {
+                            val timeFormat = "HH:mm"
+                            timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
+                        }
+                        if (timestampType == TIMESTAMP.HHMMSS) {
+                            val timeFormat = "HH:mm:ss"
+                            timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
+                        }
+                        newText += timeStr
+                    }
 
                     //
                     // loop oriParts date headers to be able to insert newText for a today's date
                     // --> oriParts might contain date headers younger as today
                     // --> oriParts might miss a date header from today
-                    // --> oriParts might be empty (aka an empty new folder or app 1st start)
+                    // --> oriParts might be empty (aka an empty new folder or app 1st start
                     //
-                    var spacers = 0                // spacers needed to translate offset in ds into lvMain
-                    var newTextInsertPos = -1      // offset in ds
-                    var skippedDatesInsertPos = -1 // offset in ds
-                    val todayDate = LocalDate.now()
-                    var itemHeaderDate: LocalDate? = null
-                    var nearestOlderHeaderDate = LocalDate.now()
-                    var checkInsertPos = true
+                    var newTextInsertPos = -1                    // offset in DataStore to insert newText
+                                                                 // -1 --> ds is empty
+                                                                 //        add today date header to newText and insert at top of ds
+                                                                 // -1 --> ds only has a younger date as today
+                                                                 //        add today date header to newText and add to bottom of ds
+                                                                 //  0 --> newText goes to top
+                                                                 // >0 --> newText insert somewhere
+                    var skippedDatesInsertPos = -1               // offset in ds to insert skipped dates
+                    var spacers = 0                              // highlighting: spacers needed to translate offset in ds into lvMain
+                    var nearestOlderHeaderDate = LocalDate.now() // lower start position for skipped dates
+                    val todayDate = LocalDate.now()              // today date for comparison
+                    var todayExists = false                      // do oriParts contain today
+                    var youngerHeaderDateAsTodayExists = false   // specific case: younger date as today in oriParts
                     for (ndx in 0 until oriParts.size) {
                         // any date header contains a regex pattern for "yyyy-mm-dd EEE", sample 2020-03-03 Thu OR 2020-03-03
                         val m = PATTERN.DateDay.matcher(oriParts[ndx])
                         if (m.find()) {
                             // build a date from oriParts
-                            itemHeaderDate = dateHeaderParser(m.group())
-                            // find nearest older date to today
-                            if (itemHeaderDate != null && !checkInsertPos) {
-                                // memorize the nearest older header date to today
-                                nearestOlderHeaderDate = itemHeaderDate
-                                // one index above would be the right insert pos for skipped dates
-                                skippedDatesInsertPos = ndx - 1
-                                // break loop
-                                break
-                            }
-                            // find insert position for newText
-                            if (itemHeaderDate != null && checkInsertPos) {
-                                // compare to find a date match between today and an already existing date header
+                            val itemHeaderDate = dateHeaderParser(m.group())
+                             // find insert position for newText
+                            if (itemHeaderDate != null) {
+                                // check for a younger date as today
+                                if (todayDate.year == itemHeaderDate.year && todayDate.dayOfYear < itemHeaderDate.dayOfYear) {
+                                    // memorize existence of younger date in oriPart
+                                    youngerHeaderDateAsTodayExists = true
+                                }
+                                // check if today exists, if so ...
+                                // ... don't break the loop to continue to look for the nearest older date header
                                 if (todayDate.year == itemHeaderDate.year && todayDate.dayOfYear == itemHeaderDate.dayOfYear) {
-                                    // that means, today has an existing date header in ds --> insert newText after header
+                                    // date match between today and an already existing date header
+                                    // --> today exists
+                                    // --> newText insert position is right here
+                                    todayExists = true
                                     newTextInsertPos = ndx         // ds offset to insert newText
                                     insertStartPos = ndx + spacers // lvMain pos for highlighting
-                                    checkInsertPos = false
                                 }
-                                // as soon as an older date header as today is found, break loop
+                                // look for the nearest older date header to today, if so break loop
                                 if (todayDate.year == itemHeaderDate.year && todayDate.dayOfYear > itemHeaderDate.dayOfYear) {
-                                    // that means, today does not yet have an existing date header in ds --> add it to newText
-                                    newText = todayDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")) + "\n" + newText
-                                    // insert newText one position before the older date header
-                                    newTextInsertPos = ndx - 1              // ds offset to insert newText
-                                    insertStartPos = ndx - 1 + spacers - 1  // lvMain pos for highlighting
-                                    checkInsertPos = false
+                                    // set newText insert position, only if today does not exist in oriParts
+                                    // --> add today date to newText
+                                    if (!todayExists) {
+                                        newTextInsertPos = ndx                       // ds offset to insert newText
+                                        insertStartPos = newTextInsertPos + spacers  // lvMain pos for highlighting
+                                        newText = todayDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")) + "\n" + newText
+                                        skippedDatesInsertPos = ndx                  // skipped dates insert pos
+                                    } else {
+                                        skippedDatesInsertPos = Math.max(0, ndx - 1) // skipped dates insert pos
+                                    }
+                                    // memorize the nearest older header date to today as lower start for skipped dates
+                                    nearestOlderHeaderDate = itemHeaderDate
+                                    break
                                 }
                                 // for highlighting
                                 spacers++
                             }
                         }
                     }
-                    if (newTextInsertPos > 0) {
-                        //
-                        // newText goes right behind insertPos
-                        //
 
-                        // skipped dates?
-                        var skippedDatesList = mutableListOf<String>()
-                        if (todayDate.dayOfYear == itemHeaderDate!!.dayOfYear + 1) {
-                            // no skipped dates
-                            fillWithSkippedDates = false
-                        } else {
-                            fillWithSkippedDates = true
-                            val defaultZoneId = ZoneId.systemDefault()
-                            val startDate = Date.from(nearestOlderHeaderDate.plusDays(1).atStartOfDay(defaultZoneId).toInstant())
-                            val stopDate = Date.from(todayDate.atStartOfDay(defaultZoneId).toInstant())
-                            skippedDatesList = getDaysBetweenDates(startDate, stopDate).asReversed().toMutableList()
-                        }
-                        // build finalStr
-                        for (ndx in 0 until oriParts.size) {
-                            // just take over oriParts[i]
+                    //  check whether folder being completely empty
+                    if (newTextInsertPos == -1 && !youngerHeaderDateAsTodayExists ) {
+                        todayExists = false
+                        newTextInsertPos = 0
+                        newText = todayDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")) + "\n" + newText
+                    }
+
+                    // skipped dates handling
+                    var skippedDatesList = mutableListOf<String>()
+                    //    today == nearestOlderHeaderDate + 1 --> no skipped date   OR       today == itemHeader --> no skipped date
+                    if (todayDate.dayOfYear == nearestOlderHeaderDate.dayOfYear + 1 || todayDate.dayOfYear == nearestOlderHeaderDate.dayOfYear) {
+                        // no skipped dates
+                        fillWithSkippedDates = false
+                    } else {
+                        fillWithSkippedDates = true
+                        val defaultZoneId = ZoneId.systemDefault()
+                        val startDate = Date.from(nearestOlderHeaderDate.plusDays(1).atStartOfDay(defaultZoneId).toInstant())
+                        val stopDate = Date.from(todayDate.atStartOfDay(defaultZoneId).toInstant())
+                        skippedDatesList = getDaysBetweenDates(startDate, stopDate).asReversed().toMutableList()
+                    }
+
+                    // build finalStr
+                    for (ndx in 0 until oriParts.size) {
+                        if (todayExists) {
+                            // take over oriParts[i]
                             finalStr += oriParts[ndx] + "\n"
                             finalStrWithSkippedDates += oriParts[ndx] + "\n"
+                        }
+                        if (ndx == newTextInsertPos) {
                             // magic insert pos for newText
-                            if (ndx == newTextInsertPos) {
-                                finalStr += newText + "\n"
-                                finalStrWithSkippedDates += newText + "\n"
-                                newTextWithSkippedDates += newText + "\n"
-                            }
-                            // skipped dates are inserted after all oriParts[i] belonging to existing date
-                            if (ndx == skippedDatesInsertPos) {
-                                // add skipped dates
-                                if (fillWithSkippedDates) {
-                                    if (skippedDatesList.size > 0) {
-                                        for (dateStr in skippedDatesList) {
-                                            finalStrWithSkippedDates += dateStr + "\n"
-                                            newTextWithSkippedDates += dateStr + "\n"
-                                        }
-                                    } else {
-                                        fillWithSkippedDates = false
-                                        finalStrWithSkippedDates = ""
-                                        newTextWithSkippedDates = ""
+                            finalStr += newText + "\n"
+                            finalStrWithSkippedDates += newText + "\n"
+                            newTextWithSkippedDates += newText + "\n"
+                        }
+                        // skipped dates are inserted after all oriParts[i] belonging to existing date
+                        if (ndx == skippedDatesInsertPos) {
+                            // add skipped dates
+                            if (fillWithSkippedDates) {
+                                if (skippedDatesList.size > 0) {
+                                    for (dateStr in skippedDatesList) {
+                                        finalStrWithSkippedDates += dateStr + "\n"
+                                        newTextWithSkippedDates += dateStr + "\n"
                                     }
                                 } else {
                                     fillWithSkippedDates = false
                                     finalStrWithSkippedDates = ""
                                     newTextWithSkippedDates = ""
-                                }
-                            }
-                        }
-                    } else {
-                        //
-                        // newText goes to top
-                        //
-
-                        // get today date stamp w/o time
-                        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
-                        val dateToday: Date? = try {
-                            dateFormat.parse(dateFormat.format(Date()))
-                        } catch (ex: Exception) {
-                            Date()
-                        }
-
-                        // prepare for a date max. 1 day before
-                        val cal = Calendar.getInstance()
-                        val todayStr = dateFormat.format(dateToday)
-                        cal.time = dateFormat.parse(todayStr)
-                        cal.add(Calendar.DATE, -1)
-                        val yesterdayStr = dateFormat.format(cal.time)
-                        val yesterdayDate = dateFormat.parse(yesterdayStr)
-                        // last entry's date
-                        val dateStringLast = if (oriParts[0] != null) {
-                            oriParts[0]
-                        } else {
-                            yesterdayStr
-                        }
-                        val dateLast: Date
-                        dateLast = try {
-                            dateFormat.parse(dateStringLast.toString())!!
-                        } catch (ex: Exception) { //  ... if no data is found, we start over with yesterday
-                            dateLastIsValid = false
-                            yesterdayDate
-                        }
-                        // keep latest date stamp always on top: 0 = add today at top / 1 = don't add today at top
-                        var combineNdx = 1
-                        var dateStr = dateStringLast + "\n"
-                        // if topmost date is not today, we need to add the today's date stamp
-                        if (dateLast.compareTo(dateToday) != 0) {
-                            dateStr = SimpleDateFormat(
-                                "yyyy-MM-dd EEE",
-                                Locale.getDefault()
-                            ).format(dateToday!!) + "\n"
-                            combineNdx = 0
-                            addDateHeader = true
-                        }
-                        // add time at the beginning of the newText
-                        var timeStr = ""
-                        if (timestampType != TIMESTAMP.OFF) {
-                            if (timestampType == TIMESTAMP.HHMM) {
-                                val timeFormat = "HH:mm"
-                                timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
-                            }
-                            if (timestampType == TIMESTAMP.HHMMSS) {
-                                val timeFormat = "HH:mm:ss"
-                                timeStr = SimpleDateFormat(timeFormat).format(Date()) + " "
-                            }
-                        }
-                        if (combineNdx == 0) {
-                            newText = timeStr + newText + "\n"
-                        } else {
-                            newText = timeStr + newText
-                        }
-                        // build final string after input
-                        finalStr = dateStr
-                        finalStr += newText
-                        // alternative finalStr
-                        finalStrWithSkippedDates = finalStr
-                        // prepare auto fill skipped dates
-                        if (fillWithSkippedDates && dateLastIsValid) {
-                            newTextWithSkippedDates = finalStr
-                            // start date is one day after the last entry's date
-                            val c = Calendar.getInstance()
-                            c.time = dateFormat.parse(dateStringLast)
-                            c.add(Calendar.DATE, 1)
-                            val fromStr = dateFormat.format(c.time)
-                            val fromDate = dateFormat.parse(fromStr)
-                            // list contains all date strings between today and the last recorded entry
-                            // !! reversed():
-                            //    build & run < API 35 ok
-                            //    build & run = API 35 ok
-                            //    build API 35 + run < API 35 --> exception NoSuchMethodError
-                            val skippedDatesList = getDaysBetweenDates(fromDate, dateToday!!).asReversed()
-                            numAutoFilledDates = skippedDatesList.size
-                            if (skippedDatesList.size > 0) {
-                                for (dateStr in skippedDatesList) {
-                                    finalStrWithSkippedDates += "\n" + dateStr
-                                    newTextWithSkippedDates += dateStr + "\n"
                                 }
                             } else {
                                 fillWithSkippedDates = false
@@ -4182,14 +4123,18 @@ class MainActivity : AppCompatActivity(),
                                 newTextWithSkippedDates = ""
                             }
                         }
-
-                        // finally append all original entries to finalStr
-                        for (i in combineNdx until oriParts.size) {
-                            finalStr += "\n" + oriParts[i]
-                            if (fillWithSkippedDates) {
-                                finalStrWithSkippedDates += "\n" + oriParts[i]
-                            }
+                        if (!todayExists) {
+                            // take over oriParts[i]
+                            finalStr += oriParts[ndx] + "\n"
+                            finalStrWithSkippedDates += oriParts[ndx] + "\n"
                         }
+                    }
+
+                    // check no insert pos found but existence of a younger header date as today in oriParts
+                    if (newTextInsertPos == -1 && youngerHeaderDateAsTodayExists ) {
+                        // simply append newText to oriParts including a leading date header
+                        newText = todayDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd EEE")) + "\n" + newText
+                        finalStr += newText + "\n"
                     }
                 }
             }
