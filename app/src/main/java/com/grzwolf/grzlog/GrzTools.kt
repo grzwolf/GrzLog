@@ -787,6 +787,50 @@ fun okBox(context: Context?, title: String?, message: String, runnerOk: Runnable
     }
 }
 
+// self-closing ok box with progress
+fun okBoxAutoClose(
+    context: Context?,
+    title: String?,
+    message: String,
+    timeoutMs: Long,
+    runnerCancel: Runnable?
+) {
+    val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+    builder.setTitle(title)
+    builder.setMessage(message)
+    builder.setNegativeButton(
+        R.string.cancel,
+        DialogInterface.OnClickListener { dialog, which ->
+            if (runnerCancel != null) {
+                runnerCancel.run()
+            }
+            dialog.dismiss()
+        }
+    )
+    try {
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            dialog.getWindow()!!.setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.WRAP_CONTENT
+            )
+        }
+        dialog.show()
+        dialog.setCanceledOnTouchOutside(false)
+        // alert auto close feature
+        object : CountDownTimer(timeoutMs, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                dialog.setMessage(message + " " + (millisUntilFinished / 1000L).toString() + " s")
+            }
+            override fun onFinish() {
+                dialog.dismiss()
+            }
+        }.start()
+    } catch (e: Exception) {
+        // leave unhandled
+    }
+}
+
 // dialog with two choices: a) or b) or cancel
 fun twoChoicesDialog(
     context: Context,

@@ -20,6 +20,17 @@
     <!-- app auto update -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- app bluetooth file sync (GrzLog.txt) with GrzLog on another device -->
+    <!-- https://stackoverflow.com/questions/67722950/android-12-new-bluetooth-permissions/69972855#69972855 -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="31" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
+
     <!-- API 33 -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
@@ -56,7 +67,6 @@
         android:enableOnBackInvokedCallback="true"
         android:windowSoftInputMode="adjustResize"
         android:requestLegacyExternalStorage="true"
-        android:screenOrientation="portrait"
         android:allowBackup="true"
         android:icon="@mipmap/ic_grzlog_launcher"
         android:label="@string/app_name"
@@ -127,6 +137,15 @@
         <activity
             android:name="com.grzwolf.grzlog.LinkedMedia"
             android:label="@string/title_linked_images"
+            android:parentActivityName="com.grzwolf.grzlog.MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.grzwolf.grzlog.MainActivity" />
+        </activity>
+
+        <activity
+            android:name="com.grzwolf.grzlog.BluetoothActivity"
+            android:label="BluetoothActivity"
             android:parentActivityName="com.grzwolf.grzlog.MainActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"

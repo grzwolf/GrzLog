@@ -19,6 +19,9 @@ class WhatsNewActivity : AppCompatActivity() {
     val text =
         "GrzLog: What's new?\n" +
         "===================\n\n" +
+        "v1.1.xx\n" +
+        "~~~~~~~\n" +
+        "new: Long tap red plus button --> synchronize folder data between two Bluetooth devices\n\n" +
         "v1.1.56\n" +
         "~~~~~~~\n" +
         "fix: insert non-existing today if a future date already exists\n" +

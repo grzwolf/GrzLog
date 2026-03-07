@@ -47,8 +47,11 @@ class HelpActivity : AppCompatActivity() {
         "         Edit existing attachment\n" +
         "   !revert latest change via Menu bar Undo!\n\n" +
         "b) tap long red + button -> 'Jump to ...'\n" +
-        "        jump to top\n" +
-        "        jump to bottom\n" +
+        "        Top\n" +
+        "        Middle\n" +
+        "        Bottom\n" +
+        "        Search phrase\n" +
+        "        Remote folder sync\n" +
         "\n" +
         "2.2 ListView item\n" +
         "~~~~~~~~~~~~~~~~~\n" +

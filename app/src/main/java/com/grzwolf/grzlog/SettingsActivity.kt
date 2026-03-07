@@ -452,7 +452,7 @@ public class SettingsActivity :
                     backupInfo.summary = getString(R.string.noBackupExisting)
                 }
             } catch (ise: IllegalStateException) {
-                centeredToast(appContext!!, "Info error: " + ise.message.toString(), 3000)
+                centeredToast(context!!, "Info error: " + ise.message.toString(), 3000)
             }
 
             // GCam usage/handling hint

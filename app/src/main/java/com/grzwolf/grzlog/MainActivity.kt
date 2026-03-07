@@ -385,10 +385,13 @@ class MainActivity : AppCompatActivity(),
         }
 
         // onCreate shall clear any undo data + set two ds tags to 0 (first and last deleted item positions)
-        ds.undoAction = ACTION.UNDEFINED
-        ds.undoText = ""
-        ds.undoSection = ""
-        ds.tagSection.clear()
+        //    but not when coming back from BluetoothActivita with undo data present
+        if (!returningFromBluetoothActivityShowMenuItemUndo) {
+            ds.undoAction = ACTION.UNDEFINED
+            ds.undoText = ""
+            ds.undoSection = ""
+            ds.tagSection.clear()
+        }
 
         // only enter, if no backup is already ongoing
         if (!backupOngoing) {
@@ -803,13 +806,17 @@ class MainActivity : AppCompatActivity(),
             if (!menuSearchVisible) {
                 // standard app menu
                 showMenuItems(false)
-                // onResume always cancels undo data, but not if fabPlus.editInsertLine is active (if returning from a canceled pick)
-                if (!fabPlus.editInsertLine) {
+                // onResume always cancels undo data:
+                //   but not if fabPlus.editInsertLine is active (if returning from a canceled pick)
+                //   but not is returning from BluetootActivity with undo data
+                if (!fabPlus.editInsertLine && !returningFromBluetoothActivityShowMenuItemUndo) {
                     ds.undoSection = ""
                     ds.undoText = ""
                     ds.undoAction = ACTION.UNDEFINED
                 }
                 showMenuItemUndo()
+                // now reset flag returningFromBluetoothActivityShowMenuItemUndo
+                returningFromBluetoothActivityShowMenuItemUndo = false
             }
         }
 
@@ -4494,24 +4501,8 @@ class MainActivity : AppCompatActivity(),
         }
         // estimate current view position
         var currentViewPct = (100.0 * lv.firstVisiblePosition / lv.adapter!!.count + 0.5).toInt()
-        // prepare single choice item pre selection
-        var checkItem = -1
-        if (lv.firstVisiblePosition == 0) {
-            checkItem = 0
-        }
-        if (lv.firstVisiblePosition == lv.adapter!!.count / 4) {
-            checkItem = 1
-        }
-        if (lv.firstVisiblePosition == lv.adapter!!.count / 2) {
-            checkItem = 2
-        }
-        if (lv.firstVisiblePosition == lv.adapter!!.count * 3 / 4) {
-            checkItem = 3
-        }
-        if (lv.lastVisiblePosition == lv.adapter!!.count - 1) {
-            checkItem = 4
-            currentViewPct = 100
-        }
+        // prepare single choice item pre-selection
+        var checkItem = 0
         // single choice dialog
         val optionsBuilder = AlertDialog.Builder(this@MainActivity, android.R.style.Theme_Material_Dialog)
         var title = getString(R.string.JumpTo) + " ( " + currentViewPct.toString() + " % )"
@@ -4520,11 +4511,10 @@ class MainActivity : AppCompatActivity(),
         optionsBuilder.setSingleChoiceItems(
             arrayOf(
                 getString(R.string.top),
-                getString(R.string.upper_quarter),
                 getString(R.string.middle),
-                getString(R.string.lower_quarter),
                 getString(R.string.bottom),
-                getString(R.string.search_phrase) + if (jumpToPhrase.length > 0) ": '" + jumpToPhrase + "'" else ""
+                getString(R.string.search_phrase) + if (jumpToPhrase.length > 0) ": '" + jumpToPhrase + "'" else "",
+                getString(R.string.remote_folder_sync)
             ),
             checkItem
         ) { dialog, which ->
@@ -4533,19 +4523,13 @@ class MainActivity : AppCompatActivity(),
                 lv.setSelection(0)
             }
             if (which == 1) {
-                lv.setSelection(lv.adapter.count / 4)
-            }
-            if (which == 2) {
                 lv.setSelection(lv.adapter.count / 2)
             }
-            if (which == 3) {
-                lv.setSelection(lv.adapter.count * 3 / 4)
-            }
-            if (which == 4) {
+            if (which == 2) {
                 // jump to bottom
                 lv.setSelection(lv.adapter.count - 1)
             }
-            if (which == 5) {
+            if (which == 3) {
                 // jump to a search phrase: repeating a search phrase on multiple hits, jumps further down
                 val input = EditText(this)
                 input.inputType = InputType.TYPE_CLASS_TEXT
@@ -4656,6 +4640,17 @@ class MainActivity : AppCompatActivity(),
                 input.requestFocus()
                 showKeyboard(input, 0, 0, 250)
             }
+            // remote folder sync
+            if (which == 4) {
+                try {
+// fire & forget BluetoothActivity
+// startActivity(Intent(this@MainActivity, BluetoothActivity::class.java))
+                    // start BluetoothActivity and return to onActivityResult afterward
+                    startActivityForResult(BluetoothActivity.newInstance(this@MainActivity), 815)
+                } catch (e: Exception) {
+                    centeredToast(this@MainActivity, "Error: " + e.message.toString(), 3000)
+                }
+            }
             optionsDialog!!.dismiss()
         }
         // + button long click options dialog
@@ -4667,9 +4662,8 @@ class MainActivity : AppCompatActivity(),
         optionsDialog?.show()
     }
 
-    // region action bar
     //
-    // action bar
+    // region action bar
     //
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // inflate the menu; this adds items to the action bar if it is present.
@@ -5403,9 +5397,12 @@ class MainActivity : AppCompatActivity(),
             fabBack!!.tag = fbt
         }
         // change folder always cancels undo
-        ds.undoSection = ""
-        ds.undoText = ""
-        ds.undoAction = ACTION.UNDEFINED
+        //    but not when coming back from BluetoothActivity with undo data present
+        if (!returningFromBluetoothActivityShowMenuItemUndo) {
+            ds.undoSection = ""
+            ds.undoText = ""
+            ds.undoAction = ACTION.UNDEFINED
+        }
         showMenuItemUndo()
         // CHANGE FOLDER
         var changeFolderBuilder: AlertDialog.Builder? = null
@@ -6805,6 +6802,11 @@ class MainActivity : AppCompatActivity(),
 
         // registerForActivityResult calls onActivityResult for unknown reasons -> reject such case
         if (requestCode > PICK.ZIP) {
+            return
+        }
+
+        // TBD: BluetoothActivity may return useful data
+        if (requestCode == REQUEST_BT_RESULT) {
             return
         }
 
@@ -8626,6 +8628,8 @@ class MainActivity : AppCompatActivity(),
 
     // static components accessible from other fragments / activities
     companion object {
+        // BluetoothActivity may return useful data in onActivityResult
+        const val REQUEST_BT_RESULT = 815
         @JvmField
         // app name
         var appName = ""
@@ -8656,6 +8660,8 @@ class MainActivity : AppCompatActivity(),
         // DataStore holds all data "new at top"; after onCreate() it is under no circumstances null
         @JvmField
         var ds: DataStore = DataStore()
+        // when returning from folder sync, there might be a need to show showMenuItemUndo() in onCreate()
+        var returningFromBluetoothActivityShowMenuItemUndo = false
         // this flag controls, whether onResume continues with onCreate()
         @JvmField
         var reReadAppFileData = false
@@ -9074,7 +9080,7 @@ class MainActivity : AppCompatActivity(),
         // switch to a folder helpers
         //   prvFolderNumber - previous folder number
         //   newFolderNumber - new selected  folder number
-        //   checkReAuth     - re authorization needed (not needed, if jumping back and forth in global search hits)
+        //   checkReAuth     - re-authorization needed (not needed, if jumping back and forth in global search hits)
         //   highLightPos    - a global search hit shall be placed somehow vertically centered
         fun switchToFolderByNumber(prvFolderNumber: Int, newFolderNumber: Int, checkReAuth: Boolean, highLightPos: Int = -1) {
             // sanity check
