@@ -486,7 +486,8 @@
     <string name="send_message">Sende Message</string>
     <string name="type_here">.. hier schreiben ..</string>
     <string name="the_folder">Der Ordner</string>
-    <string name="auto_connect">Automatisch letzte Verbindung herstellen</string>
+    <string name="auto_connect">Auto Remote verbinden</string>
+    <string name="enable_bt_on_remote_ok">Synchronisierung auf Remote aktivieren, dann OK zum Fortsetzen.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

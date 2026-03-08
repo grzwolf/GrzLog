@@ -487,7 +487,8 @@
     <string name="send_message">Send Message</string>
     <string name="type_here">.. type here ..</string>
     <string name="the_folder">The folder</string>
-    <string name="auto_connect">auto connect with connected device</string>
+    <string name="auto_connect">Auto connect last device</string>
+    <string name="enable_bt_on_remote_ok">Enable Synchronization on remote device, then push OK to continue.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

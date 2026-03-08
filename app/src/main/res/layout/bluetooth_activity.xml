@@ -6,6 +6,15 @@
     android:layout_marginTop="120dp"
     android:orientation="vertical">
 
+    <CheckBox
+        android:id="@+id/checkbox_auto_connect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:textColor="@color/black"
+        android:background="@color/white"
+        android:text="@string/auto_connect" />
+
     <ToggleButton
         android:id="@+id/toggle_onoff"
         android:layout_width="match_parent"

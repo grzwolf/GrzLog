@@ -33,6 +33,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
 import com.grzwolf.grzlog.DataStore.ACTION
 import com.grzwolf.grzlog.DataStore.TIMESTAMP
 import com.grzwolf.grzlog.MainActivity.Companion.ds
@@ -153,6 +154,7 @@ class BluetoothActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.bluetooth_activity)
@@ -169,6 +171,7 @@ class BluetoothActivity : AppCompatActivity() {
         btActivity = this
 
         // make UI views static --> all are declared in companion object
+        btCheckAutoConnect = findViewById(R.id.checkbox_auto_connect)
         btOnOffButton = findViewById(R.id.toggle_onoff)
         btCheckBoxVisibilty = findViewById(R.id.checkbox_device_visibility)
         btStatusTv = findViewById(R.id.textview_connection_status)
@@ -180,10 +183,57 @@ class BluetoothActivity : AppCompatActivity() {
         btSendMsgButton = findViewById(R.id.button_send_text)
         btSendMsgEt = findViewById(R.id.editText_send_text)
 
+        // handle auto connect to last saved BT device
+        var executeAutoConnectBluetooth = false
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+        selectedBluetoothDeviceIndex = sharedPref.getInt("BluetoothAutoConnectDeviceIndex", -1)
+        if (selectedBluetoothDeviceIndex != -1) {
+            // check BEFORE btCheckAutoConnect.setOnCheckedChangeListener to avoid click listener
+            btCheckAutoConnect.isChecked = true
+            executeAutoConnectBluetooth = true
+        }
+
+        //
         // UI click handlers
+        //
+        // auto connect to BT device
+        btCheckAutoConnect.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (isChecked) {
+                val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
+                // error: connection is not active OR no pairedDevices OR invalid device selection
+                if (btOnOffButton.isChecked == false || pairedDevices!!.isEmpty() || selectedBluetoothDeviceIndex == -1) {
+                    if (buttonView.isPressed) {
+                        btCheckAutoConnect.isChecked = false
+                    }
+                    return@setOnCheckedChangeListener
+                }
+                // error: selected device index not contained in paired list
+                if (selectedBluetoothDeviceIndex > pairedDevices.size) {
+                    if (buttonView.isPressed) {
+                        btCheckAutoConnect.isChecked = false
+                    }
+                    return@setOnCheckedChangeListener
+                }
+                // save preference
+                val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                var spe = sharedPref.edit()
+                spe.putInt("BluetoothAutoConnectDeviceIndex", selectedBluetoothDeviceIndex)
+                spe.apply()
+            } else {
+                // remove preference
+                val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+                var spe = sharedPref.edit()
+                spe.putInt("BluetoothAutoConnectDeviceIndex", -1)
+                spe.apply()
+            }
+        }
+
+        // sync ON / OFF
         btOnOffButton.setOnCheckedChangeListener { buttonView, isChecked ->
             btOnOffButtonClick(isChecked)
         }
+
+        // this device BT visibility
         btCheckBoxVisibilty.setOnCheckedChangeListener { buttonView, isChecked ->
             // sanity check
             if (isChecked && btOnOffButton.isChecked == false) {
@@ -202,15 +252,23 @@ class BluetoothActivity : AppCompatActivity() {
                 manualVisibiltyStart = true
             }
         })
+
+        // select a remote BT device
         btSelectRemoteButton.setOnClickListener(View.OnClickListener { view ->
             btSelectRemoteButtonClick()
         })
+
+        // request a folder from remote BT device
         btRequestFileButton.setOnClickListener(View.OnClickListener { view ->
             btRequestFileButtonClick()
         })
+
+        // send a folder to a remote BT device
         btSendFileButton.setOnClickListener(View.OnClickListener { view ->
             btSendFileButtonClick()
         })
+
+        // send message
         btSendMsgButton.setOnClickListener(View.OnClickListener { view ->
             btSendMsgButtonClick()
         })
@@ -219,6 +277,9 @@ class BluetoothActivity : AppCompatActivity() {
         btRequestFileStatusTv.addTextChangedListener(textWatcher)
 
         // initially all buttons are disabled
+        if (btCheckAutoConnect.isChecked == false) {
+            btCheckAutoConnect.isEnabled = false
+        }
         btCheckBoxVisibilty.isEnabled = false
         btSelectRemoteButton.isEnabled = false
         btRequestFileButton.isEnabled = false
@@ -243,6 +304,21 @@ class BluetoothActivity : AppCompatActivity() {
 
         // adding onBackPressed callback listener
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
+
+        // exec auto Bluetooth connect
+        if (executeAutoConnectBluetooth) {
+            // enable Bluetooth sync
+            btOnOffButton.isChecked = true
+            // start connect thread
+            val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
+            if (pairedDevices!!.isEmpty() || selectedBluetoothDeviceIndex > pairedDevices!!.size || selectedBluetoothDeviceIndex == -1) {
+                btCheckAutoConnect.isChecked = false
+                return
+            }
+            val connectThread = ConnectThread(pairedDevices!!.elementAt(selectedBluetoothDeviceIndex))
+            connectThread.start()
+        }
+
     }
 
     // BT on off button click implementation
@@ -348,6 +424,7 @@ class BluetoothActivity : AppCompatActivity() {
                         for (i: Int in pairedDevices.indices) {
                             if (i == tmpSelectionNdx) {
                                 // index of item with "name of mobile phone" as shown in 'About Phone'
+                                selectedBluetoothDeviceIndex = i
                                 val connectThread = ConnectThread(pairedDevices.elementAt(i))
                                 // start connect thread
                                 connectThread.start()
@@ -361,6 +438,7 @@ class BluetoothActivity : AppCompatActivity() {
                 selectBuilder.setNeutralButton(
                     "Pair a new remote device",
                     DialogInterface.OnClickListener { dlg, which ->
+                        selectedBluetoothDeviceIndex = -1
                         // pair with a new remote device
                         pairNewDevice()
                         // just get out
@@ -372,6 +450,7 @@ class BluetoothActivity : AppCompatActivity() {
                 selectBuilder.setNegativeButton(
                     R.string.cancel,
                     DialogInterface.OnClickListener { dlg, which ->
+                        selectedBluetoothDeviceIndex = -1
                         // just get out
                         return@OnClickListener
                     }
@@ -391,6 +470,7 @@ class BluetoothActivity : AppCompatActivity() {
                 // no existing paired BT devices so far
                 //
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    selectedBluetoothDeviceIndex = -1
                     // goes the full cycle:
                     //    start broadcast receiver
                     //    request making remote device visible
@@ -928,6 +1008,7 @@ val timeoutBluetoothBeacon    = 300     // [s]  aka 5 min = 60s * 5
 val timeoutBluetoothDiscovery = 20000L  // [ms] 20s
 
 // UI views
+lateinit var btCheckAutoConnect:    CheckBox
 lateinit var btOnOffButton:         ToggleButton
 lateinit var btCheckBoxVisibilty:   CheckBox
 lateinit var btStatusTv:            TextView
@@ -945,6 +1026,8 @@ var manualVisibiltyStart = false
 var bluetoothManager: BluetoothManager? = null
 var bluetoothAdapter: BluetoothAdapter? = null
 var btAdapterIsEnabledOriginal = false
+
+var selectedBluetoothDeviceIndex = -1
 
 // app's fix UUID
 @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
@@ -995,6 +1078,7 @@ class ServiceBT(val handler: Handler) {
             handler.postDelayed({
                 btStatusTv.text = btActivity!!.getString(R.string.ok_connected_to_device_shown_below)
                 btSelectedRemoteTv.text = mmSocket.remoteDevice.name
+                btCheckAutoConnect.isEnabled = true
                 btCheckBoxVisibilty.isChecked = false
                 btCheckBoxVisibilty.isEnabled = false
                 btSelectRemoteButton.isEnabled = false
@@ -1333,6 +1417,10 @@ class ServiceBT(val handler: Handler) {
                 } catch (e: IOException) {
                     // input stream got disconnected
                     handler.postDelayed({
+                        // cannot set auto connect anymore
+                        if (btCheckAutoConnect.isChecked == false) {
+                            btCheckAutoConnect.isEnabled = false
+                        }
                         // turn off all BT sync
                         btOnOffButton.isChecked = false
                     }, 0)
@@ -1348,6 +1436,10 @@ class ServiceBT(val handler: Handler) {
             } catch (e: IOException) {
                 handler.postDelayed({
                     btStatusTv.text = btActivity!!.getString(R.string.error_remote_device_is_not_reachable)
+                    // cannot set auto connect anymore
+                    if (btCheckAutoConnect.isChecked == false) {
+                        btCheckAutoConnect.isEnabled = false
+                    }
                     // allow to reconnect
                     btCheckBoxVisibilty.isEnabled = true
                     btSelectRemoteButton.isEnabled = true
@@ -1364,6 +1456,12 @@ class ServiceBT(val handler: Handler) {
         // call this method to shut down the connection.
         fun cancel() {
             try {
+                // cannot set auto connect anymore
+                handler.postDelayed({
+                    if (btCheckAutoConnect.isChecked == false) {
+                        btCheckAutoConnect.isEnabled = false
+                    }
+                }, 0)
                 mmSocket.close()
             } catch (e: IOException) {
 //                  Log.e(TAG, "Could not close the connect socket", e)
@@ -1446,6 +1544,10 @@ class ConnectThread(device: BluetoothDevice) : Thread() {
                 // update status: a connection request was made from here, but remote did not answer
                 Handler(Looper.getMainLooper()).postDelayed({
                     btStatusTv.text = btActivity!!.getString(R.string.no_answer_from_remote_device) + e.message
+                    var message = btActivity!!.getString(R.string.enable_bt_on_remote_device)
+                    if (selectedBluetoothDeviceIndex != -1) {
+                        message = btActivity!!.getString(R.string.enable_bt_on_remote_ok)
+                    }
                     decisionBox(
                         btActivity as Context,
                         DECISION.YESNO,
@@ -1455,7 +1557,17 @@ class ConnectThread(device: BluetoothDevice) : Thread() {
                             okBox(
                                 btActivity as Context,
                                 btActivity!!.getString(R.string.note),
-                                btActivity!!.getString(R.string.enable_bt_on_remote_device)
+                                message,
+                                {
+                                    // auto connect failed, bc remote was not activated
+                                    if (selectedBluetoothDeviceIndex != -1) {
+                                        val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
+                                        if (pairedDevices != null && pairedDevices.isNotEmpty()) {
+                                            val connectThread = ConnectThread(pairedDevices!!.elementAt(selectedBluetoothDeviceIndex))
+                                            connectThread.start()
+                                        }
+                                    }
+                                }
                             )
                         },
                         {
@@ -1463,7 +1575,8 @@ class ConnectThread(device: BluetoothDevice) : Thread() {
                                 btActivity as Context,
                                 btActivity!!.getString(R.string.note),
                                 btActivity!!.getString(R.string.on_both_phones_goto_settings)
-                            )                        }
+                            )
+                        }
                     )
                 }, 0)
             }
@@ -1482,6 +1595,8 @@ class ConnectThread(device: BluetoothDevice) : Thread() {
 // proceed a list of available remote BT devices to pair with as a follow-up from BroadcastReceiver()
 @SuppressLint("MissingPermission")
 fun handleUnpairedBtDevices(devices: MutableList<DeviceBluetooth>) {
+    // no auto connect anymore
+    btCheckAutoConnect.isChecked = false
     // build a list of String for selection dialog
     val deviceArray: MutableList<String> = ArrayList()
     for (item in devices) {
