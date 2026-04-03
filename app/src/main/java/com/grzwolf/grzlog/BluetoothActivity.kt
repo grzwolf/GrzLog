@@ -1102,11 +1102,12 @@ class ServiceBT(val handler: Handler) {
                     var read = mmInStream.read(mmBuffer)
 
                     //
-                    // string from bytearray with zeros eliminated
+                    // string from bytearray with \NULL removed
                     //
-                    var msg = ""
-                    if (read < 1024) {
-                        msg = mmBuffer.toString(Charsets.UTF_8).substring(0, read)
+                    var msg = mmBuffer.toString(Charsets.UTF_8)
+                    val posNull = msg.indexOf('\u0000')
+                    if ( posNull != -1 ) {
+                        msg = msg.substring(0, posNull)
                     }
 
                     //
