@@ -1092,13 +1092,13 @@ fun getFileExtension(fileName: String?): String {
 }
 
 // copy "Android's Photo Picker Uri" to fullFilePath, here:  GrzLog files images
-fun copyPickerUriToAppFilesImages(context: Context, pickerUri: Uri, fullFilePath: String): Boolean {
+fun copyPickerUriToAppFilesImages(context: Context, pickerUri: Uri, fullFilePathOri: String, fullFilePathApp: String): Boolean {
     var retVal = true
     try {
         // input
         val inputStream = context.contentResolver.openInputStream(pickerUri)
         // output
-        val appImageFile = File(fullFilePath)
+        val appImageFile = File(fullFilePathApp)
         val outputStream = FileOutputStream(appImageFile)
         // copy stream
         inputStream?.copyTo(outputStream)
@@ -1106,7 +1106,22 @@ fun copyPickerUriToAppFilesImages(context: Context, pickerUri: Uri, fullFilePath
         inputStream?.close()
         outputStream.close()
     } catch (e: Exception) {
-        retVal = false
+        // now try with full filename
+        try {
+            // input
+            val fileOri = File(fullFilePathOri)
+            val inputStream = context.contentResolver.openInputStream(Uri.fromFile(fileOri))
+            // output
+            val appImageFile = File(fullFilePathApp)
+            val outputStream = FileOutputStream(appImageFile)
+            // copy stream
+            inputStream?.copyTo(outputStream)
+            // finish
+            inputStream?.close()
+            outputStream.close()
+        } catch (e: Exception) {
+            retVal = false
+        }
     }
     return retVal
 }
@@ -2111,14 +2126,14 @@ fun getLinkedFilesInfo(
                     (LinkedMedia.GrzThumbNail(
                         pickerUri,
                         id,
-                        uriString,
-                        "19700101",
+                        fileName,
+                        fileDate,
                         null,
                         null,
                         null,
                         null,
                         false,
-                        0
+                        fileSize
                     ))
                 )
             }

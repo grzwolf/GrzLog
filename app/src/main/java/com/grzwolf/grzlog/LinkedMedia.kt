@@ -539,12 +539,14 @@ class LinkedMedia : AppCompatActivity() {
                         if (!copyPickerUriToAppFilesImages(
                                 MainActivity.contextMainActivity,
                                 item.pickerUri!!,
+                                item.fileName,
                                 appImageFullPath
                             )
                         ) {
                             runOnUiThread {
                                 centeredToast(contextLinkedMedia, "Error copy Picker Uri", 1000)
                             }
+                            continue
                         }
 
                         // find out if video vs. image
