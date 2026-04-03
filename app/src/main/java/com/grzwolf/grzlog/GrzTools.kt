@@ -2075,15 +2075,63 @@ fun getLinkedFilesInfo(
             // get thumbnail directly from uri
             var bmp = loadThumbnailFromUri(context, pickerUri)
             if (bmp == null) {
-                // supposed to happen if uri is video
-                bmp = ThumbnailUtils.createVideoThumbnail(File(fileName), Size(128, 128), null)
+                // supposed to happen if uri is video OR uri is invalid
+                try {
+                    bmp = ThumbnailUtils.createVideoThumbnail(File(fileName), Size(128, 128), null)
+                } catch(e: Exception) {
+                    bmp = null
+                }
             }
-            val dwb = BitmapDrawable(context.resources, bmp)
-            // add to return value list retVal
-            retVal.add((LinkedMedia.GrzThumbNail(pickerUri, mediaId, fileName, fileDate, dwb, null, null, null,false, fileSize)))
+            if (bmp != null) {
+                val dwb = BitmapDrawable(context.resources, bmp)
+                // add to return value list retVal
+                retVal.add(
+                    (LinkedMedia.GrzThumbNail(
+                        pickerUri,
+                        mediaId,
+                        fileName,
+                        fileDate,
+                        dwb,
+                        null,
+                        null,
+                        null,
+                        false,
+                        fileSize
+                    ))
+                )
+            } else {
+                // add a broken link
+                retVal.add(
+                    (LinkedMedia.GrzThumbNail(
+                        pickerUri,
+                        id,
+                        uriString,
+                        "19700101",
+                        null,
+                        null,
+                        null,
+                        null,
+                        false,
+                        0
+                    ))
+                )
+            }
         } else {
             // add a broken link
-            retVal.add((LinkedMedia.GrzThumbNail(pickerUri, id, uriString, "19700101", null, null, null, null,false, 0)))
+            retVal.add(
+                (LinkedMedia.GrzThumbNail(
+                    pickerUri,
+                    id,
+                    uriString,
+                    "19700101",
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    0
+                ))
+            )
         }
     }
 
