@@ -1648,7 +1648,8 @@ fun showImagePopup(context: Context, imagePath: String, title: String, imageUri:
                 // prevent onLoadFailed(..) to be called twice: no clue why this happens at all & at the 1st fail only
                 if (!loaded) {
                     loaded = true
-                    okBox(context, context.getString(R.string.FileNotFound), imageUri.path.toString())
+                    // try to show image with system app
+                    showImageInAndroidGalleryViewer(context, imageUri)
                 }
                 return true
             }
@@ -1714,13 +1715,18 @@ fun showImageInAndroidGalleryViewer(context: Context, imageUri: Uri, mimeType: S
     if (imageUri.toString().startsWith("content://media")) {
         // applies to image links to Gallery: convert "MediaStore Picker Uri" to "Google Photos Uri"
         val realPath = GalleryInfo.getGalleryMediaRealPath(context, imageUri)
-        val realUri = FileProvider.getUriForFile(
-            context,
-            context.packageName + ".provider",
-            File(realPath)
-        )
-        // finalize intent
-        intent.setDataAndType(realUri, type)
+        if (realPath.isNotEmpty()) {
+            val realUri = FileProvider.getUriForFile(
+                context,
+                context.packageName + ".provider",
+                File(realPath)
+            )
+            // finalize intent
+            intent.setDataAndType(realUri, type)
+        } else {
+            okBox(context, context.getString(R.string.FileNotFound), imageUri.path.toString())
+            return
+        }
     } else {
         // convert imageUri to the app local file
         val file = getFileFromUri(context.applicationContext, imageUri)
