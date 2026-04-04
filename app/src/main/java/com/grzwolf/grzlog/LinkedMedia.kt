@@ -4,16 +4,21 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.text.Html
+import android.util.Size
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -33,6 +38,9 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 import com.grzwolf.grzlog.MainActivity.Companion.AttachmentStorage
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Date
 
 
 class LinkedMedia : AppCompatActivity() {
@@ -792,8 +800,6 @@ class LinkedMedia : AppCompatActivity() {
         // generate thumbnails in another thread
         try {
             Thread {
-                // have a granted permission list of images linked to the phone gallery
-                var grantedPermissionList = MainActivity.contextMainActivity.contentResolver.getPersistedUriPermissions()
                 // prepare 1st progress
                 pw.incCount = 0
                 var lineCount = 0
@@ -804,7 +810,7 @@ class LinkedMedia : AppCompatActivity() {
                 pw.absCount = lineCount.toFloat()
                 pw.absFakeCount = -1F
                 // iterate all data sections of DataStore to search for the patterns of linked images & build a list
-                val neededPermissionList: MutableList<Uri> = arrayListOf()
+                val listGrzThumbNail = mutableListOf<LinkedMedia.GrzThumbNail>()
                 for (dsNdx in MainActivity.ds.dataSection.indices) {
                     // set progress
                     runOnUiThread {
@@ -814,13 +820,12 @@ class LinkedMedia : AppCompatActivity() {
                     val sectionText = MainActivity.ds.dataSection[dsNdx]
                     // loop the split text line
                     val textLines = sectionText.split("\\n+".toRegex()).toTypedArray()
-                    for (i in textLines.indices) {
+                    for (textLine in textLines) {
                         // set progress
                         runOnUiThread {
                             pw.incCount += 1
                         }
                         // deal with one line containing a link pattern
-                        val textLine = textLines[i]
                         val m = PATTERN.UriLink.matcher(textLine)
                         if (m.find()) {
                             val lnkFull = m.group()
@@ -832,36 +837,57 @@ class LinkedMedia : AppCompatActivity() {
                                 try {
                                     val lnkParts = lnkStr.split("::::".toRegex()).toTypedArray()
                                     if (lnkParts != null && lnkParts.size >= 2) {
-                                        // get linked image uri
+                                        // init vars
                                         val uri = Uri.parse(lnkParts[1])
-                                        // check "needed" to be found in "granted"
-                                        var found = false
-                                        for (item in grantedPermissionList) {
-                                            if (item.uri == uri) {
-                                                // set found flag
-                                                found = true
-                                                // add uri to needed list if not yet contained
-                                                if (!neededPermissionList.contains(uri)) {
-                                                    neededPermissionList.add(uri)
+                                        val uriString = uri.toString()
+                                        val mediaId = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
+                                        var fileName = uriString
+                                        var fileSize: Long = 0
+                                        var fileDate = "19700101"
+                                        var bmp: Bitmap? = null
+                                        var dwb: BitmapDrawable? = null
+                                        val galleryItem = GalleryInfo.getGalleryMediaInfo(this, mediaId)
+                                        if (galleryItem != null) {
+                                            // update vars
+                                            fileName = galleryItem.absolutePath
+                                            fileSize = galleryItem.size.toLong()
+                                            fileDate = SimpleDateFormat("yyyyMMdd").format(Date(galleryItem.dateAdded.toLong() * 1000))
+                                            // get thumbnail directly from uri
+                                            bmp = loadThumbnailFromUri(this, uri)
+                                            if (bmp == null) {
+                                                // supposed to happen if uri is video OR uri is invalid
+                                                try {
+                                                    bmp = ThumbnailUtils.createVideoThumbnail(File(fileName), Size(128, 128), null)
+                                                } catch(e: Exception) {
+                                                    bmp = null
                                                 }
+                                            } else {
+                                                dwb = BitmapDrawable(this.resources, bmp)
                                             }
                                         }
-                                        // if not found, try to get permission & retrieve permission list again
-                                        // OR build neededPermissionList in an alternative way
-                                        if (!found) {
-                                            try {
-                                                // apply for permanent read permission
-                                                MainActivity.contextMainActivity.contentResolver.takePersistableUriPermission(
-                                                    uri,
-                                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                                )
-                                                grantedPermissionList = MainActivity.contextMainActivity.contentResolver.getPersistedUriPermissions()
-                                            } catch (e: SecurityException) {
-                                                // if this happens, build neededPermissionList in an alternative way
-                                                if (!neededPermissionList.contains(uri)) {
-                                                    neededPermissionList.add(uri)
-                                                }
+                                        // add data set to list
+                                        var foundItem = false
+                                        for (item in listGrzThumbNail) {
+                                            if (item.pickerUri!!.equals(uri)) {
+                                                foundItem = true
+                                                break
                                             }
+                                        }
+                                        if (foundItem == false) {
+                                            listGrzThumbNail.add(
+                                                GrzThumbNail(
+                                                    uri,
+                                                    mediaId,
+                                                    fileName,
+                                                    fileDate,
+                                                    dwb,
+                                                    null,
+                                                    null,
+                                                    null,
+                                                    false,
+                                                    fileSize
+                                                )
+                                            )
                                         }
                                     }
                                 } finally {
@@ -869,10 +895,15 @@ class LinkedMedia : AppCompatActivity() {
                             }
                         }
                     }
+                    // sort list in descending order by date stamp
+                    val cmp = compareBy<LinkedMedia.GrzThumbNail> {
+                        LocalDate.parse(
+                            it.fileDate,
+                            DateTimeFormatter.ofPattern("yyyyMMdd")
+                        )
+                    }
+                    listGrzThumbNail.sortWith(cmp.reversed())
                 }
-
-                // prepare a list of <GrzThumbNail> of linked images
-                val listGrzThumbNail = getLinkedFilesInfo(this, neededPermissionList, pw)
                 // prepare 2nd progress
                 pw.incCount = 0
                 pw.absCount = listGrzThumbNail.size.toFloat()
