@@ -8872,16 +8872,21 @@ class MainActivity : AppCompatActivity(),
                     var pos = sectionText.indexOf(linkText)
                     while (pos != -1) {
                         // beginning from pos move lhs, find the next occurrence of "["
-                        var i = 0
-                        while (!sectionText[pos - i].equals('[')) {
-                            i++
+                        var openingBracketOfs = 0
+                        while (!sectionText[pos - openingBracketOfs].equals('[')) {
+                            openingBracketOfs++
                             // sanity check, although not supposed to happen
-                            if (i == pos) {
+                            if (openingBracketOfs == pos) {
                                 break
                             }
                         }
-                        // foundLink shall now contain the full link info: [bla::::bla]
-                        val foundLink = sectionText.substring(pos - i, pos + linkText.length)
+                        // beginning from pos move rhs, find the next occurrence of "]"
+                        var closingBracketOfs = 0
+                        while (!sectionText[pos + closingBracketOfs].equals(']')) {
+                            closingBracketOfs++
+                        }
+                        // foundLink now contains full link info: [bla::::link] or [bla::::link:::image] or [bla::::link:::video]
+                        val foundLink = sectionText.substring(pos - openingBracketOfs, pos + closingBracketOfs + 1)
                         // exec replacement, leave <X> as a visual leftover
                         sectionText = sectionText.replaceFirst(foundLink, "<X>")
                         // find next occurrence of linkText in DataStore
@@ -8897,7 +8902,7 @@ class MainActivity : AppCompatActivity(),
         }
 
         // find & replace text in all dataSections (folders) and return success
-        fun insideDataStoreSearchAndReplace(searchText: String, replaceText: String, pw: ProgressWindow?, context: Context): Boolean {
+        fun insideDataStoreSearchAndReplace(searchText: String, searchTextExtra: String, replaceText: String, pw: ProgressWindow?, context: Context): Boolean {
             var success = true
             try {
                 // iterate all data sections of DataStore
@@ -8909,11 +8914,15 @@ class MainActivity : AppCompatActivity(),
                         }
                     }
                     // get text from DataStore folder
-                    var sectionText = ds.dataSection[dsNdx]
+                    val sectionText = ds.dataSection[dsNdx]
                     // search & replace action
-                    sectionText = sectionText.replace(searchText, replaceText, false)
+                    var sectionTextNew = sectionText.replace(searchTextExtra, replaceText, false)
+                    // in case, the extra info (::::image or ::::video) was missing, exec s&r again without extra info
+                    if (sectionTextNew.equals(sectionText)) {
+                        sectionTextNew = sectionText.replace(searchText, replaceText, false)
+                    }
                     // put replaced data back into DataStore
-                    ds.dataSection[dsNdx] = sectionText
+                    ds.dataSection[dsNdx] = sectionTextNew
                 }
             } catch (e: Exception) {
                 success = false

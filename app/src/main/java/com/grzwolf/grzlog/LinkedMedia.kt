@@ -579,12 +579,14 @@ class LinkedMedia : AppCompatActivity() {
                         }
 
                         // build search text
-                        val searchText = "::::" + item.pickerUri!!.toString() + extraInfo
+                        val searchText = "::::" + item.pickerUri!!.toString()
+                        val searchTextExtra = searchText + extraInfo
                         // build replace text
                         val replaceText = "::::/" + appImageFileName
                         // update DataStore with progress
                         if (!MainActivity.insideDataStoreSearchAndReplace(
                                 searchText,
+                                searchTextExtra,
                                 replaceText,
                                 pw,
                                 contextLinkedMedia
@@ -663,8 +665,8 @@ class LinkedMedia : AppCompatActivity() {
                     // item shall be selected and containing a valid file name
                     if (item.selected && item.fileName.isNotEmpty()) {
 
-                        // build search text
-                        val searchText = "::::" + item.pickerUri!!.toString() + "]"
+                        // build search text: leave out any like extra info :::image or :::video
+                        val searchText = "::::" + item.pickerUri!!.toString()
                         // build replace text
                         val replaceText = ""
                         // update DataStore with progress
