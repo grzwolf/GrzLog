@@ -167,24 +167,41 @@ class MainActivity : AppCompatActivity(),
 
     // double tap detector, only used in fabPlus.inputAlertView to open a date picker dialog
     lateinit var doubleTapDetector: GestureDetector
+    
+    // app start monitor
+    fun setStartMonitor(spe: SharedPreferences.Editor, step: Int) {
+        spe.putInt("AppStartMonitor", step)
+        spe.apply()        
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
-        // dark mode OR light mode; call before super.onCreate
+        // get preference instance and its editor
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-        // set theme
-        var theme = sharedPref.getString(getString(R.string.chosenTheme), "?")
+        val spe = sharedPref.edit()
+
+        // startMonitorResult is number of onCreate & onResume passed init steps: 0 --> full success
+        val startMonitorResult = sharedPref.getInt("AppStartMonitor", 0)
+        if (startMonitorResult != 0) {
+            // write startMonitorResult to GrzLog.log located in /sdcard/Download
+            appendToLogfile(this, "code " + startMonitorResult.toString() + "\n")
+        }
+        setStartMonitor(spe, 1)
+
+        // set theme: dark mode OR light mode; call before super.onCreate
+        val theme = sharedPref.getString(getString(R.string.chosenTheme), "?")
         when (theme) {
             "Dark"      -> setTheme(R.style.ThemeOverlay_AppCompat_Dark)
             "Light"     -> setTheme(R.style.ThemeOverlay_AppCompat_Light)
             else        -> {
                              // set default theme after app installation or preference reset
                              setTheme(R.style.ThemeOverlay_AppCompat_Dark)
-                             val spe = sharedPref.edit()
                              spe.putString(getString(R.string.chosenTheme), "Dark")
                              spe.apply()
                            }
         }
+        setStartMonitor(spe, 2)
+        
         MainActivity.showAppReminders = true
         // register lock screen notification API26+: https://developer.android.com/training/notify-user/build-notification
         createNotificationChannels()
@@ -202,9 +219,11 @@ class MainActivity : AppCompatActivity(),
                 }
             }
         }, intentFilter)
+        setStartMonitor(spe, 3)
 
         // notification permission must be called from NOT RESUMED - aka, not from a onClick handler
         notificationPermissionGranted = verifyNotificationPermission()
+        setStartMonitor(spe, 4)
 
         // if camera app returns an image, the app needs a common directory to store it
         // from this place, the image is later copied to GrzLog local
@@ -214,6 +233,7 @@ class MainActivity : AppCompatActivity(),
                 okBox(this, "Note", "Cannot create image dir")
             }
         }
+        setStartMonitor(spe, 5)
 
         // gboard keyboard usage warning: pen input doesn't work
         //     gboard silently activated floating pen keyboard as default in API 35
@@ -221,6 +241,7 @@ class MainActivity : AppCompatActivity(),
         if (gboardStr.contains("com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME")) {
             dontShowAgain(this, getString(R.string.no_pen_support), "gboardNote")
         }
+        setStartMonitor(spe, 6)
 
         // make context static
         contextMainActivity = this
@@ -234,10 +255,10 @@ class MainActivity : AppCompatActivity(),
             // encrypt pwd with app's public key
             appPwdPub = keyManager.encryptPwdPub(appPwdClear)
             // save encrypted pwd in prefs
-            val spe = sharedPref.edit()
             spe.putString("app_pwd", appPwdPub)
             spe.apply()
         }
+        setStartMonitor(spe, 7)
 
         // if installed version is < v1.1.50, there is a high chance, that data are PUB/PRV encrypted
         //    this is needed, just in case a downgrade was done
@@ -245,11 +266,13 @@ class MainActivity : AppCompatActivity(),
         if (appVersionMain < 50) {
             sharedPref.edit().remove("checkPUBPRV").commit()
         }
+        setStartMonitor(spe, 8)
 
         // standard
         super.onCreate(savedInstanceState)
         window.setBackgroundDrawable(null) // black screen at start or returning from settings
         setContentView(R.layout.activity_main)
+        setStartMonitor(spe, 9)
 
 //        // if logging “A resource failed to call close.” is needed: https://wh0.github.io/2020/08/12/closeguard.html
 //        StrictMode.setVmPolicy(VmPolicy.Builder(StrictMode.getVmPolicy())
@@ -258,9 +281,11 @@ class MainActivity : AppCompatActivity(),
 
         // life cycle observer
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+        setStartMonitor(spe, 10)
 
         // application name is needed in many places
         appName = this.applicationInfo.loadLabel(this.packageManager).toString()
+        setStartMonitor(spe, 11)
 
         // at app start check app update availability just once a day
         if (sharedPref.getBoolean("AppAtStartCheckUpdateFlag", false)) {
@@ -271,7 +296,6 @@ class MainActivity : AppCompatActivity(),
             val dateToday = LocalDate.now()
             if (dateToday.compareTo(dateCheckLast) != 0) {
                 // since check is allowed for today, save today as last check date
-                val spe = sharedPref.edit()
                 spe.putString("AppAtStartCheckUpdateDate", formatter.format(dateToday))
                 spe.apply()
                 // internet connection state
@@ -284,6 +308,7 @@ class MainActivity : AppCompatActivity(),
                 }
             }
         }
+        setStartMonitor(spe, 12)
 
         // toolbar tap listener
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -304,6 +329,7 @@ class MainActivity : AppCompatActivity(),
             }
             true
         }
+        setStartMonitor(spe, 13)
 
         // GrzLog files folder is initially generated during installation; if folder was removed for whatever reason, the app is in trouble & crashes
         appStoragePath = applicationContext.getExternalFilesDir(null)!!.absolutePath
@@ -311,6 +337,7 @@ class MainActivity : AppCompatActivity(),
         if (!folder.exists()) {
             folder.mkdirs()
         }
+        setStartMonitor(spe, 14)
 
         // GrzLog attachments can be in two different places
         AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal] = "$appStoragePath/Images"
@@ -328,6 +355,7 @@ class MainActivity : AppCompatActivity(),
         AttachmentStorage.activeType = AttachmentStorage.Type.entries.find {
             it.name.equals(storageModeName, ignoreCase = true)
         }!!
+        setStartMonitor(spe, 15)
 
         // we need these controls in so many places ...
         lvMain.listView = findViewById(R.id.lvMain)
@@ -335,6 +363,7 @@ class MainActivity : AppCompatActivity(),
         fabPlus.button = findViewById(R.id.fabPlus)
         fabBack = findViewById(R.id.fabBack)
         fabBack!!.tag = FabBackTag("", ArrayList(), -1, "")
+        setStartMonitor(spe, 16)
 
         // API 36: set the icon/text colors in the status bar and nav bar
         when (theme) {
@@ -366,12 +395,18 @@ class MainActivity : AppCompatActivity(),
                insets
             }
         }
+        setStartMonitor(spe, 17)
 
         // prevents onPause / onResume to make a text bak: reset flag in onCreate
         returningFromRestore = false
 
         // read complete GrzLog.ser into DataStore
-        ds = readAppData(appStoragePath)
+        try {
+            ds = readAppData(appStoragePath)
+            setStartMonitor(spe, 18)
+        } catch (e: Exception) {
+            e.message?.let { okBox(this, "GrzLog", it) }
+        }
 
         // only check for folder protection, if protected folder is not already open
         MainActivity.folderIsAuthenticated = false
@@ -383,6 +418,7 @@ class MainActivity : AppCompatActivity(),
             MainActivity.folderIsAuthenticated = true
             openFolder(-1, ds.selectedSection, -1)
         }
+        setStartMonitor(spe, 19)
 
         // onCreate shall clear any undo data + set two ds tags to 0 (first and last deleted item positions)
         //    but not when coming back from BluetoothActivita with undo data present
@@ -392,9 +428,11 @@ class MainActivity : AppCompatActivity(),
             ds.undoSection = ""
             ds.tagSection.clear()
         }
+        setStartMonitor(spe, 20)
 
         // only enter, if no backup is already ongoing
         if (!backupOngoing) {
+            setStartMonitor(spe, 21)
             // check for a broken backup: may happen, if a backup was previously aborted by OS or user
             val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             var file = File(downloadDir, "$appName.zip" + "_part")
@@ -434,6 +472,7 @@ class MainActivity : AppCompatActivity(),
                 }
             }
         }
+        setStartMonitor(spe, 22)
 
         // listview item touch listener determines the screen coordinates of the touch event
         (lvMain.listView)?.setOnTouchListener(OnTouchListener { listView, event ->
@@ -461,6 +500,7 @@ class MainActivity : AppCompatActivity(),
             }
             false
         })
+        setStartMonitor(spe, 23)
 
         // listview item 'double click' and 'single click'
         (lvMain.listView)?.setOnItemClickListener(OnItemClickListener { adapterView, itemView, itemPosition, itemId ->
@@ -519,6 +559,7 @@ class MainActivity : AppCompatActivity(),
                 }, DOUBLECLICK_MS)
             }
         })
+        setStartMonitor(spe, 24)
 
         // listview item long press
         (lvMain.listView)?.setOnItemLongClickListener(OnItemLongClickListener { adapterView, itemView, itemPosition, itemId ->
@@ -539,6 +580,7 @@ class MainActivity : AppCompatActivity(),
             }
             true
         })
+        setStartMonitor(spe, 25)
 
         // user input button has two use scenarios:
         // 1.) click
@@ -563,6 +605,7 @@ class MainActivity : AppCompatActivity(),
                 return true
             }
         })
+        setStartMonitor(spe, 26)
 
         // switch back to previous folder: a) after following an attachment to a GrzLog folder b) after following a search hit into another folder
         (fabBack)?.setOnClickListener(View.OnClickListener { view ->
@@ -617,15 +660,16 @@ class MainActivity : AppCompatActivity(),
                 }
             )
         })
+        setStartMonitor(spe, 27)
 
         // silently scan app gallery data
         getAppGalleryThumbsSilent(this, true)
+        setStartMonitor(spe, 28)
 
         // memorize first app usage to make a backup reminder from it
         var deferredBakDate = sharedPref.getLong("deferredBak", 0)
         // 0 indicates the very first app usage, which has oc no backup
         if (deferredBakDate == 0L) {
-            val spe = sharedPref.edit()
             spe.putLong("deferredBak", Date().time)
             spe.apply()
         }
@@ -669,6 +713,9 @@ class MainActivity : AppCompatActivity(),
                 )
             }
         }
+
+        // last step in onCreate --> continue in onResume
+        setStartMonitor(spe, 29)
     }
 
     // activity_lifecycle.png: onPause() is called, whenever the app goes into background
@@ -698,15 +745,22 @@ class MainActivity : AppCompatActivity(),
 
     // activity_lifecycle.png: onResume is called, even when coming back from settings via "Android Back Button"
     override fun onResume() {
+        // settings shared preferences instance and editor
+        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+        val spe = sharedPref.edit()
+
         // show folder content
         window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setRecentsScreenshotEnabled(true)
         }
+        setStartMonitor(spe, 30)
 
         // continue with onCreate(..), if flag reReadAppFileData is true --> needed for changing the theme
         if (reReadAppFileData) {
             reReadAppFileData = false
+            // set app start success flag
+            setStartMonitor(spe, 0)
             // https://stackoverflow.com/questions/2482848/how-to-change-current-theme-at-runtime-in-android  Yuriy Yunikov
             TaskStackBuilder.create(this)
                 .addNextIntent(Intent(this, MainActivity::class.java))
@@ -723,6 +777,7 @@ class MainActivity : AppCompatActivity(),
                 showMenuItems(false)
             }
         }
+        setStartMonitor(spe, 32)
 
         // switch to matching dialog: either 'folder more dialog' OR 'fabPlus input' OR 'file picker dialog'
         if (returningFromAppGallery) {
@@ -788,6 +843,8 @@ class MainActivity : AppCompatActivity(),
                 }
             }
             super.onResume()
+            // set app start success flag
+            setStartMonitor(spe, 0)
             return
         }
 
@@ -795,9 +852,9 @@ class MainActivity : AppCompatActivity(),
         if (lvMain.adapter != null) {
             lvMain.adapter!!.notifyDataSetChanged()
         }
+        setStartMonitor(spe, 33)
 
-        // settings shared preferences
-        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
+        // data show order
         lvMain.showOrder = if (sharedPref.getBoolean("newAtBottom", false)) SHOW_ORDER.BOTTOM else SHOW_ORDER.TOP
 
         // app toolbar control
@@ -819,12 +876,12 @@ class MainActivity : AppCompatActivity(),
                 returningFromBluetoothActivityShowMenuItemUndo = false
             }
         }
+        setStartMonitor(spe, 34)
 
         // if widget calls input, simulate remote click on fabPlus button
         if (sharedPref.getBoolean("widgetJumpInput", false)) {
             if (sharedPref.getBoolean("doubleClickWidget", false)) {
                 // clear previously set shared pref in widget: otherwise ANY onResume would fire
-                val spe = sharedPref.edit()
                 spe.putBoolean("doubleClickWidget", false)
                 spe.apply()
                 // double click action just opens GrzLog
@@ -832,7 +889,6 @@ class MainActivity : AppCompatActivity(),
             }
             if (sharedPref.getBoolean("clickFabPlus", false)) {
                 // clear previously set shared pref in widget: otherwise ANY onResume would fire
-                val spe = sharedPref.edit()
                 spe.putBoolean("clickFabPlus", false)
                 spe.apply()
                 // goto input
@@ -840,19 +896,21 @@ class MainActivity : AppCompatActivity(),
             }
         } else {
             // anyway clear clickPlus
-            val spe = sharedPref.edit()
             spe.putBoolean("clickFabPlus", false)
             spe.apply()
         }
         super.onResume()
+        setStartMonitor(spe, 35)
 
         // if app was previously closed, an intent comes here
         handleSharedIntent(getIntent())
+        setStartMonitor(spe, 36)
 
         // show in app reminders
         if (MainActivity.showAppReminders) {
             showGrzLogReminder()
         }
+        setStartMonitor(spe, 37)
 
         // treat protected folders timeout auth
         if (ds.timeSection[ds.selectedSection] == TIMESTAMP.AUTH) {
@@ -867,6 +925,8 @@ class MainActivity : AppCompatActivity(),
         }
         onPauseStartTime = -1
 
+        // set succes app start flag
+        setStartMonitor(spe, 0)
     }
 
     // life cycle observer knows, if app is in foreground or not

@@ -83,6 +83,7 @@ import java.nio.file.attribute.FileTime
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.Calendar
@@ -668,6 +669,16 @@ internal fun createTxtBackup(context: Context, downloadDir: String?, dataStore: 
     val file = File(downloadDir, "$appName.txt")
     var result = writeFile(file, text)
     return result
+}
+
+// GrzLog.log is the app's own logfile
+fun appendToLogfile(context: Context, text: String) {
+    val appName = context.applicationInfo.loadLabel(context.packageManager).toString()
+    val downloadDir = "" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+    val file = File(downloadDir, "$appName.log")
+    val nowDateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now())
+    val outText = nowDateTime + " " + text
+    file.appendText(outText)
 }
 
 // trim trailing spaces of a string
