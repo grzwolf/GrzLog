@@ -146,6 +146,7 @@
     <string name="JumpTo">Springe an ...</string>
     <string name="top">Anfang</string>
     <string name="bottom">Ende</string>
+    <string name="date">Datum</string>
     <string name="WrapAround">wieder von vorn</string>
     <string name="unselectSearchHits">Selektion der Fundstellen aufheben</string>
     <string name="InsertNotAllowed">Zeile einfügen ist hier nicht erlaubt.</string>
@@ -488,6 +489,8 @@
     <string name="the_folder">Der Ordner</string>
     <string name="auto_connect">Auto Remote verbinden</string>
     <string name="enable_bt_on_remote_ok">Synchronisierung auf Remote aktivieren, dann OK zum Fortsetzen.</string>
+    <string name="no_matching_date_found">Kein suchbares Datum gefunden.</string>
+    <string name="date_not_found">Datum nicht gefunden.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

@@ -147,6 +147,7 @@
     <string name="JumpTo">Jump to ...</string>
     <string name="top">Top</string>
     <string name="bottom">Bottom</string>
+    <string name="date">Date</string>
     <string name="WrapAround">wrapped around</string>
     <string name="unselectSearchHits">Unselect search hits</string>
     <string name="InsertNotAllowed">Insert line here is not allowed.</string>
@@ -489,6 +490,8 @@
     <string name="the_folder">The folder</string>
     <string name="auto_connect">Auto connect last device</string>
     <string name="enable_bt_on_remote_ok">Enable Synchronization on remote device, then push OK to continue.</string>
+    <string name="no_matching_date_found">No searchable date found.</string>
+    <string name="date_not_found">No matching date found.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

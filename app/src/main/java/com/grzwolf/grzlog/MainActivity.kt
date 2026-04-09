@@ -4570,6 +4570,7 @@ class MainActivity : AppCompatActivity(),
         var optionsDialog: AlertDialog? = null
         optionsBuilder.setSingleChoiceItems(
             arrayOf(
+                getString(R.string.date),
                 getString(R.string.top),
                 getString(R.string.middle),
                 getString(R.string.bottom),
@@ -4579,17 +4580,100 @@ class MainActivity : AppCompatActivity(),
             checkItem
         ) { dialog, which ->
             if (which == 0) {
+                // get topmost header date depending on SHOW_ORDER
+                var topMostHeaderDate: LocalDate? = null
+                if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                    for (item in lvMain.arrayList.reversed()) {
+                        if (item.isSection) {
+                            val m = PATTERN.DateDay.matcher(item.title)
+                            if (m.find()) {
+                                topMostHeaderDate = dateHeaderParser(m.group())
+                                break
+                            }
+                        }
+                    }
+                } else {
+                    for (item in lvMain.arrayList) {
+                        if (item.isSection) {
+                            val m = PATTERN.DateDay.matcher(item.title)
+                            if (m.find()) {
+                                topMostHeaderDate = dateHeaderParser(m.group())
+                                break
+                            }
+                        }
+                    }
+                }
+                if (topMostHeaderDate == null) {
+                    okBox(this, getString(R.string.note), getString(R.string.no_matching_date_found))
+                    return@setSingleChoiceItems
+                }
+                // show date picker dialog
+                val cal = Calendar.getInstance()
+                cal.setTime(Date.from(topMostHeaderDate.atStartOfDay(ZoneId.systemDefault()).toInstant()))
+                val yNow = cal.get(Calendar.YEAR)
+                val mNow = cal.get(Calendar.MONTH)
+                val dNow = cal.get(Calendar.DAY_OF_MONTH)
+                val dpd = DatePickerDialog(
+                    this,
+                    AlertDialog.THEME_DEVICE_DEFAULT_DARK,
+                    DatePickerDialog.OnDateSetListener { view, year, monthOfYear, dayOfMonth ->
+                    }, yNow, mNow, dNow
+                )
+                dpd.show()
+                // date picker dialog OK button listener
+                val okButton = dpd.getButton(DialogInterface.BUTTON_POSITIVE)
+                okButton.setOnClickListener {
+                    // get selected date
+                    val year = dpd.datePicker.year
+                    val month = dpd.datePicker.month + 1
+                    val day = dpd.datePicker.dayOfMonth
+                    // close date picker
+                    dpd.dismiss()
+                    // search phrase
+                    val searchDateStr = String.format("%d-%02d-%02d", year, month, day)
+                    val searchDate = LocalDate.parse(searchDateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    // loop array for provided date
+                    var foundPos = -1
+                    for (pos in lvMain.arrayList.indices) {
+                        if (lvMain.arrayList[pos].isSection) {
+                            val foundDateStr = lvMain.arrayList[pos].title!!.substring(0, 10)
+                            val foundDate = LocalDate.parse(
+                                foundDateStr,
+                                DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                            )
+                            // foundPos is SHOW_ORDER dependent
+                            if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                                if (foundDate.isAfter(searchDate) || foundDate.equals(searchDate)) {
+                                    foundPos = pos
+                                    break
+                                }
+                            } else {
+                                if (foundDate.isBefore(searchDate) || foundDate.equals(searchDate)) {
+                                    foundPos = pos
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    if (foundPos != -1) {
+                        lv.setSelection(foundPos)
+                    } else {
+                        okBox(this, getString(R.string.note), getString(R.string.date_not_found))
+                    }
+                }
+            }
+            if (which == 1) {
                 // jump to top
                 lv.setSelection(0)
             }
-            if (which == 1) {
+            if (which == 2) {
                 lv.setSelection(lv.adapter.count / 2)
             }
-            if (which == 2) {
+            if (which == 3) {
                 // jump to bottom
                 lv.setSelection(lv.adapter.count - 1)
             }
-            if (which == 3) {
+            if (which == 4) {
                 // jump to a search phrase: repeating a search phrase on multiple hits, jumps further down
                 val input = EditText(this)
                 input.inputType = InputType.TYPE_CLASS_TEXT
@@ -4701,7 +4785,7 @@ class MainActivity : AppCompatActivity(),
                 showKeyboard(input, 0, 0, 250)
             }
             // remote folder sync
-            if (which == 4) {
+            if (which == 5) {
                 try {
 // fire & forget BluetoothActivity
 // startActivity(Intent(this@MainActivity, BluetoothActivity::class.java))
