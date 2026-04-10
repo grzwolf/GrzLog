@@ -9597,7 +9597,7 @@ class MainActivity : AppCompatActivity(),
         }
 
         // DataStore serialization read: return value is under no circumstances null
-        private fun readAppData(storagePath: String): DataStore {
+        fun readAppData(storagePath: String): DataStore {
             var dataStore: DataStore? = null
             val appName = contextMainActivity.applicationInfo.loadLabel(contextMainActivity.packageManager).toString()
             val file = File(storagePath, "$appName.ser")

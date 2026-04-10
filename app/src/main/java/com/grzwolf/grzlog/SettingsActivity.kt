@@ -47,11 +47,14 @@ import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
 import com.grzwolf.grzlog.MainActivity.Companion.AttachmentStorage
+import com.grzwolf.grzlog.MainActivity.Companion.appName
 import com.grzwolf.grzlog.MainActivity.Companion.appPwdPub
 import com.grzwolf.grzlog.MainActivity.Companion.appStoragePath
+import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
 import com.grzwolf.grzlog.MainActivity.Companion.ds
 import com.grzwolf.grzlog.MainActivity.Companion.returningFromAppGallery
 import com.grzwolf.grzlog.MainActivity.Companion.writeAppData
+import com.grzwolf.grzlog.MainActivity.Companion.readAppData
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -86,7 +89,24 @@ public class SettingsActivity :
             MainActivity.reReadAppFileData = true
         }
         if (s == "encryptProtectedFolders") {
+            // clear app cache
+            MainActivity.deleteAppDataCache(MainActivity.contextMainActivity)
+            // signal to MainActivity to refresh its data
             MainActivity.reReadAppFileData = true
+            // reflect the encryption status change immediately to disk
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+            val encryptProtectedFolders = sharedPref.getBoolean("encryptProtectedFolders", false)
+            if (encryptProtectedFolders) {
+                // write the always unencrypted MainActivity.ds encrypted to disk
+                writeAppData(appStoragePath, MainActivity.ds, appName, true)
+                // read encrypted data from disk to decrypted MainActivity.ds
+                MainActivity.ds = readAppData(appStoragePath)
+            } else {
+                // write the always unencrypted MainActivity.ds unencrypted to disk
+                writeAppData(appStoragePath, MainActivity.ds, appName, true)
+                // read unencrypted data from disk to unencrypted MainActivity.ds
+                MainActivity.ds = readAppData(appStoragePath)
+            }
         }
     }
 
