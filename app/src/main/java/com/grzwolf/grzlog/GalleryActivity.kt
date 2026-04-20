@@ -552,149 +552,137 @@ class GalleryActivity : AppCompatActivity() {
         var thumbsList = mutableListOf<GrzThumbNail>()
         val pw = ProgressWindow(context, getString(R.string.scanAppGallery))
         pw.dialog?.setOnDismissListener {
-                if (success) {
-                    adapter = GridAdapter(this@GalleryActivity, thumbsList.toTypedArray())
-                    if (adapter != null) {
-                        // visibility of two action menu items
-                        var itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
-                        var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
-                        var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
-                        itemUpload.isVisible = returnPayload
-                        itemDelete.isVisible = !returnPayload
-                        itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
-                        itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
-                        itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
-                        // update view
-                        gridView.setAdapter(adapter)
-                        adapter!!.notifyDataSetChanged()
-                        MainActivity.appGalleryAdapter = adapter
-                    }
+            if (success) {
+                adapter = GridAdapter(this@GalleryActivity, thumbsList.toTypedArray())
+                if (adapter != null) {
+                    // visibility of two action menu items
+                    var itemUpload = galleryMenu!!.findItem(R.id.action_Payload)
+                    var itemDelete = galleryMenu!!.findItem(R.id.action_Delete)
+                    var itemUsages = galleryMenu!!.findItem(R.id.action_Usages)
+                    itemUpload.isVisible = returnPayload
+                    itemDelete.isVisible = !returnPayload
+                    itemUpload.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                    itemDelete.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                    itemUsages.icon!!.setColorFilter(BlendModeColorFilter(getResources().getColor(R.color.lightgrey), BlendMode.SRC_IN))
+                    // update view
+                    gridView.setAdapter(adapter)
+                    adapter!!.notifyDataSetChanged()
+                    MainActivity.appGalleryAdapter = adapter
                 }
+            }
         }
         pw.show()
         // generate thumbnails in another thread
-        try {
-            // GrzLog gallery can be in two different places
-            val appImagesPath = AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
-            Thread {
+        // GrzLog gallery can be in two different places
+        val appImagesPath = AttachmentStorage.pathList[AttachmentStorage.activeType.ordinal]
+        Thread {
+            try {
                 val fileList: Array<File> = File(appImagesPath).listFiles()
                 pw.absCount = fileList.size.toFloat() * 3 // keeps progress more agile
                 pw.absFakeCount = fileList.size.toFloat() // count to show in pw
                 val listGrzThumbNail = getFolderFiles(this, appImagesPath, sortByDate, fileList, pw)
-                try {
-                    val sdfIn = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-                    val sdfOutDate = SimpleDateFormat("yyyy MMM dd, EEE", Locale.getDefault())
-                    var lastDateStamp = ""
-                    var fileSize: Long = 0
-                    var index = 0
-                    for (item in listGrzThumbNail) {
-                        // set progress
-                        runOnUiThread {
-                            pw.incCount += 1
-                        }
-                        try {
-                            // get file size
-                            var file = File(appImagesPath, item.fileName)
-                            fileSize = Paths.get(file.absolutePath).fileSize()
-                            // now drawable
-                            var drawable = item.thumbNail
-                            if (drawable == null) {
-                                var bmp: Bitmap? = null
-                                // mime
-                                val mimeExt = getFileExtension(item.fileName)
-                                if (IMAGE_EXT.contains(mimeExt, ignoreCase = true)) {
-                                    bmp = ThumbnailUtils.createImageThumbnail(
+                val sdfIn = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+                val sdfOutDate = SimpleDateFormat("yyyy MMM dd, EEE", Locale.getDefault())
+                var lastDateStamp = ""
+                var fileSize: Long = 0
+                var index = 0
+                for (item in listGrzThumbNail) {
+                    // set progress
+                    runOnUiThread {
+                        pw.incCount += 1
+                    }
+                    try {
+                        // get file size
+                        var file = File(appImagesPath, item.fileName)
+                        fileSize = Paths.get(file.absolutePath).fileSize()
+                        // now drawable
+                        var drawable = item.thumbNail
+                        if (drawable == null) {
+                            var bmp: Bitmap? = null
+                            // mime
+                            val mimeExt = getFileExtension(item.fileName)
+                            if (IMAGE_EXT.contains(mimeExt, ignoreCase = true)) {
+                                bmp = ThumbnailUtils.createImageThumbnail(
+                                    file,
+                                    Size(128, 128),
+                                    null
+                                )
+                            } else {
+                                if (VIDEO_EXT.contains(mimeExt, ignoreCase = true)) {
+                                    bmp = ThumbnailUtils.createVideoThumbnail(
                                         file,
                                         Size(128, 128),
                                         null
                                     )
                                 } else {
-                                    if (VIDEO_EXT.contains(mimeExt, ignoreCase = true)) {
-                                        bmp = ThumbnailUtils.createVideoThumbnail(
+                                    if (AUDIO_EXT.contains(mimeExt, ignoreCase = true)) {
+                                        bmp = ThumbnailUtils.createAudioThumbnail(
                                             file,
                                             Size(128, 128),
                                             null
                                         )
                                     } else {
-                                        if (AUDIO_EXT.contains(mimeExt, ignoreCase = true)) {
-                                            bmp = ThumbnailUtils.createAudioThumbnail(
-                                                file,
-                                                Size(128, 128),
-                                                null
-                                            )
+                                        if (mimeExt.equals("pdf", ignoreCase = true)) {
+                                            bmp = (resources.getDrawable(R.drawable.ic_pdf) as BitmapDrawable).bitmap
                                         } else {
-                                            if (mimeExt.equals("pdf", ignoreCase = true)) {
-                                                bmp = (resources.getDrawable(R.drawable.ic_pdf) as BitmapDrawable).bitmap
-                                            } else {
-                                                if (mimeExt.equals("txt", ignoreCase = true)) {
-                                                    bmp = (resources.getDrawable(android.R.drawable.ic_dialog_email) as BitmapDrawable).bitmap
-                                                }
+                                            if (mimeExt.equals("txt", ignoreCase = true)) {
+                                                bmp = (resources.getDrawable(android.R.drawable.ic_dialog_email) as BitmapDrawable).bitmap
                                             }
                                         }
                                     }
                                 }
-                                drawable = BitmapDrawable(bmp)
                             }
-                            // check date stamp: generate a date stamp header, if date changes
-                            if (!lastDateStamp.equals(item.fileDate)) {
-                                // insert fully empty entry, the one right beneath an image
-                                if (index % 2 != 0) {
-                                    thumbsList.add(
-                                        GalleryActivity.GrzThumbNail(
-                                            "",
-                                            "",
-                                            getDrawable(android.R.drawable.gallery_thumb)!!
-                                        )
-                                    )
-                                    index++
-                                }
-                                // next line shall show the current date (!!the item right next to it carries a " ")
-                                var date = sdfIn.parse(item.fileDate)
+                            drawable = BitmapDrawable(bmp)
+                        }
+                        // check date stamp: generate a date stamp header, if date changes
+                        if (!lastDateStamp.equals(item.fileDate)) {
+                            // insert fully empty entry, the one right beneath an image
+                            if (index % 2 != 0) {
                                 thumbsList.add(
                                     GalleryActivity.GrzThumbNail(
                                         "",
-                                        sdfOutDate.format(date),
+                                        "",
                                         getDrawable(android.R.drawable.gallery_thumb)!!
                                     )
                                 )
                                 index++
-                                thumbsList.add(
-                                    GalleryActivity.GrzThumbNail(
-                                        "",
-                                        " ",
-                                        getDrawable(android.R.drawable.gallery_thumb)!!
-                                    )
-                                )
-                                index++
-                                lastDateStamp = item.fileDate
                             }
-                            // set thumbnail
-                            if (drawable != null) {
-                                // covers all files providing a Bitmap thumbnail
-                                thumbsList.add(
-                                    GalleryActivity.GrzThumbNail(
-                                        item.fileName,
-                                        item.fileDate,
-                                        drawable,
-                                        false,
-                                        fileSize
-                                    )
-                                )
-                            } else {
-                                // covers: pdf, txt
-                                thumbsList.add(
-                                    GalleryActivity.GrzThumbNail(
-                                        item.fileName,
-                                        item.fileDate,
-                                        this.getDrawable(android.R.drawable.gallery_thumb)!!,
-                                        false,
-                                        fileSize
-                                    )
-                                )
-                            }
-                        } catch (e: Exception) {
+                            // next line shall show the current date (!!the item right next to it carries a " ")
+                            var date = sdfIn.parse(item.fileDate)
                             thumbsList.add(
-                                GrzThumbNail(
+                                GalleryActivity.GrzThumbNail(
+                                    "",
+                                    sdfOutDate.format(date),
+                                    getDrawable(android.R.drawable.gallery_thumb)!!
+                                )
+                            )
+                            index++
+                            thumbsList.add(
+                                GalleryActivity.GrzThumbNail(
+                                    "",
+                                    " ",
+                                    getDrawable(android.R.drawable.gallery_thumb)!!
+                                )
+                            )
+                            index++
+                            lastDateStamp = item.fileDate
+                        }
+                        // set thumbnail
+                        if (drawable != null) {
+                            // covers all files providing a Bitmap thumbnail
+                            thumbsList.add(
+                                GalleryActivity.GrzThumbNail(
+                                    item.fileName,
+                                    item.fileDate,
+                                    drawable,
+                                    false,
+                                    fileSize
+                                )
+                            )
+                        } else {
+                            // covers: pdf, txt
+                            thumbsList.add(
+                                GalleryActivity.GrzThumbNail(
                                     item.fileName,
                                     item.fileDate,
                                     this.getDrawable(android.R.drawable.gallery_thumb)!!,
@@ -703,19 +691,28 @@ class GalleryActivity : AppCompatActivity() {
                                 )
                             )
                         }
-                        // just the current index
-                        index++
+                    } catch (e: Exception) {
+                        thumbsList.add(
+                            GrzThumbNail(
+                                item.fileName,
+                                item.fileDate,
+                                this.getDrawable(android.R.drawable.gallery_thumb)!!,
+                                false,
+                                fileSize
+                            )
+                        )
                     }
-                    success = true
-                } catch (ex: Exception) {
-                } catch (ex: OutOfMemoryError) {
+                    // just the current index
+                    index++
                 }
-                runOnUiThread {
-                    pw.close()
-                }
-            }.start()
-        } catch (e: Exception) {
-        }
+                success = true
+            } catch (ex: Exception) {
+            } catch (ex: OutOfMemoryError) {
+            }
+            runOnUiThread {
+                pw.close()
+            }
+        }.start()
     }
 
 }

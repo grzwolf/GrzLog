@@ -2148,11 +2148,13 @@ fun getFolderFiles(context: Context, path: String, sortByDate: Boolean, fileList
                     fileDateStr = group.substring(1, group.length - 1)
                     sdf.parse(fileDateStr)
                 } catch (e: Exception) {
-                    centeredToast(
-                        contextMainActivity,
-                        "GrzLog date parse: " + e.message.toString(),
-                        3000
-                    )
+                    (context as Activity).runOnUiThread(Runnable {
+                        centeredToast(
+                            contextMainActivity,
+                            "GrzLog date parse: " + e.message.toString(),
+                            3000
+                        )
+                    })
                 }
             }
             // if no valid date string, get it from file as a fallback date
@@ -2163,11 +2165,13 @@ fun getFolderFiles(context: Context, path: String, sortByDate: Boolean, fileList
                     var fDateStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(fDate.toString())
                     fileDateStr = SimpleDateFormat("yyyyMMdd").format(fDateStr)
                 } catch (e: Exception) {
-                    centeredToast(
-                        contextMainActivity,
-                        "GrzLog filetime parse: " + e.message.toString(),
-                        3000
-                    )
+                    (context as Activity).runOnUiThread(Runnable {
+                        centeredToast(
+                            contextMainActivity,
+                            "GrzLog filetime parse: " + e.message.toString(),
+                            3000
+                        )
+                    })
                 }
             }
             item.fileDate = fileDateStr
@@ -2302,10 +2306,10 @@ fun parseFileDateFromFileName(fileName: String): FileTime {
 // get list of thumbnail images silently - called from MainActivity ideally before GalleryActivity is called
 fun getAppGalleryThumbsSilent(context: Context, sortByDate: Boolean) {
     MainActivity.appGalleryScanning = true
-    try {
-        // GrzLog gallery can be in two different places
-        val appImagesPath = MainActivity.Companion.AttachmentStorage.pathList[MainActivity.Companion.AttachmentStorage.activeType.ordinal]
-        Thread {
+    // GrzLog gallery can be in two different places
+    val appImagesPath = MainActivity.Companion.AttachmentStorage.pathList[MainActivity.Companion.AttachmentStorage.activeType.ordinal]
+    Thread {
+        try {
             val fileList: Array<File> = File(appImagesPath).listFiles()
             val listGrzThumbNail = getFolderFiles(context, appImagesPath, sortByDate, fileList, null)
             MainActivity.appScanTotal = listGrzThumbNail.size
@@ -2424,10 +2428,12 @@ fun getAppGalleryThumbsSilent(context: Context, sortByDate: Boolean) {
             MainActivity.appGalleryAdapter!!.notifyDataSetChanged()
             MainActivity.appGallerySortedByDate = sortByDate
             MainActivity.appGalleryScanning = false
-        }.start()
-    } catch (e: Exception) {
-        centeredToast(contextMainActivity, "GrzLog silent: " + e.message.toString(), 3000)
-    }
+        } catch (e: Exception) {
+            (context as Activity).runOnUiThread(Runnable {
+                centeredToast(contextMainActivity, "GrzLog silent: " + e.message.toString(), 3000)
+            })
+        }
+    }.start()
 }
 
 // EXIF data may contain something useful

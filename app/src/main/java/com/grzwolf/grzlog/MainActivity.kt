@@ -6562,26 +6562,24 @@ class MainActivity : AppCompatActivity(),
                         pw.show()
                         pw.absCount = appScanTotal.toFloat()
                         pw.curCount = appScanCurrent
-                        try {
-                            Thread {
-                                try {
-                                    while (pw.curCount < pw.absCount) {
-                                        runOnUiThread {
-                                            pw.curCount = appScanCurrent
-                                        }
-                                        Thread.sleep(100)
+                        Thread {
+                            try {
+                                while (pw.curCount < pw.absCount) {
+                                    runOnUiThread {
+                                        pw.curCount = appScanCurrent
                                     }
+                                    Thread.sleep(100)
                                 }
-                                catch (ex: Exception) {}
-                                catch (ex: OutOfMemoryError) {}
                                 runOnUiThread {
                                     pw.close()
                                     // finally show, what was supposed to be shown
                                     val galleryIntent = Intent(this, GalleryActivity::class.java)
                                     startActivity(galleryIntent)
                                 }
-                            }.start()
-                        } catch (e: Exception) {}
+                            } catch (ex: Exception) {
+                            } catch (ex: OutOfMemoryError) {
+                            }
+                        }.start()
                         return@OnClickListener
                     } else {
                         val galleryIntent = Intent(this, GalleryActivity::class.java)
@@ -7637,38 +7635,39 @@ class MainActivity : AppCompatActivity(),
         // set progress limit
         pw.absCount = (textLines.size - 1).toFloat()
         // generate RTF async in another thread
-        try {
-            Thread {
-                try {
-                    success = buildRTF(textLines, folderName, fileName, pw, share, dpi)
-                } catch (ex: Exception) {
-                    runOnUiThread {
-                        okBox(
-                            this@MainActivity,
-                            "Memory",
-                            "Try again with less image resolution or smaller image count."
-                        )
-                    }
-                } catch (ex: OutOfMemoryError) {
-                    runOnUiThread {
-                        okBox(
-                            this@MainActivity,
-                            "Memory",
-                            "Try again with less image resolution or smaller image count."
-                        )
-                    }
-                }
+        Thread {
+            try {
+                success = buildRTF(textLines, folderName, fileName, pw, share, dpi)
+            } catch (ex: Exception) {
                 runOnUiThread {
-                    pw.close()
+                    okBox(
+                        this@MainActivity,
+                        "Memory",
+                        "Try again with less image resolution or smaller image count."
+                    )
                 }
-            }.start()
-        } catch (e: Exception) {
-            okBox(
-                this@MainActivity,
-                getString(R.string.Failure),
-                getString(R.string.RTFcouldnotbecreated)
-            )
-        }
+            } catch (ex: OutOfMemoryError) {
+                runOnUiThread {
+                    okBox(
+                        this@MainActivity,
+                        "Memory",
+                        "Try again with less image resolution or smaller image count."
+                    )
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    okBox(
+                        this@MainActivity,
+                        getString(R.string.Failure),
+                        getString(R.string.RTFcouldnotbecreated)
+                    )
+                }
+            }
+
+            runOnUiThread {
+                pw.close()
+            }
+        }.start()
     }
 
     private fun formatRtfText(text: String): Array<String> {
@@ -7910,27 +7909,27 @@ class MainActivity : AppCompatActivity(),
             }
         }
         // generate PDF async in another thread
-        try {
-            runOnUiThread(Runnable {
-                pw.show()
-            })
-            Thread {
-                success = generatePdfFile(folderName, rawText, share, dpi, show, pw)
+        runOnUiThread(Runnable {
+            pw.show()
+        })
+        Thread {
+            try {
+               success = generatePdfFile(folderName, rawText, share, dpi, show, pw)
+               runOnUiThread(Runnable {
+                   pw.close()
+               })
+            } catch (e: Exception) {
+                success = false
                 runOnUiThread(Runnable {
                     pw.close()
+                    okBox(
+                        this@MainActivity,
+                        getString(R.string.Failure),
+                        getString(R.string.PDFcouldnotbecreated)
+                    )
                 })
-            }.start()
-        } catch (e: Exception) {
-            success = false
-            runOnUiThread(Runnable {
-                pw.close()
-            })
-            okBox(
-                this@MainActivity,
-                getString(R.string.Failure),
-                getString(R.string.PDFcouldnotbecreated)
-            )
-        }
+            }
+        }.start()
     }
 
     private fun formatPdfText(text: String): SpannableString {
@@ -9416,19 +9415,18 @@ class MainActivity : AppCompatActivity(),
                                 deleteOrphans(context, attachmentsList, fileUsed)
                             }
                         )
-                    } catch(e: Exception) {
+                    } catch (e: Exception) {
                         centeredToast(context, e.message, Toast.LENGTH_LONG)
                     }
                 } else {
                     okBox(context, context.getString(R.string.Failure), context.getString(R.string.repeatSearch), { null })
                 }
             }
-            // search orphans async in another thread
-            try {
-                // show progress window
-                progressWindow.show()
-                // real work
-                Thread {
+            // show progress window
+            progressWindow.show()
+            // real work: search orphans async in another thread
+            Thread {
+                try {
                     progressWindow.let { it
                         // clear app cache before doing anything
                         deleteAppDataCache(MainActivity.contextMainActivity)
@@ -9552,13 +9550,15 @@ class MainActivity : AppCompatActivity(),
                         setOnDismissListener(true)
                         progressWindow.close()
                     })
-                }.start()
-            } catch (e: Exception) {
-                // tell UI, a failure happened
-                e.printStackTrace()
-                setOnDismissListener(false)
-                progressWindow.close()
-            }
+                } catch (e: Exception) {
+                    // tell UI, a failure happened
+                    (context as Activity).runOnUiThread(Runnable {
+                        e.printStackTrace()
+                        setOnDismissListener(false)
+                        progressWindow.close()
+                    })
+                }
+            }.start()
         }
         // delete unused files from app folder /Images
         fun deleteOrphans(context: Context, fileList: Array<File>, fileUsed: Array<Boolean?>) {
@@ -9993,38 +9993,40 @@ class MainActivity : AppCompatActivity(),
         //
         fun movePrivateGalleryToExternalPicturesGrzLog(context: Context) {
             Thread {
-                val sourceFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal])
-                val destinationFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal])
-                val errorList = moveGrzLogGallery(context, sourceFolder, destinationFolder, AttachmentStorage.Type.PUBLIC)
-                ds.clear()                                                        // clear DataStore
-                ds = readAppData(appStoragePath)                                  // un serialize DataStore from GrzLog.ser
-                val dsText = ds.dataSection[ds.selectedSection]                   // get raw data text from DataStore section/folder
-                lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder) // convert & format raw text to array
-                lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList) // set adapter and populate main listview
-                (context as Activity).runOnUiThread({
-                    lvMain.listView!!.adapter = lvMain.adapter
-                    if (errorList.size > 1) {
-                        val numFiles = errorList[0].toInt()
-                        errorList.removeAt(0)
-                        val listStr = TextUtils.join("\n", errorList)
-                        okBox(
-                            context,
-                            context.getString(R.string.note),
-                            context.getString(R.string.out_of) +
-                                    numFiles.toString() +
-                                    " " +
-                                    context.getString(R.string.following_no_touch) +
-                                    "\n\n" +
-                                    listStr
-                        )
-                    } else {
-                        centeredToast(
-                            context,
-                            errorList[0] + " " + context.getString(R.string.files_moved),
-                            3000
-                        )
-                    }
-                })
+                try {
+                    val sourceFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal])
+                    val destinationFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal])
+                    val errorList = moveGrzLogGallery(context, sourceFolder, destinationFolder, AttachmentStorage.Type.PUBLIC)
+                    ds.clear()                                                        // clear DataStore
+                    ds = readAppData(appStoragePath)                                  // un serialize DataStore from GrzLog.ser
+                    val dsText = ds.dataSection[ds.selectedSection]                   // get raw data text from DataStore section/folder
+                    lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder) // convert & format raw text to array
+                    lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList) // set adapter and populate main listview
+                    (context as Activity).runOnUiThread({
+                        lvMain.listView!!.adapter = lvMain.adapter
+                        if (errorList.size > 1) {
+                            val numFiles = errorList[0].toInt()
+                            errorList.removeAt(0)
+                            val listStr = TextUtils.join("\n", errorList)
+                            okBox(
+                                context,
+                                context.getString(R.string.note),
+                                context.getString(R.string.out_of) +
+                                        numFiles.toString() +
+                                        " " +
+                                        context.getString(R.string.following_no_touch) +
+                                        "\n\n" +
+                                        listStr
+                            )
+                        } else {
+                            centeredToast(
+                                context,
+                                errorList[0] + " " + context.getString(R.string.files_moved),
+                                3000
+                            )
+                        }
+                    })
+                } catch(e: Exception) {}
             }.start()
         }
         //
@@ -10032,38 +10034,40 @@ class MainActivity : AppCompatActivity(),
         //
         fun moveExternalPicturesGrzLogToPrivateGallery(context: Context) {
             Thread {
-                val sourceFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal])
-                val destinationFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal])
-                val errorList = moveGrzLogGallery(context, sourceFolder, destinationFolder, AttachmentStorage.Type.PRIVATE)
-                ds.clear()                                                        // clear DataStore
-                ds = readAppData(appStoragePath)                                  // un serialize DataStore from GrzLog.ser
-                val dsText = ds.dataSection[ds.selectedSection]                   // get raw data text from DataStore section/folder
-                lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder) // convert & format raw text to array
-                lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList) // set adapter and populate main listview
-                (context as Activity).runOnUiThread({
-                    lvMain.listView!!.adapter = lvMain.adapter
-                    if (errorList.size > 1) {
-                        val numFiles = errorList[0].toInt()
-                        errorList.removeAt(0)
-                        val listStr = TextUtils.join("\n", errorList)
-                        okBox(
-                            context,
-                            context.getString(R.string.note),
-                            context.getString(R.string.out_of) +
-                                    numFiles.toString() +
-                                    " " +
-                                    context.getString(R.string.following_no_touch) +
-                                    "\n\n" +
-                                    listStr
-                        )
-                    } else {
-                        centeredToast(
-                            context,
-                            errorList[0] + " " + context.getString(R.string.files_moved),
-                            3000
-                        )
-                    }
-                })
+                try {
+                    val sourceFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PUBLIC.ordinal])
+                    val destinationFolder = File(AttachmentStorage.pathList[AttachmentStorage.Type.PRIVATE.ordinal])
+                    val errorList = moveGrzLogGallery(context, sourceFolder, destinationFolder, AttachmentStorage.Type.PRIVATE)
+                    ds.clear()                                                        // clear DataStore
+                    ds = readAppData(appStoragePath)                                  // un serialize DataStore from GrzLog.ser
+                    val dsText = ds.dataSection[ds.selectedSection]                   // get raw data text from DataStore section/folder
+                    lvMain.arrayList = lvMain.makeArrayList(dsText, lvMain.showOrder) // convert & format raw text to array
+                    lvMain.adapter = LvAdapter(contextMainActivity, lvMain.arrayList) // set adapter and populate main listview
+                    (context as Activity).runOnUiThread({
+                        lvMain.listView!!.adapter = lvMain.adapter
+                        if (errorList.size > 1) {
+                            val numFiles = errorList[0].toInt()
+                            errorList.removeAt(0)
+                            val listStr = TextUtils.join("\n", errorList)
+                            okBox(
+                                context,
+                                context.getString(R.string.note),
+                                context.getString(R.string.out_of) +
+                                        numFiles.toString() +
+                                        " " +
+                                        context.getString(R.string.following_no_touch) +
+                                        "\n\n" +
+                                        listStr
+                            )
+                        } else {
+                            centeredToast(
+                                context,
+                                errorList[0] + " " + context.getString(R.string.files_moved),
+                                3000
+                            )
+                        }
+                    })
+                } catch (e: Exception) {}
             }.start()
         }
     }

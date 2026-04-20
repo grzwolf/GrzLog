@@ -1286,14 +1286,16 @@ public class SettingsActivity :
                 progressWindow.show()
                 // real work
                 Thread {
-                    var success = progressWindow.let {
-                        createZipArchive(context, srcFolder!!, outFolder, zipName, it, null, null, 0)
-                    }
-                    // jump back to UI
-                    (context as Activity).runOnUiThread(Runnable {
-                        success.let { progressWindow.dialog.setOnDismissListener(it) }
-                        progressWindow.close()
-                    })
+                    try {
+                        var success = progressWindow.let {
+                            createZipArchive(context, srcFolder!!, outFolder, zipName, it, null, null, 0)
+                        }
+                        // jump back to UI
+                        (context as Activity).runOnUiThread(Runnable {
+                            success.let { progressWindow.dialog.setOnDismissListener(it) }
+                            progressWindow.close()
+                        })
+                    } catch (e: Exception) {}
                 }.start()
             } catch (e: Exception) {
                 okBox(
@@ -1797,8 +1799,8 @@ public class SettingsActivity :
                 }
             }
             // restore ZIP async in another thread
-            try {
-                Thread {
+            Thread {
+                try {
                     var success = progressWindow.let {
                         unpackZipArchive(context, outPath, zipFilePath, it)
                     }
@@ -1807,12 +1809,14 @@ public class SettingsActivity :
                         success.let { progressWindow.dialog.setOnDismissListener(it) }
                         progressWindow.close()
                     })
-               }.start()
-            } catch (e: Exception) {
-                e.printStackTrace()
-                progressWindow.dialog.setOnDismissListener(false)
-                progressWindow.close()
-            }
+                } catch (e: Exception) {
+                    (context as Activity).runOnUiThread(Runnable {
+                        e.printStackTrace()
+                        progressWindow.dialog.setOnDismissListener(false)
+                        progressWindow.close()
+                    })
+                }
+            }.start()
         }
 
         // copy a file to GrzLog Import folder and return full filename: allows to import alien bak from Downloads

@@ -521,8 +521,8 @@ class LinkedMedia : AppCompatActivity() {
         pw.show()
 
         // do the lengthy work in another thread
-        try {
-            Thread {
+        Thread {
+            try {
                 // prepare progress
                 pw.incCount = 0
                 pw.absCount = (MainActivity.ds.dataSection.size).toFloat()
@@ -617,9 +617,9 @@ class LinkedMedia : AppCompatActivity() {
                 runOnUiThread {
                     pw.close()
                 }
-            }.start()
-        } catch (e: Exception) {
-        }
+            } catch (e: Exception) {
+            }
+        }.start()
     }
 
     // execute link removal in DataStore in a separate thread
@@ -652,8 +652,8 @@ class LinkedMedia : AppCompatActivity() {
         pw.show()
 
         // do the lengthy work in another thread
-        try {
-            Thread {
+        Thread {
+            try {
                 // prepare progress
                 pw.incCount = 0
                 pw.absCount = (MainActivity.ds.dataSection.size).toFloat()
@@ -698,9 +698,9 @@ class LinkedMedia : AppCompatActivity() {
                 runOnUiThread {
                     pw.close()
                 }
-            }.start()
-        } catch (e: Exception) {
-        }
+            } catch (e: Exception) {
+            }
+        }.start()
     }
 
     // GridView adapter
@@ -800,8 +800,8 @@ class LinkedMedia : AppCompatActivity() {
         }
         pw.show()
         // generate thumbnails in another thread
-        try {
-            Thread {
+        Thread {
+            try {
                 // prepare 1st progress
                 pw.incCount = 0
                 var lineCount = 0
@@ -1013,8 +1013,8 @@ class LinkedMedia : AppCompatActivity() {
                 runOnUiThread {
                     pw.close()
                 }
-            }.start()
-        } catch (e: Exception) {
-        }
+            } catch (e: Exception) {
+            }
+        }.start()
     }
 }
