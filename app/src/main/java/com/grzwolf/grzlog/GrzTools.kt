@@ -800,6 +800,41 @@ fun okBox(context: Context?, title: String?, message: String, runnerOk: Runnable
     }
 }
 
+fun okBoxHelpPwd(context: Context?, title: String?, message: String, runnerCancel: Runnable?, runnerNeutral: Runnable?, runnerOk: Runnable?) {
+    val builder = AlertDialog.Builder(context, android.R.style.Theme_Material_Dialog)
+    builder.setTitle(title)
+    builder.setMessage("\n" + message)
+    builder.setNegativeButton(R.string.cancel, DialogInterface.OnClickListener { dialog, which ->
+        runnerCancel?.run()
+        dialog.dismiss()
+    })
+    builder.setPositiveButton(R.string.ok, DialogInterface.OnClickListener { dialog, which ->
+        runnerOk?.run()
+        dialog.dismiss()
+    })
+    builder.setNeutralButton(R.string.random, DialogInterface.OnClickListener { dialog, which ->
+        runnerNeutral?.run()
+        dialog.dismiss()
+    })
+    try {
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
+        dialog.show()
+        val msgView = dialog.findViewById<TextView>(android.R.id.message)
+        msgView.setTypeface(Typeface.SERIF)
+        dialog.setCanceledOnTouchOutside(false)
+        val buttonPositive: Button = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        buttonPositive.isAllCaps = false
+        val buttonNeutral: Button = dialog.getButton(DialogInterface.BUTTON_NEUTRAL)
+        buttonNeutral.isAllCaps = false
+        val buttonNegative: Button = dialog.getButton(DialogInterface.BUTTON_NEGATIVE)
+        buttonNegative.isAllCaps = false
+    } catch (e: Exception) {
+    }
+}
+
 // self-closing ok box with progress
 fun okBoxAutoClose(
     context: Context?,

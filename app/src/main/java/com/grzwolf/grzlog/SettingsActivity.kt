@@ -8,28 +8,42 @@ import android.app.DownloadManager
 import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.getActivity
+import android.content.ClipData
+import android.content.ClipboardManager
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.pm.PackageManager
+import android.content.DialogInterface.OnMultiChoiceClickListener
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.provider.Settings
+import android.text.Editable
+import android.text.InputType
 import android.view.MenuItem
+import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.ui.graphics.Color
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.FileProvider
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
@@ -45,21 +59,29 @@ import com.android.volley.Response
 import com.android.volley.VolleyError
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
+import com.grzwolf.grzlog.DataStore.TIMESTAMP
 import com.grzwolf.grzlog.FileUtils.Companion.getPath
 import com.grzwolf.grzlog.MainActivity.Companion.AttachmentStorage
+import com.grzwolf.grzlog.MainActivity.Companion.appName
 import com.grzwolf.grzlog.MainActivity.Companion.appPwdPub
 import com.grzwolf.grzlog.MainActivity.Companion.appStoragePath
+import com.grzwolf.grzlog.MainActivity.Companion.contextMainActivity
 import com.grzwolf.grzlog.MainActivity.Companion.ds
 import com.grzwolf.grzlog.MainActivity.Companion.returningFromAppGallery
 import com.grzwolf.grzlog.MainActivity.Companion.writeAppData
+import com.grzwolf.grzlog.MainActivity.Companion.readAppData
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.regex.Pattern
 import java.util.zip.ZipFile
+import kotlin.collections.MutableList
 
 
 public class SettingsActivity :
@@ -86,6 +108,15 @@ public class SettingsActivity :
             MainActivity.reReadAppFileData = true
         }
         if (s == "encryptProtectedFolders") {
+            // clear app cache
+            MainActivity.deleteAppDataCache(MainActivity.contextMainActivity)
+            // signal to MainActivity to refresh its data
+            MainActivity.reReadAppFileData = true
+        }
+        if (s == "app_pwd") {
+            // clear app cache
+            MainActivity.deleteAppDataCache(MainActivity.contextMainActivity)
+            // signal to MainActivity to refresh its data
             MainActivity.reReadAppFileData = true
         }
     }
@@ -495,6 +526,576 @@ public class SettingsActivity :
                 } catch (e: Exception) {
                     centeredToast(appContext!!, "What's New error: " + e.message.toString(), 3000)
                 }
+                true
+            }
+
+            // action after click folder encryption
+            val encryptPref = findPreference("encryptProtectedFolders") as Preference?
+            var pwdAvailable = sharedPref.getString("app_pwd", "")!!.isNotEmpty()
+            // setting encryptPref is only available if a password for encryption is already set
+            encryptPref!!.isEnabled = pwdAvailable
+            var encryptProtectedFolders = sharedPref.getBoolean("encryptProtectedFolders", false)
+            var encryptProtectedFoldersTmp = encryptProtectedFolders
+            if (encryptProtectedFolders) {
+                encryptPref!!.setSummary(getString(R.string.yesEncrypt))
+            } else {
+                encryptPref!!.setSummary(getString(R.string.noEncrypt))
+            }
+            encryptPref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                // build a prompt info structure
+                val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("GrzLog Authentication")
+                    .setSubtitle("Log in using system credential")
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                    .build()
+                // exec the actual prompt process
+                val biometricPrompt = BiometricPrompt(this, ContextCompat.getMainExecutor(requireContext()),
+                    // setup a few callbacks
+                    object : BiometricPrompt.AuthenticationCallback() {
+                        // error handling: usually CANCEL auth
+                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                            super.onAuthenticationError(errorCode, errString)
+                            centeredToast(requireContext(), "Authentication error: $errString", 3000)
+                        }
+                        // SUCCESS: auth did work
+                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                            super.onAuthenticationSucceeded(result)
+                            // handle authentication success
+                            val items = arrayOf<CharSequence>(requireContext().getString(R.string.encryptProtectedFolders))
+                            val checkedItems = BooleanArray(1) { encryptProtectedFolders }
+                            val builder = AlertDialog.Builder(requireContext(), android.R.style.Theme_Material_Dialog)
+                            builder.setTitle(requireContext().getString(R.string.choose))
+                            builder.setMultiChoiceItems(
+                                items,
+                                checkedItems,
+                                OnMultiChoiceClickListener { dialog, which, isChecked ->
+                                    encryptProtectedFoldersTmp = isChecked
+                                })
+                            builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dialog, which ->
+                                encryptProtectedFolders = encryptProtectedFoldersTmp
+                                val spe = sharedPref.edit()
+                                spe.putBoolean("encryptProtectedFolders", encryptProtectedFolders)
+                                spe.apply()
+                                encryptProtectedFolders = sharedPref.getBoolean("encryptProtectedFolders", false)
+                                // flag to support extra backup need
+                                var forceBackup = true
+                                // the mode change changes data in DataStore
+                                if (encryptProtectedFolders) {
+                                    // folder shall become encrypted
+                                    encryptPref!!.setSummary(getString(R.string.yesEncrypt))
+                                    //
+                                    // if encryption gets activated, there are two cases:
+                                    //    1a) directly after restore from a backup, ds might contain encrypted data
+                                    //        bc. data were read with disabled folder encryption flag
+                                    //    1b) data were read with a wrong encryption password,
+                                    //           which automatically disables folder encryption.
+                                    //           but user forced folder encryption here and then re reads data
+                                    //    2) normally ds contains unencrypted data
+                                    //
+                                    // so loop all folders to find out if at least one folder is encrypted
+                                    var folderIsDataStoreEncrypted = false
+                                    for (i in MainActivity.ds.timeSection.indices) {
+                                        // only check protected folders
+                                        if (MainActivity.ds.timeSection[i] == TIMESTAMP.AUTH) {
+                                            // if a folder contains encrypted data, it would be a desaster to encrypt it again
+                                            folderIsDataStoreEncrypted = KeyManager.isTextEncryptedGCM(MainActivity.ds.dataSection[i])
+                                            break
+                                        }
+                                    }
+                                    if (folderIsDataStoreEncrypted) {
+                                        // write the exceptionally encrypted MainActivity.ds NOT ENCRYPTED to disk
+                                        writeAppData(appStoragePath, MainActivity.ds, appName, false)
+                                        // suppress fresh backup, bc. in this very specific case, it would make desaster
+                                        forceBackup = false
+                                    } else {
+                                        // write the normally unencrypted MainActivity.ds ENCRYPTED to disk
+                                        writeAppData(appStoragePath, MainActivity.ds, appName, true)
+                                    }
+                                    // finally read encrypted data from disk to normally decrypted MainActivity.ds (excptionally encrypted, see above)
+                                    MainActivity.ds = readAppData(appStoragePath)
+                                } else {
+                                    // user decided to NOT encrypt folder
+                                    encryptPref!!.setSummary(getString(R.string.noEncrypt))
+                                    // write the always unencrypted MainActivity.ds unencrypted to disk
+                                    writeAppData(appStoragePath, MainActivity.ds, appName, false)
+                                    // read unencrypted data from disk to unencrypted MainActivity.ds
+                                    MainActivity.ds = readAppData(appStoragePath)
+                                }
+                                // take care about backups, bc. any encryption mode change makes older backups obsolete
+                                if (forceBackup == true) {
+                                    if (sharedPref.getBoolean("BackupModeManually", false) == true) {
+                                        // leave warning about outdated backups
+                                        okBox(
+                                            context,
+                                            getString(R.string.note),
+                                            getString(R.string.make_backup)
+                                        )
+                                    } else {
+                                        // only exec backup in 'backup auto mode'
+                                        if (!createTxtBackup(requireContext(), downloadDir, ds)) {
+                                            okBox(requireContext(), "Note", "GrzLog.txt backup failed")
+                                        }
+                                        gBScontext = requireContext()
+                                        gBSsrcFolder = requireContext().getExternalFilesDir(null)!!.absolutePath
+                                        gBSoutFolder = downloadDir
+                                        gBSzipName = "$appName.zip"
+                                        gBSmaxProgress = countFiles(File(gBSsrcFolder))
+                                        // start BackupService, which prevents interrupting the backup
+                                        actionOnBackupService(requireContext(), BackupService.Companion.Actions.START)
+                                    }
+                                    // show GDrive backup as outdated
+                                    val outdated = requireContext().getString(R.string.gdrive_outdated)
+                                    spe.putString("BackupUploadGDrive", outdated)
+                                    spe.apply()
+                                    val bakGdrive = findPreference("BackupToGDrive") as Preference?
+                                    bakGdrive!!.summary = requireContext().getString(R.string.clickHere) + " " + outdated
+                                }
+                            })
+                            builder.setNegativeButton(R.string.cancel, DialogInterface.OnClickListener { dlg, which ->
+                                return@OnClickListener
+                            })
+                            val dialog = builder.create()
+                            dialog.setOnShowListener {
+                                dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                            }
+                            dialog.show()
+                            dialog.setCanceledOnTouchOutside(false)
+                        }
+                        // failure: usually there is no system auth available
+                        override fun onAuthenticationFailed() {
+                            super.onAuthenticationFailed()
+                            centeredToast(requireContext(), "Authentication failed.", 3000)
+                        }
+                    })
+                // exec auth
+                biometricPrompt.authenticate(promptInfo)
+                true
+            }
+
+            // action after click show folder encryption pwd
+            val showPwdPref = findPreference("showEncryptionPassword") as Preference?
+            // setting encryptPref is only available if a password for encryption is already set
+            showPwdPref!!.isEnabled = pwdAvailable
+            showPwdPref!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                // build a prompt info structure
+                val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("GrzLog Authentication")
+                    .setSubtitle("Log in using system credential")
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                    .build()
+                // exec the actual prompt process
+                val biometricPrompt = BiometricPrompt(this, ContextCompat.getMainExecutor(requireContext()),
+                    // setup a few callbacks
+                    object : BiometricPrompt.AuthenticationCallback() {
+                        // error handling: usually CANCEL auth
+                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                            super.onAuthenticationError(errorCode, errString)
+                            centeredToast(requireContext(), "Authentication error: $errString", 3000)
+                        }
+                        // SUCCESS: auth did work
+                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                            super.onAuthenticationSucceeded(result)
+                            // read encrypted pwd from app preferences
+                            val appPwdEnc = sharedPref.getString("app_pwd", "")!!
+                            // decrypt pwd with app's private key from keystore
+                            val keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+                            val appPwdClear = keyManager.decryptPwdPrv(appPwdEnc)
+                            // copy final pwd to clipboard
+                            val clipboard = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText(getString(R.string.copiedText), appPwdClear)
+                            clipboard.setPrimaryClip(clip)
+                            centeredToast(requireActivity(), appPwdClear + " " + getString(R.string.copiedToClip), 50)
+                            // leave a "keep pwd" note
+                            okBox(
+                                context,
+                                getString(R.string.note),
+                                appPwdClear + " <- " + getString(R.string.keep_pwd)
+                            )
+                        }
+                        // failure: usually there is no system auth available
+                        override fun onAuthenticationFailed() {
+                            super.onAuthenticationFailed()
+                            centeredToast(requireContext(), "Authentication failed.", 3000)
+                        }
+                    }
+                )
+                // exec auth
+                biometricPrompt.authenticate(promptInfo)
+                true
+            }
+
+            // action after click set encryption password
+            val allowed =
+                ('a'..'z') + ('A'..'Z') + ('0'..'9') +
+                listOf('!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '�', '/', '=', '?', '_', '-', ':', '.', ';', ',')
+            val allowedStr = allowed.joinToString().replace(',', 0.toChar()) + " ,"
+            fun allowedOk(str: String): Boolean {
+                val arrStr = str.toCharArray()
+                var allFound = true
+                for (arrItem in arrStr) {
+                    var hit = false
+                    for (allowedItem in allowed) {
+                        if (arrItem.equals(allowedItem)) {
+                            hit = true
+                            break
+                        }
+                    }
+                    if (hit == false) {
+                        allFound = false
+                    }
+                }
+                return allFound
+            }
+            val setPwd = findPreference("setEncryptionPassword") as Preference?
+            if (pwdAvailable) {
+                setPwd!!.setSummary(requireContext().getString(R.string.pwd_is_set))
+            } else {
+                setPwd!!.setSummary(requireContext().getString(R.string.pwd_is_not_set))
+            }
+            setPwd!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+                // build a prompt info structure
+                val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("GrzLog Authentication")
+                    .setSubtitle("Log in using system credential")
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                    .build()
+                // exec the actual prompt process
+                val biometricPrompt = BiometricPrompt(this, ContextCompat.getMainExecutor(requireContext()),
+                    // setup a few callbacks
+                    object : BiometricPrompt.AuthenticationCallback() {
+                        // error handling: usually CANCEL auth
+                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                            super.onAuthenticationError(errorCode, errString)
+                            centeredToast(requireContext(), "Authentication error: $errString", 3000)
+                        }
+                        // SUCCESS: auth did work
+                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                            super.onAuthenticationSucceeded(result)
+                            // handle authentication success
+                            var inputBuilderOne: AlertDialog.Builder? = null
+                            inputBuilderOne = AlertDialog.Builder(requireContext(), android.R.style.Theme_Material_Dialog)
+                            inputBuilderOne.setTitle(requireContext().getString(R.string.set_new_pwd))
+                            val inputOne = EditText(requireContext())
+                            inputOne.inputType = InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                            inputOne.typeface = Typeface.MONOSPACE
+                            inputOne.setTextColor(android.graphics.Color.WHITE)
+                            inputBuilderOne.setView(inputOne)
+                            // input One dlg ok
+                            inputBuilderOne.setPositiveButton(
+                                requireContext().getString(R.string.ok),
+                                DialogInterface.OnClickListener { dialog, which ->
+                                    var textOne = inputOne.text.toString()
+                                    // check pwd length empty == delete pwd
+                                    if (textOne.length == 0) {
+                                        // ask
+                                        decisionBox(
+                                            requireContext(),
+                                            DECISION.YESNO,
+                                            getString(R.string.note),
+                                            getString(R.string.delete_pwd),
+                                            {
+                                                // save empty pwd in app preferences
+                                                val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+                                                val spe = sharedPref.edit()
+                                                spe.putString("app_pwd", "")
+                                                spe.apply()
+                                                // disable folder encryption
+                                                spe.putBoolean("encryptProtectedFolders", false)
+                                                spe.apply()
+                                                encryptPref!!.isEnabled = false
+                                                centeredToast(requireContext(), getString(R.string.encryptProtectedFoldersDisabled), 200)
+                                                // the recently deleted pwd disables its show status
+                                                showPwdPref!!.isEnabled = false
+                                                setPwd!!.setSummary(requireContext().getString(R.string.pwd_is_not_set))
+                                                // write the always unencrypted MainActivity.ds unencrypted to disk
+                                                writeAppData(appStoragePath, MainActivity.ds, appName, false)
+                                                // read unencrypted data from disk to unencrypted MainActivity.ds
+                                                MainActivity.ds = readAppData(appStoragePath)
+                                                // leave success note
+                                                okBox(
+                                                    context,
+                                                    getString(R.string.success),
+                                                    getString(R.string.success_pwd_delete),
+                                                    {
+                                                        if (sharedPref.getBoolean("BackupModeManually", false) == true) {
+                                                            // leave warning about outdated backups
+                                                            okBox(
+                                                                context,
+                                                                getString(R.string.note),
+                                                                getString(R.string.make_backup)
+                                                            )
+                                                        } else {
+                                                            // only exec backup in 'backup auto mode'
+                                                            if (!createTxtBackup(requireContext(), downloadDir, ds)) {
+                                                                okBox(requireContext(), "Note", "GrzLog.txt backup failed")
+                                                            }
+                                                            gBScontext = requireContext()
+                                                            gBSsrcFolder = requireContext().getExternalFilesDir(null)!!.absolutePath
+                                                            gBSoutFolder = downloadDir
+                                                            gBSzipName = "$appName.zip"
+                                                            gBSmaxProgress = countFiles(File(gBSsrcFolder))
+                                                            // start BackupService, which prevents interrupting the backup
+                                                            actionOnBackupService(requireContext(), BackupService.Companion.Actions.START)
+                                                        }
+                                                        // show GDrive backup as outdated
+                                                        val outdated = requireContext().getString(R.string.gdrive_outdated)
+                                                        spe.putString("BackupUploadGDrive", outdated)
+                                                        spe.apply()
+                                                        val bakGdrive = findPreference("BackupToGDrive") as Preference?
+                                                        bakGdrive!!.summary = requireContext().getString(R.string.clickHere) + " " + outdated
+                                                    }
+                                                )
+                                            },
+                                            {}
+                                        )
+                                        return@OnClickListener
+                                    }
+                                    // check pwd other length
+                                    if (textOne.length < 16) {
+                                        centeredToast(requireContext(), requireContext().getString(R.string.pwd_too_short), 3000)
+                                        return@OnClickListener
+                                    }
+                                    // check pwd is in allowed chars
+                                    if (allowedOk(textOne) == false) {
+                                        centeredToast(requireContext(), requireContext().getString(R.string.only_asci), 3000)
+                                        return@OnClickListener
+                                    }
+                                    // compare new pwd with current one
+                                    val appPwdEnc = sharedPref.getString("app_pwd", "")!!
+                                    val keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+                                    val appPwdClear = keyManager.decryptPwdPrv(appPwdEnc)
+                                    if (textOne.equals(appPwdClear) == true) {
+                                        centeredToast(requireContext(), requireContext().getString(R.string.new_pwd_equals_current), 3000)
+                                        return@OnClickListener
+                                    }
+                                    // build pwd confirmation dialog
+                                    val inputBuilderTwo = AlertDialog.Builder(requireContext(), android.R.style.Theme_Material_Dialog)
+                                    inputBuilderTwo.setTitle(requireContext().getString(R.string.repeat_new_pwd))
+                                    val inputTwo = EditText(requireContext())
+                                    inputTwo.inputType = InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                                    inputTwo.typeface = Typeface.MONOSPACE
+                                    inputTwo.setTextColor(android.graphics.Color.WHITE)
+                                    inputBuilderTwo.setView(inputTwo)
+                                    // input Two dlg ok
+                                    inputBuilderTwo.setPositiveButton(
+                                        requireContext().getString(R.string.ok),
+                                        DialogInterface.OnClickListener { dialog, which ->
+                                            var textTwo = inputTwo.text.toString()
+                                            // check match with 1st pwd input
+                                            if (textTwo.equals(textOne) == false) {
+                                                centeredToast(requireContext(), requireContext().getString(R.string.pwd_no_match), 3000)
+                                                return@OnClickListener
+                                            }
+                                            // copy final pwd to clipboard
+                                            val clipboard = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                                            val clip = ClipData.newPlainText(getString(R.string.copiedText), textTwo)
+                                            clipboard.setPrimaryClip(clip)
+                                            centeredToast(requireActivity(), textTwo + " " + getString(R.string.copiedToClip), 50)
+                                            // leave a "keep pwd" note
+                                            okBox(
+                                                context,
+                                                getString(R.string.note),
+                                                getString(R.string.keep_pwd),
+                                                {
+                                                    // set the new password by simply overriding the old/existing pwd
+                                                    val appPwdClear = textTwo
+                                                    try {
+                                                        // encrypt pwd with app's public key from keystore
+                                                        val keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+                                                        val appPwdPubHere = keyManager.encryptPwdPub(appPwdClear)
+                                                        // save encrypted pwd in app preferences
+                                                        val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+                                                        val spe = sharedPref.edit()
+                                                        spe.putString("app_pwd", appPwdPubHere)
+                                                        spe.apply()
+                                                        // re-read encrypted pwd from app preferences
+                                                        MainActivity.Companion.appPwdPub = sharedPref.getString("app_pwd", "")!!
+                                                        // check consistency
+                                                        if (MainActivity.Companion.appPwdPub.equals(appPwdPubHere) == false) {
+                                                            throw Exception()
+                                                        }
+                                                        // reflect the encryption password change immediately to disk
+                                                        val encryptProtectedFolders = sharedPref.getBoolean("encryptProtectedFolders", false)
+                                                        if (encryptProtectedFolders) {
+                                                            // write the always unencrypted MainActivity.ds encrypted to disk
+                                                            writeAppData(appStoragePath, MainActivity.ds, appName, true)
+                                                            // read encrypted data from disk to decrypted MainActivity.ds
+                                                            MainActivity.ds = readAppData(appStoragePath)
+                                                        } else {
+                                                            // write the always unencrypted MainActivity.ds unencrypted to disk
+                                                            writeAppData(appStoragePath, MainActivity.ds, appName, false)
+                                                            // read unencrypted data from disk to unencrypted MainActivity.ds
+                                                            MainActivity.ds = readAppData(appStoragePath)
+                                                        }
+                                                        // the recently set pwd could now be shown
+                                                        showPwdPref!!.isEnabled = true
+                                                        // Settings --> encrypt folders is not grayed out anymore
+                                                        encryptPref!!.isEnabled = true
+                                                        // update pwd summary
+                                                        setPwd!!.setSummary(requireContext().getString(R.string.pwd_is_set))
+                                                        // leave success note
+                                                        okBox(
+                                                            context,
+                                                            getString(R.string.success),
+                                                            getString(R.string.success_pwd_change),
+                                                            {
+                                                                if (sharedPref.getBoolean("BackupModeManually", false) == true) {
+                                                                    // leave warning about outdated backups
+                                                                    okBox(
+                                                                        context,
+                                                                        getString(R.string.note),
+                                                                        getString(R.string.make_backup)
+                                                                    )
+                                                                } else {
+                                                                    // only exec backup in 'backup auto mode'
+                                                                    if (!createTxtBackup(requireContext(), downloadDir, ds)) {
+                                                                        okBox(requireContext(), "Note", "GrzLog.txt backup failed")
+                                                                    }
+                                                                    gBScontext = requireContext()
+                                                                    gBSsrcFolder = requireContext().getExternalFilesDir(null)!!.absolutePath
+                                                                    gBSoutFolder = downloadDir
+                                                                    gBSzipName = "$appName.zip"
+                                                                    gBSmaxProgress = countFiles(File(gBSsrcFolder))
+                                                                    // start BackupService, which prevents interrupting the backup
+                                                                    actionOnBackupService(requireContext(), BackupService.Companion.Actions.START)
+                                                                }
+                                                                // show GDrive backup as outdated
+                                                                val outdated = requireContext().getString(R.string.gdrive_outdated)
+                                                                spe.putString("BackupUploadGDrive", outdated)
+                                                                spe.apply()
+                                                                val bakGdrive = findPreference("BackupToGDrive") as Preference?
+                                                                bakGdrive!!.summary = requireContext().getString(R.string.clickHere) + " " + outdated
+                                                            }
+                                                        )
+                                                    } catch (E: Exception) {
+                                                        // in case the unknown happens
+                                                        okBox(context, getString(R.string.note), getString(R.string.error_pwd_change))
+                                                        val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
+                                                        val spe = sharedPref.edit()
+                                                        spe.putString("app_pwd", "")
+                                                        spe.putBoolean("encryptProtectedFolders", false)
+                                                        spe.apply()
+                                                        // Settings --> encrypt folders is grayed out as long as there is no valid pwd
+                                                        encryptPref!!.isEnabled = false
+                                                        // update 2x summary
+                                                        encryptPref!!.setSummary(getString(R.string.noEncrypt))
+                                                        setPwd!!.setSummary(requireContext().getString(R.string.pwd_is_not_set))
+                                                    }
+                                                }
+                                            )
+                                    })
+                                    // input Two dlg cancel
+                                    inputBuilderTwo.setNegativeButton(
+                                        R.string.cancel,
+                                        DialogInterface.OnClickListener { dialog, which ->
+                                            return@OnClickListener
+                                    })
+                                    val dlgTwo = inputBuilderTwo.create()
+                                    dlgTwo.setOnShowListener {
+                                        dlgTwo.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                                    }
+                                    dlgTwo.show()
+                                    dlgTwo.getWindow()?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                                    dlgTwo.setCanceledOnTouchOutside(false)
+                                }
+                            )
+                            // input One dlg cancel
+                            inputBuilderOne.setNegativeButton(
+                                R.string.cancel,
+                                DialogInterface.OnClickListener { dialog, which ->
+                                    return@OnClickListener
+                                }
+                            )
+                            // input One dlg help
+                            inputBuilderOne.setNeutralButton(
+                                getString(R.string.title_activity_help),
+                                DialogInterface.OnClickListener { dialog, which ->
+                                    okBoxHelpPwd(
+                                        requireContext(),
+                                        "Allowed chars",
+                                        allowedStr,
+                                        { // runner CANCEL -> restart input One dlg
+                                            (inputOne.parent as? ViewGroup)?.removeView(inputOne)
+                                            val dlg = inputBuilderOne.create()
+                                            dlg.setOnShowListener {
+                                                dlg.getWindow()!!.setLayout(
+                                                    WindowManager.LayoutParams.MATCH_PARENT,
+                                                    WindowManager.LayoutParams.WRAP_CONTENT
+                                                )
+                                            }
+                                            dlg.show()
+                                            dlg.getWindow()?.setLayout(
+                                                WindowManager.LayoutParams.MATCH_PARENT,
+                                                WindowManager.LayoutParams.WRAP_CONTENT
+                                            )
+                                            dlg.setCanceledOnTouchOutside(false)
+                                            inputOne.requestFocus()
+                                        },
+                                        { // runner NEUTRAL -> generate random pwd + restart input One dlg
+                                            // suggest a random pwd
+                                            val keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+                                            val randomPwd = keyManager.generateRandomPassword(16)
+                                            // copy pwd to clipboard
+                                            val clipboard = requireActivity().getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                                            val clip = ClipData.newPlainText(getString(R.string.copiedText), randomPwd)
+                                            clipboard.setPrimaryClip(clip)
+                                            centeredToast(requireActivity(), getString(R.string.copiedToClip), 50)
+                                            // before restarting input One, view needs removed
+                                            (inputOne.parent as? ViewGroup)?.removeView(inputOne)
+                                            // fill in the random pwd
+                                            inputOne.setText(randomPwd)
+                                            val dlg = inputBuilderOne.create()
+                                            dlg.setOnShowListener {
+                                                dlg.getWindow()!!.setLayout(
+                                                    WindowManager.LayoutParams.MATCH_PARENT,
+                                                    WindowManager.LayoutParams.WRAP_CONTENT
+                                                )
+                                            }
+                                            dlg.show()
+                                            dlg.getWindow()?.setLayout(
+                                                WindowManager.LayoutParams.MATCH_PARENT,
+                                                WindowManager.LayoutParams.WRAP_CONTENT
+                                            )
+                                            dlg.setCanceledOnTouchOutside(false)
+                                            inputOne.requestFocus()
+                                        },
+                                        { // runner OK -> show allowed chars + restart input One dlg
+                                            (inputOne.parent as? ViewGroup)?.removeView(inputOne)
+                                            val dlg = inputBuilderOne.create()
+                                            dlg.setOnShowListener {
+                                                dlg.getWindow()!!.setLayout(
+                                                    WindowManager.LayoutParams.MATCH_PARENT,
+                                                    WindowManager.LayoutParams.WRAP_CONTENT
+                                                )
+                                            }
+                                            dlg.show()
+                                            dlg.getWindow()?.setLayout(
+                                                WindowManager.LayoutParams.MATCH_PARENT,
+                                                WindowManager.LayoutParams.WRAP_CONTENT
+                                            )
+                                            dlg.setCanceledOnTouchOutside(false)
+                                            inputOne.requestFocus()
+                                        }
+                                    )
+                                }
+                            )
+                            val dlgOne = inputBuilderOne.create()
+                            dlgOne.setOnShowListener {
+                                dlgOne.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                            }
+                            dlgOne.show()
+                            dlgOne.getWindow()?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+                            dlgOne.setCanceledOnTouchOutside(false)
+                            inputOne.requestFocus()
+                        }
+                        // failure: usually there is no system auth available
+                        override fun onAuthenticationFailed() {
+                            super.onAuthenticationFailed()
+                            centeredToast(requireContext(), "Authentication failed.", 3000)
+                        }
+                    })
+                // exec auth
+                biometricPrompt.authenticate(promptInfo)
                 true
             }
 
@@ -1193,12 +1794,13 @@ public class SettingsActivity :
                 return
             }
 
-            // an alien backup zip is not allowed to open in >= API 30: make alien backup zip to an app local file
+            // make sure to use the same pwd
             decisionBox(
                 this,
                 DECISION.YESNO,
                 getString(R.string.note),
-                getString(R.string.copyFileToApp),
+                getString(R.string.make_sure_same_pwd),
+                // an alien backup zip is not allowed to open in >= API 30: make alien backup zip to an app local file
                 { copyFileToAppImport(this, uri, outputFilePath) },
                 null
             )

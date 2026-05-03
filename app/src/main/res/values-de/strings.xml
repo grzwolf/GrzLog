@@ -81,7 +81,7 @@
     <string name="restoreFromBackup">Datenwiederherstellung</string>
     <string name="restoreGrzLogData">GrzLog Datenwiederherstellung \n</string>
     <string name="fromBackup">\n\naus Sicherung\n</string>
-    <string name="noUndo">\n\nDieser Vorgang kann nicht rückgängig gemacht werden.</string>
+    <string name="noUndo">\n\nDieser Vorgang kann nicht rückgängig gemacht werden. Bitte sicherstellen, daß Backup und GrLog das selbe Paßwort für die Ordner-Verschlüsselung verwenden.</string>
     <string name="backupDisappeared">Sicherungsdatei existiert nicht mehr</string>
     <string name="previewAutoCloseOff">Vorschau bleibt offen</string>
     <string name="previewAutoCloseOn">Vorschau schließt nach 3s</string>
@@ -119,6 +119,7 @@
     <string name="folderAsPDF">Ordner als PDF</string>
     <string name="folderAsRTF">Ordner als RTF</string>
     <string name="copyToClip">Kopieren in Zwischenablage RTF</string>
+    <string name="copiedToClip">Kopiert in Zwischenablage</string>
     <string name="shareSelection">Weiterleiten / Kopieren der Auswahl</string>
     <string name="capture">[Kamera]</string>
     <string name="image">[Bild]</string>
@@ -184,7 +185,7 @@
     <string name="clickToImport">Click hier für Daten Import</string>
     <string name="resetAppPreferences">Reset App Preferenzen</string>
     <string name="resetAppPreferencesSummary">Reset Preferenzen, Daten bleiben erhalten.</string>
-    <string name="copyFileToApp">Kopieren der Datei in den App Ordner erforderlich, Fortsetzen?</string>
+    <string name="make_sure_same_pwd">Vor dem Fortsetzen sicherstellen, daß GrzLog das selbe Verschlüsselungs-Paßwort nutzt wie das Backup.\n\nFortsetzen?</string>
     <string name="noValidFilename">Kein erlaubter Dateiname.</string>
     <string name="resetSharedPrefs">Reset der App Einstellungen auf Standardwerte</string>
     <string name="settingsHint">Hamburger noch einmal für Settings</string>
@@ -376,12 +377,14 @@
     <string name="fix_it_by_edit_existing_attachment">Reparatur: \'Zeile editieren\' -> \'Anhang\' -> \'Edit Dateianhang\'.</string>
     <string name="quitSearch">Suche beenden</string>
     <string name="encryptProtectedFolders">Geschützte Ordner verschlüsseln</string>
+    <string name="encryptProtectedFoldersDisabled">Geschützte Ordner verschlüsseln is deaktiv, weil kein Paßwort existiert</string>
     <string name="noEncrypt">keine Verschlüsselung</string>
     <string name="yesEncrypt">Verschlüsselung aktiv</string>
     <string name="forbidden">verboten</string>
     <string name="no_encryption_available">Verschlüsselung nicht verfügbar</string>
     <string name="encryption_failed">Fehler Verschlüsselung</string>
-    <string name="decryption_failed">\'Geschützte Ordner verschlüsseln\' deaktiviert?</string>
+    <string name="decryption_failure">Entschlüsselung fehlerhaft. Wahrscheinlich wegen falschen Verschlüsselungs-Paßwortes oder Verschlüsselung ist deaktiviert.</string>
+    <string name="decryption_failed">Entschlüsselung fehlerhaft.</string>
     <string name="backupCompression">Backup Komprimierung</string>
     <string name="bak_larger_faster">schnell, aber größere Datei</string>
     <string name="bak_smaller_slower">kleinere Datei, aber langsamer</string>
@@ -491,6 +494,26 @@
     <string name="enable_bt_on_remote_ok">Synchronisierung auf Remote aktivieren, dann OK zum Fortsetzen.</string>
     <string name="no_matching_date_found">Kein suchbares Datum gefunden.</string>
     <string name="date_not_found">Datum nicht gefunden.</string>
+    <string name="choose">Auswahl</string>
+    <string name="setEncryptionPassword">Paßwort für Verschlüsselung setzen</string>
+    <string name="pwd_is_set">Paßwort ist gesetzt</string>
+    <string name="pwd_is_not_set">Paßwort ist nicht gesetzt</string>
+    <string name="set_new_pwd">Neues Paßwort: 16 Zeichen</string>
+    <string name="repeat_new_pwd">Neues Paßwort wiederholen</string>
+    <string name="pwd_too_short">Paßwort zu kurz</string>
+    <string name="pwd_no_match">Paßwort keine Übereinstimmung</string>
+    <string name="only_asci">Nur ASCII Zeichen sind erlaubt</string>
+    <string name="error_pwd_change">Fehler bei Änderung Paßwort, Verschlüsselung wird ausgeschaltet.</string>
+    <string name="keep_pwd">Paßwort wurde in Clipboard kopiert. Bitte sichern, um die Daten auf einem anderen Phone verwenden zu können.</string>
+    <string name="success_pwd_change">Erfolg bei Änderung Paßwort.</string>
+    <string name="random">Random PWD</string>
+    <string name="showEncryptionPassword">Paßwort für Verschlüsselung zeigen</string>
+    <string name="click_to_show_pwd">Klick zum Zeigen des Paßwortes</string>
+    <string name="make_backup">Neues Backup anfertigen! Vorhergehende Backups werden nicht mehr funktionieren.</string>
+    <string name="gdrive_outdated">GDrive Backup ist ungültig, ein neues anfertigen.</string>
+    <string name="delete_pwd">Das Paßwort zur Verschlüsselung von Ordnern wird gelöscht.</string>
+    <string name="success_pwd_delete">Erfolg bei Löschen Paßwort.</string>
+    <string name="new_pwd_equals_current">Neues und aktuelles Paßwort sind identisch.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

@@ -113,6 +113,10 @@ class HelpActivity : AppCompatActivity() {
         "              protected & encrypted folder title is yellow\n" +
         "              protected & not encrypted folder title is magenta with a warning triangle\n" +
         "              not protected & not encrypted folder title is white\n" +
+        "       Set encryption password\n" +
+        "              via Help button a password could be generated\n" +
+        "              input an empty password will delete the current one\n" +
+        "       Show encryption password\n" +
         "   Backup and Restore\n" +
         "       Backup File Information\n" +
         "              Note: folders in Backup Files are encrypted, if encryption is selected\n" +
@@ -124,7 +128,7 @@ class HelpActivity : AppCompatActivity() {
         "              Note: folders in Backup Files are encrypted, if encryption is selected\n" +
         "       Backup Data now --> to /Download (gray if automated)\n" +
         "       Backup compression\n" +
-        "       Restore Data <-- from /Download\n" +
+        "       Restore Data <-- from phone /Download folder\n" +
         "       Import backup from a file list\n" +
         "       Export Backup to Google Drive (needs log in to Google account)\n" +
         "       Import Backup from Google Drive (needs log in to Google account)\n" +

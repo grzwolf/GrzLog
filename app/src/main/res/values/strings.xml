@@ -81,7 +81,7 @@
     <string name="restoreFromBackup">Restore from backup</string>
     <string name="restoreGrzLogData">You want to restore GrzLog data \n</string>
     <string name="fromBackup">\n\nfrom backup\n</string>
-    <string name="noUndo">\n\nThis cannot be undone.</string>
+    <string name="noUndo">\n\nThis cannot be undone. Make sure, encryption password for Backup and GrzLog are identical.</string>
     <string name="backupDisappeared">Backup file not existing anymore</string>
     <string name="previewAutoCloseOff">Keep preview image open</string>
     <string name="previewAutoCloseOn">Close preview image after 3s</string>
@@ -120,6 +120,7 @@
     <string name="folderAsPDF">folder as PDF</string>
     <string name="folderAsRTF">folder as RTF</string>
     <string name="copyToClip">Copy to clipboard</string>
+    <string name="copiedToClip">Copied to clipboard</string>
     <string name="shareSelection">Share / copy data selection</string>
     <string name="capture">[capture]</string>
     <string name="image">[image]</string>
@@ -185,7 +186,7 @@
     <string name="clickToImport">Click here to import data from a file list</string>
     <string name="resetAppPreferences">Reset app preferences</string>
     <string name="resetAppPreferencesSummary">Reset preferences, data are not affected.</string>
-    <string name="copyFileToApp">Copy file to app storage is needed, continue?</string>
+    <string name="make_sure_same_pwd">Prior continue make sure, GrzLog uses the same encryption password as the Backup.\n\nContinue?</string>
     <string name="noValidFilename">Not an acceptable filename.</string>
     <string name="resetSharedPrefs">Reset app\'s preferences to default values</string>
     <string name="settingsHint">Tap Hamburger again for settings</string>
@@ -377,12 +378,14 @@
     <string name="fix_it_by_edit_existing_attachment">Fix: \'Edit line\' -> \'ATTACHMENT\' -> \'Edit existing attachment\'.</string>
     <string name="quitSearch">Quit search</string>
     <string name="encryptProtectedFolders">Encrypt protected folders</string>
+    <string name="encryptProtectedFoldersDisabled">Encrypt protected folders is disabled due to empty password</string>
     <string name="yesEncrypt">encryption active</string>
     <string name="noEncrypt">no encryption</string>
     <string name="forbidden">forbidden</string>
     <string name="no_encryption_available">no encryption available</string>
     <string name="encryption_failed">encryption failed</string>
-    <string name="decryption_failed">\'Encrypt protected folders\' disabled? </string>
+    <string name="decryption_failure">Decryption failed. Most likely due to a wrong password or folder encryption is disabled.</string>
+    <string name="decryption_failed">Decryption failed.</string>
     <string name="backupCompression">Backup compression</string>
     <string name="bak_larger_faster">fast, but larger file</string>
     <string name="bak_smaller_slower">smaller file, but slower</string>
@@ -492,6 +495,26 @@
     <string name="enable_bt_on_remote_ok">Enable Synchronization on remote device, then push OK to continue.</string>
     <string name="no_matching_date_found">No searchable date found.</string>
     <string name="date_not_found">No matching date found.</string>
+    <string name="choose">Choose</string>
+    <string name="setEncryptionPassword">Set encryption password</string>
+    <string name="pwd_is_set">Password is set</string>
+    <string name="pwd_is_not_set">Password is not set</string>
+    <string name="set_new_pwd">Type new password: 16 chars</string>
+    <string name="repeat_new_pwd">Repeat new password</string>
+    <string name="pwd_too_short">Password too short</string>
+    <string name="pwd_no_match">Password does not match</string>
+    <string name="only_asci">Only ASCII chars are accepted</string>
+    <string name="error_pwd_change">Error changing encryption password, falling back to no encryption.</string>
+    <string name="keep_pwd">Password is copied to clipboard. Keep it to be able to move the data to another phone.</string>
+    <string name="success_pwd_change">Changing encryption password succeeded.</string>
+    <string name="random">Random PWD</string>
+    <string name="showEncryptionPassword">Show encryption password</string>
+    <string name="click_to_show_pwd">Click here to show encryption password</string>
+    <string name="make_backup">Make a fresh Backup! Previous Backups will not succeed.</string>
+    <string name="gdrive_outdated">GDrive Backup is outdated, make a new one.</string>
+    <string name="delete_pwd">You are going to delete the current encryption password.</string>
+    <string name="success_pwd_delete">Deleting encryption password succeeded.</string>
+    <string name="new_pwd_equals_current">New password and current one are identical.</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>

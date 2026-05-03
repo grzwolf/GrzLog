@@ -21,14 +21,15 @@ class NotesActivity : AppCompatActivity() {
     "GrzLog FAQ and notes\n" +
     "====================\n" +
 
-    "\nNote:\nFloating keyboard (like Gboard pen input)\n" +
-    "is not supported. 'Pen input' must be disabled.\n\n" +
+    "\nImportant:\nIf protection & encryption are selected, Backup files GrzLog.zip and GrzLog.txt contain encrypted data.\n" +
+    "If you do a Restore from a Backup, make sure the Backup used the same encryption password as GrzLog uses.\n" +
+    "If you ignore this note, encrypted data will be lost after Restore.\n\n" +
 
-    "Note:\nFolder protection w/o encryption is weak.\n" +
+    "Note:\nFolder protection alone, aka w/o encryption is weak.\n" +
     "Protected folders could be encrypted in Settings.\n\n" +
 
-    "Note:\nIf protection & encryption are selected, Backup files GrzLog.zip and GrzLog.txt contain encrypted data.\n" +
-    "!! Disable folder encryption & execute a manual backup before restoring a Backup on another phone !!\n\n" +
+    "Note:\nFloating keyboard (like Gboard pen input)\n" +
+    "is not supported. 'Pen input' must be disabled.\n\n" +
 
     "How to get GrzLog and its data to a new phone?\n" +
     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
@@ -36,17 +37,15 @@ class NotesActivity : AppCompatActivity() {
     "------------\n" +
     "1.) No need to change gallery/attachment location\n" +
     "    reason: any Backup contains the GrzLog gallery, no matter where they are is located\n" +
-    "2.) Turn encryption off --> Settings --> Encrypt protected folders\n" +
-    "    reason: new phone wil have another password set as the old phone \n" +
+    "2.) Super safe way: Turn encryption off --> Settings --> Encrypt protected folders == off\n" +
     "3.) Execute a manual backup --> Settings --> Backup Data now \n" +
     "4a.) copy GrzLog.zip from Download folder to a USB-Drive ...\n" +
     "4b.) ... OR Export Backup to Google Drive\n" +
     "On new phone\n" +
     "------------\n" +
     "5.) install GrzLog from https://github.com/grzwolf/GrzLog\n" +
-    "6.) it doesn't matter, if encryption is enabled or not, both is fine: Settings --> Encrypt protected folders\n" +
-    "7a.) copy GrzLog.zip from USB-Drive to Download folder and execute Restore ...\n" +
-    "7b.) ... OR Import Backup from Google Drive\n" +
+    "6a.) copy GrzLog.zip from USB-Drive to Download folder and execute Restore from a File list ...\n" +
+    "6b.) ... OR Import Backup from Google Drive\n" +
     "\n\n" +
 
     "What is the difference between GrzLog's private and public attachment folder?\n" +
@@ -98,28 +97,26 @@ class NotesActivity : AppCompatActivity() {
     "- if no folder is protected, encryption won't do anything\n" +
     "- if a folder is protected w/o encryption, its title color is magenta, a warning may appear\n" +
     "- folders are symmetrically encrypted, which needs a strong password\n" +
-    "- at the very first start of GrzLog, such a strong random 16 char password is generated\n" +
+    "- this password can be set in Settings\n" +
     "- this password will be kept as long as this installation exists\n" +
-    "- that means, any installation of GrzLog has its own random password\n" +
     "- the password gets asymmetrically encrypted with the system keystore's public key\n" +
     "- the password is stored in the app's preferences, but no one could decipher it\n" +
     "- once a folder requests encryption/decryption, the stored password gets decrypted with the system keystore's private key\n" +
     "- Note: Folder encryption does not affect attachments!\n" +
     "  Why such effort?\n" +
     "  ----------------\n" +
-    "  The main goal was to encrypt app data, w/o letting the user deal with passwords.\n" +
+    "  The main goal was to encrypt app data.\n" +
     "  Asymmetrical encryption/decryption is considered to be state of art and safe, private and public key\n" +
-    "  come safely from the phones hardware keystore, w/o even knowing or to store them.\n" +
+    "  come safely from the phones hardware keystore.\n" +
     "  Though larger text's performance is horribly slow.\n" +
     "  Symmetrical encryption/decryption is ten fold faster as asymmetrical encryption.\n" +
     "  But it needs a password, which the user has to provide each time (too boring ...).\n" +
-    "  Or the password is stored somewhere on the phone, which is not really safe ...\n" +
-    "  ... Unless the password itself is asymmetrically encrypted with the keystore's public key.\n" +
+    "  Or the user defined password is stored somewhere on the phone, which is safe\n" +
+    "  if the password itself is asymmetrically encrypted with the keystore's public key.\n" +
     "  To obtain the password, it gets decrypted with the keystore's private key.\n" +
-    "  Asymmetrical encryption/decryption of just a 16 char password is not a performance issue at all.\n" +
-    "  Huge advantage: The user doesn't need to provide a password and cannot forget it.\n" +
-    "                  The password could only be obtained in a debug session of the specific GrzLog installation.\n" +
-    "                  Even copying data and password to another phone do not fly, its keystore would provide a totally different key pair.\n" +
+    "  Asymmetrical encryption/decryption of a 16 char password is not a performance issue at all.\n" +
+    "  Huge advantage: The password could only be obtained, if the device lock mechanism is known to an attacker.\n" +
+    "                  Or the app instance is debugged with appropriate tools ...\n" +
     "\n\n"
 
     override fun onStart() {

@@ -246,16 +246,11 @@ class MainActivity : AppCompatActivity(),
         // make context static
         contextMainActivity = this
 
-        // check existence of app's password
+        // check existence of app's folder encryption password
         appPwdPub = sharedPref.getString("app_pwd", "")!!
         if (appPwdPub.isEmpty()) {
-            // generate a unique pwd
-            var keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
-            var appPwdClear = keyManager.generateRandomPassword(16)
-            // encrypt pwd with app's public key
-            appPwdPub = keyManager.encryptPwdPub(appPwdClear)
-            // save encrypted pwd in prefs
-            spe.putString("app_pwd", appPwdPub)
+            // if there is no pwd, disable folder encryption
+            spe.putBoolean("encryptProtectedFolders", false)
             spe.apply()
         }
         setStartMonitor(spe, 7)
@@ -5881,10 +5876,12 @@ class MainActivity : AppCompatActivity(),
                                         )
                                         ds.selectedSection = Math.max(selectedSectionTemp - 1, 0)
                                         ds.dataSection.removeAt(selectedSectionTemp)
+                                        ds.timeSection.removeAt(selectedSectionTemp)
                                     } else {
                                         ds.namesSection[selectedSectionTemp] = getString(R.string.folder)
                                         ds.selectedSection = selectedSectionTemp
                                         ds.dataSection[selectedSectionTemp] = ""
+                                        ds.timeSection[selectedSectionTemp] = TIMESTAMP.OFF
                                     }
                                     // save data
                                     writeAppData(appStoragePath, ds, appName)
@@ -8803,6 +8800,7 @@ class MainActivity : AppCompatActivity(),
         // DataStore holds all data "new at top"; after onCreate() it is under no circumstances null
         @JvmField
         var ds: DataStore = DataStore()
+        var dsExtraInfo: MutableList<String> = ArrayList()
         // when returning from folder sync, there might be a need to show showMenuItemUndo() in onCreate()
         var returningFromBluetoothActivityShowMenuItemUndo = false
         // this flag controls, whether onResume continues with onCreate()
@@ -9318,6 +9316,18 @@ class MainActivity : AppCompatActivity(),
                     // color
                     toolbar.setTitleTextColor(Color.MAGENTA)
                 }
+
+                // there might be a decryption failure
+                try {
+                    if (dsExtraInfo[ds.selectedSection].isNotEmpty()) {
+                        okBox(
+                            contextMainActivity,
+                            contextMainActivity.getString(R.string.error),
+                            contextMainActivity.getString(R.string.decryption_failure)
+                        )
+                    }
+                } catch (e: Exception) {}
+
             }
             // 'normal' scroll to position in listview
             var scrollPos = if (lvMain.showOrder == SHOW_ORDER.TOP) 0 else Math.max(lvMain.arrayList.size - 1, 0)
@@ -9597,7 +9607,7 @@ class MainActivity : AppCompatActivity(),
         }
 
         // DataStore serialization read: return value is under no circumstances null
-        private fun readAppData(storagePath: String): DataStore {
+        fun readAppData(storagePath: String): DataStore {
             var dataStore: DataStore? = null
             val appName = contextMainActivity.applicationInfo.loadLabel(contextMainActivity.packageManager).toString()
             val file = File(storagePath, "$appName.ser")
@@ -9688,54 +9698,86 @@ class MainActivity : AppCompatActivity(),
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(contextMainActivity)
             var checkPUBPRV = sharedPref.getBoolean("checkPUBPRV", true)
 
-            // decrypt DataStore.dataSection aka folder
-            var keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+            // check if folder decryption is enabled at all
+            val decryptData = sharedPref.getBoolean("encryptProtectedFolders", false)
+            if (decryptData == false) {
+                // normally nothing else to do, so get out from here
+                //
+                // also get out in a very specific case right after restore from a backup:
+                //   - bak might contain an encrypted folder, but app flag encrypt folders is disabled
+                //   - this leads to a situation, that ds contains encrypted data
+                //   - that looks awkward in UI, but it is not a problem, if user activates folder encryption afterward
+                return dataStore
+            }
+
+            // prepare decrypt DataStore.dataSection aka folder
+            val keyManager = KeyManager(contextMainActivity, "GrzLogAlias", "GrzLog")
+
+            // dsExtraInfo can be filled with some extra data, works in conjunction with ds
+            dsExtraInfo.clear()
+
+            // loop dataStore folders
             for (i in dataStore.dataSection.indices) {
+
+                // dsExtraInfo can be filled with some extra data, works in conjunction with ds
+                dsExtraInfo.add("")
+
+                // if there is no folder protection -> continue loop
+                if (dataStore.timeSection[i] != TIMESTAMP.AUTH) {
+                    continue
+                }
+
                 // only decrypt protected folders
-                if (dataStore.timeSection[i] == TIMESTAMP.AUTH) {
-                    var warning = (i == dataStore.selectedSection)
-                    // 1)  check for GCM
-                    // 2a) if not empty, update dataStore.dataSection             --> done
-                    // 2b) if empty, check for PUBPRV
-                    // 3a) if not empty, update dataStore.dataSection with chunks --> done
-                    // 3b) if empty --> no encryption at all                      --> done
-                    var clearData = keyManager.decryptGCM(dataStore.dataSection[i], keyManager.decryptPwdPrv(appPwdPub), warning)
-                    if (clearData.isNotEmpty()) {
-                        dataStore.dataSection[i] = clearData
-                    } else {
-                        // only check outdated PUBPRV until 1st full encrypted write folders is done
-                        if (checkPUBPRV) {
-                            // although outdated, we need to check for PUBPRV:
-                            //    this case catches the update from v49 PUBPRV  --> v50 GCM
-                            //    encrypted chunks are delimited by a white space
-                            var chunks: MutableList<String> = dataStore.dataSection[i].split(" ").toMutableList()
-                            if (keyManager.isEncryptedWithPub(chunks[0])) {
-                                // reset folder data
-                                dataStore.dataSection[i] = ""
-                                // decrypt chunks into folder
-                                for (j in chunks.indices) {
-                                    if (chunks[j].length > 0) {
-                                        dataStore.dataSection[i] += keyManager.decryptPub(chunks[j])
-                                    } else {
-                                        Log.e("GrzLog readAppData", "chunk length 0")
-                                    }
+                val warning = (i == dataStore.selectedSection)
+                // 1)  execute GCM decryption
+                // 2a) if not empty, update dataStore.dataSection
+                // 2b) if not empty, but dataSection == clearData --> decrypt error
+                // 2c) if empty, check for PUBPRV
+                // 3a) if not empty, update dataStore.dataSection with chunks
+                // 3b) if empty --> no encryption at all
+                val clearData = keyManager.decryptGCM(dataStore.dataSection[i], keyManager.decryptPwdPrv(appPwdPub), warning)
+                if (clearData.isNotEmpty()) {
+                    // if decryption failed for whatever reason --> output == input
+                    if (clearData.equals(dataStore.dataSection[i])) {
+                        dsExtraInfo[i] = contextMainActivity.getString(R.string.decryption_failure)
+                    }
+                    // set data for return
+                    dataStore.dataSection[i] = clearData
+                } else {
+                    // only check outdated PUBPRV until 1st full encrypted write folders is done
+                    if (checkPUBPRV) {
+                        // although outdated, we need to check for PUBPRV:
+                        //    this case catches the update from v49 PUBPRV  --> v50 GCM
+                        //    encrypted chunks are delimited by a white space
+                        val chunks: MutableList<String> = dataStore.dataSection[i].split(" ").toMutableList()
+                        if (keyManager.isEncryptedWithPub(chunks[0])) {
+                            // reset folder data
+                            dataStore.dataSection[i] = ""
+                            // decrypt chunks into folder
+                            for (j in chunks.indices) {
+                                if (chunks[j].length > 0) {
+                                    dataStore.dataSection[i] += keyManager.decryptPub(chunks[j])
+                                } else {
+                                    Log.e("GrzLog readAppData", "chunk length 0")
                                 }
-                            } else {
-                                // data are not encrypted at all:
-                                //    happens if 'set folder protection' was set
-                                //    and encryption/decryption was not yet available.
-                                //    Which is the case by switch from <= v45 ---> >= v46
-                                continue
                             }
-                        } else{
+                        } else {
                             // data are not encrypted at all:
-                            //    a) happens if 'set folder protection' was set
-                            //       and encryption/decryption was not yet available.
-                            //       Which is the case by switch from <= v45 ---> >= v46
-                            //    b) always happens, if encrypt/decrypt is turned off from Settings
-                            //       AND a manual backup was forced
+                            //    happens if 'set folder protection' was set
+                            //    and encryption/decryption was not yet available.
+                            //    Which is the case by switch from <= v45 ---> >= v46
                             continue
                         }
+                    } else {
+                        // data are not encrypted at all:
+                        //    a) happens if 'set folder protection' was set
+                        //       and encryption/decryption was not yet available.
+                        //       Which is the case by switch from <= v45 ---> >= v46
+                        //    b) always happens, if encrypt/decrypt is turned off from Settings
+                        //       AND a manual backup was forced
+                        //    c) decryption went wrong:
+                        //       false pwd etc.
+                        continue
                     }
                 }
             }
@@ -10846,19 +10888,21 @@ internal class LvAdapter : BaseAdapter {
         var spanStr = SpannableString(text)
         if (items!![position].title?.contains("[") == true) {
             // place icon left to key and after the opening bracket
-            val start = text?.indexOf('[')?.plus(1)
-            val stop = text?.indexOf(']')?.plus(1)
+            val startIcon = text?.indexOf('[')?.plus(1)
+            val stopIcon = text?.indexOf(']')?.plus(1)
             // get attachment file name
-            var fileNameString = items!![position].fullTitle!!.substring(
-                items!![position].fullTitle!!.indexOf("::::"),
-                items!![position].fullTitle!!.lastIndexOf("]")
-            )
+            var fileNameString = ""
+            val startFn = items!![position].fullTitle!!.indexOf("::::")
+            val stopFn = items!![position].fullTitle!!.lastIndexOf("]")
+            if (startFn != -1 && stopFn != -1) {
+                fileNameString = items!![position].fullTitle!!.substring(startFn, stopFn)
+            }
             // get mime type
             var mime = ""
             try {
-                if (stop != -1) {
+                if (stopIcon != -1) {
                     // insert a " " as icon placeholder
-                    text = text?.substring(0, start!!) + " " + text?.substring(start!!)
+                    text = text?.substring(0, startIcon!!) + " " + text?.substring(startIcon!!)
                     spanStr = SpannableString(text)
                     // set icon via spannable
                     res = android.R.drawable.ic_dialog_alert
@@ -10869,7 +10913,7 @@ internal class LvAdapter : BaseAdapter {
                 mime = ""
             }
             // very quick check for a linked image
-            if (fileNameString[4] == 'c') {
+            if (fileNameString.length > 4 && fileNameString[4] == 'c') {
                 // next check for picker uri
                 // API<35 might provide a shorter version "content://media" vs. "content://media/picker"
                 val pos = fileNameString.indexOf("content://media")
@@ -10979,7 +11023,7 @@ internal class LvAdapter : BaseAdapter {
                     }
                 } else {
                     // check for folder attachment link OR geo , if the folder name does not contain a .
-                    if (start != -1 && stop != -1) {
+                    if (startIcon != -1 && stopIcon != -1) {
                         val fullItemText = items!![position].fullTitle
                         val m = fullItemText?.let { PATTERN.UriLink.matcher(it) }
                         if (m?.find() == true) {
@@ -11003,8 +11047,8 @@ internal class LvAdapter : BaseAdapter {
             drawable?.setBounds(0, 0, tv.lineHeight, tv.lineHeight)
             drawable?.colorFilter = BlendModeColorFilterCompat.createBlendModeColorFilterCompat(ContextCompat.getColor(context!!, iconColor), BlendModeCompat.SRC_ATOP)
             val icon = ImageSpan(drawable!!, ImageSpan.ALIGN_BOTTOM)
-            if (stop != null) {
-                spanStr.setSpan(icon, start!!, start + 1, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+            if (stopIcon != null) {
+                spanStr.setSpan(icon, startIcon!!, startIcon + 1, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
                 tv.text = spanStr
             }
         }

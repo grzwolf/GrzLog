@@ -21,7 +21,11 @@ class WhatsNewActivity : AppCompatActivity() {
         "===================\n\n" +
         "v1.1.xx\n" +
         "~~~~~~~\n" +
-        "new: Long tap red plus button --> synchronize folder data between two Bluetooth devices\n\n" +
+        "fix: thread exceptions\n" +
+        "fix: repair broken phone media links\n" +
+        "new: user defined folder encryption password\n" +
+        "new: long tap red plus button --> jump to a date\n" +
+        "new: long tap red plus button --> synchronize folder data between two Bluetooth devices\n\n" +
         "v1.1.56\n" +
         "~~~~~~~\n" +
         "fix: insert non-existing today if a future date already exists\n" +
