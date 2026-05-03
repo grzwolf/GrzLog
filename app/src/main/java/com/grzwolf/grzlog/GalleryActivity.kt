@@ -259,8 +259,10 @@ class GalleryActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // back to MainActivity
         if (item.itemId == android.R.id.home) {
-            for (aItem in adapter!!.list) {
-                aItem.selected = false
+            if (adapter != null) {
+                for (aItem in adapter!!.list) {
+                    aItem.selected = false
+                }
             }
             val mItem = galleryMenu!!.findItem(R.id.action_Delete)
             mItem.isVisible = false

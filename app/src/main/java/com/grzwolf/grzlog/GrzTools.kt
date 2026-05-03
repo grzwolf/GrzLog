@@ -12,6 +12,7 @@ import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -794,6 +795,7 @@ fun okBox(context: Context?, title: String?, message: String, runnerOk: Runnable
             dialog.getWindow()!!.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
         }
         dialog.show()
+        dialog.setCanceledOnTouchOutside(false)
     } catch (e: Exception) {
     }
 }
@@ -2162,8 +2164,7 @@ fun getFolderFiles(context: Context, path: String, sortByDate: Boolean, fileList
                 try {
                     var fAttr = Files.readAttributes(path, BasicFileAttributes::class.java)
                     var fDate = fAttr.creationTime()
-                    var fDateStr = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(fDate.toString())
-                    fileDateStr = SimpleDateFormat("yyyyMMdd").format(fDateStr)
+                    fileDateStr = SimpleDateFormat("yyyyMMdd").format(fDate.toMillis())
                 } catch (e: Exception) {
                     (context as Activity).runOnUiThread(Runnable {
                         centeredToast(
@@ -2178,19 +2179,21 @@ fun getFolderFiles(context: Context, path: String, sortByDate: Boolean, fileList
         }
     }
 
-    if (sortByDate) {
-        // sort list in descending order by date stamp
-        val cmp = compareBy<GalleryActivity.GrzThumbNail> {
-            LocalDate.parse(
-                it.fileDate,
-                DateTimeFormatter.ofPattern("yyyMMdd")
-            )
+    try {
+        if (sortByDate) {
+            // sort list in descending order by date stamp
+            val cmp = compareBy<GalleryActivity.GrzThumbNail> {
+                LocalDate.parse(
+                    it.fileDate,
+                    DateTimeFormatter.ofPattern("yyyMMdd")
+                )
+            }
+            retVal.sortWith(cmp.reversed())
+        } else {
+            // sort list in descending order by file size
+            retVal.sortByDescending { it.fileSize }
         }
-        retVal.sortWith(cmp.reversed())
-    } else {
-        // sort list in descending order by file size
-        retVal.sortByDescending { it.fileSize }
-    }
+    } catch (e: Exception) {}
 
     // back
     return retVal
@@ -2308,16 +2311,17 @@ fun getAppGalleryThumbsSilent(context: Context, sortByDate: Boolean) {
     MainActivity.appGalleryScanning = true
     // GrzLog gallery can be in two different places
     val appImagesPath = MainActivity.Companion.AttachmentStorage.pathList[MainActivity.Companion.AttachmentStorage.activeType.ordinal]
+    val fileList: Array<File> = File(appImagesPath).listFiles()
+    var listGrzThumbNail = mutableListOf<GalleryActivity.GrzThumbNail>()
+    var list = mutableListOf<GalleryActivity.GrzThumbNail>()
+    val sdfIn = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+    val sdfOutDate = SimpleDateFormat("yyyy MMM dd, EEE", Locale.getDefault())
+    var lastDateStamp = ""
     Thread {
         try {
-            val fileList: Array<File> = File(appImagesPath).listFiles()
-            val listGrzThumbNail = getFolderFiles(context, appImagesPath, sortByDate, fileList, null)
+            listGrzThumbNail = getFolderFiles(context, appImagesPath, sortByDate, fileList, null) as MutableList<GalleryActivity.GrzThumbNail>
             MainActivity.appScanTotal = listGrzThumbNail.size
             MainActivity.appScanCurrent = 0
-            var list = mutableListOf<GalleryActivity.GrzThumbNail>()
-            val sdfIn = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-            val sdfOutDate = SimpleDateFormat("yyyy MMM dd, EEE", Locale.getDefault())
-            var lastDateStamp = ""
             var index = 0
             for (item in listGrzThumbNail) {
                 MainActivity.appScanCurrent += 1
