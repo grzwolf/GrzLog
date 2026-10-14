@@ -1,21 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/main_view"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:layout_marginTop="120dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginTop="0dp"
     android:orientation="vertical">
 
-    <CheckBox
-        android:id="@+id/checkbox_auto_connect"
+    <!-- vertical ScrollView to make all the items or views scrollable -->
+    <ScrollView
+        android:id="@+id/scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+    <!-- exactly one element (here: LinearLayout) underneath ScrollView is needed -->
+    <!-- android:weightSum="10" is consumed by ListView to 95% -->
+    <LinearLayout
+        android:id="@+id/outer_ll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        android:textColor="@color/black"
-        android:background="@color/white"
-        android:text="@string/auto_connect" />
+        android:weightSum="10"
+        android:orientation="vertical">
 
-    <ToggleButton
+        <ToggleButton
         android:id="@+id/toggle_onoff"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -26,7 +34,7 @@
         android:textOff="@string/synchronization_off"
         android:textOn="@string/synchronization_is_enabled" />
 
-    <CheckBox
+        <CheckBox
         android:id="@+id/checkbox_device_visibility"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -35,17 +43,8 @@
         android:background="@color/white"
         android:text="@string/device_visibility_check_it_after_being_told" />
 
-    <TextView
-        android:id="@+id/textview_connection_status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        android:padding="8dp"
-        android:textColor="@color/black"
-        android:background="@color/white"
-        android:text="@string/connection_status" />
-
-    <LinearLayout
+        <LinearLayout
+        android:id="@+id/select_ll"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:weightSum="3"
@@ -68,21 +67,16 @@
             android:layout_width="0dp"
             android:layout_weight="1.5"
             android:layout_height="wrap_content"
-            android:layout_gravity="right|center_vertical"
+            android:layout_gravity="end|center_vertical"
             android:layout_margin="10dp"
             android:padding="8dp"
             android:textColor="@color/black"
             android:background="@color/white"
             android:text="" />
-    </LinearLayout>
+        </LinearLayout>
 
-    <View
-        android:id="@+id/divider1"
-        android:layout_width="match_parent"
-        android:layout_height="20dp"
-        android:background="?android:attr/listDivider" />
-
-    <LinearLayout
+        <LinearLayout
+        android:id="@+id/send_ll"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:weightSum="2"
@@ -111,36 +105,28 @@
             android:textSize="12sp"
             android:background="@color/lightskyblue"
             android:text="@string/request_folder" />
+        </LinearLayout>
 
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:weightSum="1"
-        android:orientation="horizontal" >
-
+        <!-- invisible text used as message receiver -->
         <TextView
-            android:id="@+id/textview_request_file"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:layout_gravity="right|center_vertical"
-            android:layout_margin="10dp"
-            android:padding="8dp"
-            android:textColor="@color/black"
-            android:background="@color/white"
-            android:text="" />
+        android:id="@+id/textview_file_transfer_messages"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="" />
 
-    </LinearLayout>
-
-    <View
-        android:id="@+id/divider2"
+        <ListView
+        android:id="@+id/chat_list"
+        android:layout_weight="9.5"
+        android:layout_height="0dp"
         android:layout_width="match_parent"
-        android:layout_height="20dp"
-        android:background="?android:attr/listDivider" />
+        android:layout_marginTop="0dp"
+        android:layout_marginBottom="0dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="@color/lightgrey" />
 
-    <LinearLayout
+        <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:weightSum="3"
@@ -149,7 +135,7 @@
         <Button
             android:id="@+id/button_send_text"
             android:layout_width="0dp"
-            android:layout_weight="1.1"
+            android:layout_weight="0.8"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
             android:paddingStart="4dp"
@@ -161,18 +147,20 @@
         <EditText
             android:id="@+id/editText_send_text"
             android:layout_width="0dp"
-            android:layout_weight="1.9"
+            android:layout_weight="2.2"
             android:layout_height="wrap_content"
             android:layout_gravity="left|center_vertical"
             android:layout_margin="10dp"
             android:gravity="left"
             android:padding="8dp"
-            android:inputType="text"
+            android:inputType="textNoSuggestions"
             android:textColor="@color/black"
             android:background="@color/white"
             android:selectAllOnFocus="true"
             android:text="@string/type_here" />
-    </LinearLayout>
+        </LinearLayout>
 
+    </LinearLayout>
+    </ScrollView>
 
 </LinearLayout>

@@ -9,12 +9,16 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
 import android.content.BroadcastReceiver
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -22,43 +26,89 @@ import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.*
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.AdapterView
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ListView
+import android.widget.ScrollView
+import android.widget.SimpleAdapter
 import android.widget.TextView
 import android.widget.ToggleButton
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.IdRes
+import androidx.annotation.LayoutRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.preference.PreferenceManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import com.grzwolf.grzlog.BluetoothActivity.Companion.addTextToChatView
 import com.grzwolf.grzlog.DataStore.ACTION
 import com.grzwolf.grzlog.DataStore.TIMESTAMP
 import com.grzwolf.grzlog.MainActivity.Companion.ds
-import com.grzwolf.grzlog.MainActivity.Companion.lvMain
-import com.grzwolf.grzlog.MainActivity.Companion.showMenuItemUndo
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.text.SimpleDateFormat
 import java.util.ArrayList
+import java.util.Date
 import java.util.UUID
+import kotlin.collections.MutableList
 import kotlin.text.isNotEmpty
 
 class BluetoothActivity : AppCompatActivity() {
 
-    // supposed to make sure to return to MainActivity -->
     companion object {
+        // supposed to make sure to return to MainActivity -->
         fun newInstance(context: Context) = Intent(context, BluetoothActivity::class.java)
+
+        // add a text into the chat view
+        @SuppressLint("MissingPermission")
+        fun addTextToChatView(text: String, isLocalSender: Boolean) {
+            // UI action sometimes fired by thread
+            Handler(Looper.getMainLooper()).postDelayed({
+                // who did send the message
+                var origin = "   me"
+                if (isLocalSender == false) {
+                    origin = "   " + btSelectedRemoteTv.text
+                }
+                // get time stamp
+                val sdf = SimpleDateFormat("yyyy/MM/dd hh:mm:ss")
+                val nowDateTime = sdf.format(Date()) + origin
+                // build new chat list entry
+                val entry = ChatMessageItem(mutableMapOf("text" to text, "time" to nowDateTime), isLocalSender)
+                // append chat list
+                chatMsgList.add(entry)
+                // notify about change
+                lvChatList.adapter = CustomSimpleAdapter(
+                    btActivity as Context,
+                    chatMsgList,
+                    R.layout.chat_item,
+                    from,
+                    to
+                )
+                // scroll to last added entry
+                lvChatList.setSelection(lvChatList.adapter.count - 1)
+            }, 0)
+        }
+
     }
 
     // constants passed to startActivityForResult()
     val REQUEST_ENABLE_BT = 1001
     val REQUEST_DISABLE_BT = 1002
+
+    // visibility of onscreen keyboard
+    var imeVisible = false
 
     override fun onStart() {
         super.onStart()
@@ -159,6 +209,8 @@ class BluetoothActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.bluetooth_activity)
 
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
         // action bar to go back to MainActivity
         val actionBar = supportActionBar
         actionBar?.setDisplayHomeAsUpEnabled(true)
@@ -171,62 +223,70 @@ class BluetoothActivity : AppCompatActivity() {
         btActivity = this
 
         // make UI views static --> all are declared in companion object
-        btCheckAutoConnect = findViewById(R.id.checkbox_auto_connect)
         btOnOffButton = findViewById(R.id.toggle_onoff)
         btCheckBoxVisibilty = findViewById(R.id.checkbox_device_visibility)
-        btStatusTv = findViewById(R.id.textview_connection_status)
         btSelectRemoteButton = findViewById(R.id.button_select_remote)
         btSelectedRemoteTv = findViewById(R.id.textview_remote_device)
         btRequestFileButton = findViewById(R.id.button_request_file)
-        btRequestFileStatusTv = findViewById(R.id.textview_request_file)
+        btRequestFileStatusTv = findViewById(R.id.textview_file_transfer_messages)
         btSendFileButton = findViewById(R.id.button_send_file)
         btSendMsgButton = findViewById(R.id.button_send_text)
         btSendMsgEt = findViewById(R.id.editText_send_text)
+        lvChatList = findViewById(R.id.chat_list) as ListView
+        scrollView = findViewById(R.id.scroll_view) as ScrollView
+        val selectLL = findViewById(R.id.select_ll) as LinearLayout
+        val sendLL = findViewById(R.id.send_ll) as LinearLayout
 
-        // handle auto connect to last saved BT device
-        var executeAutoConnectBluetooth = false
-        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-        selectedBluetoothDeviceIndex = sharedPref.getInt("BluetoothAutoConnectDeviceIndex", -1)
-        if (selectedBluetoothDeviceIndex != -1) {
-            // check BEFORE btCheckAutoConnect.setOnCheckedChangeListener to avoid click listener
-            btCheckAutoConnect.isChecked = true
-            executeAutoConnectBluetooth = true
+        // move complete LinearLayout inside ScrollView if keyboard shows up or disappears
+        ViewCompat.setOnApplyWindowInsetsListener(btSendMsgEt) { _, insets ->
+            imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            val imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            if (imeVisible == true) {
+                // keyboard shows up --> move layout up
+                scrollView.setPadding(0, 0, 0, imeHeight)
+                btCheckBoxVisibilty.visibility = View.GONE
+                selectLL.visibility = View.GONE
+                sendLL.visibility = View.GONE
+                Handler(Looper.getMainLooper()).postDelayed({
+                    scrollView.smoothScrollBy(0, imeHeight)
+                    lvChatList.setSelection(lvChatList.adapter.count - 1)
+                }, 200)
+            } else {
+                // keyboard disappears --> restore layout
+                btCheckBoxVisibilty.visibility = View.VISIBLE
+                selectLL.visibility = View.VISIBLE
+                sendLL.visibility = View.VISIBLE
+                Handler(Looper.getMainLooper()).postDelayed({
+                    scrollView.scrollToDescendant(btOnOffButton)
+                    scrollView.setPadding(0, 0, 0, 0)
+                    lvChatList.setSelection(lvChatList.adapter.count - 1)
+                }, 200)
+            }
+            insets
         }
+
+        // handling after user pressed ime button DONE
+        btSendMsgEt.setOnEditorActionListener { v, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_DONE){
+                // keyboard done shall send message
+                btSendMsgButtonClick()
+            }
+            false
+        }
+
+        // prepare chat listview
+        lvChatList.adapter = CustomSimpleAdapter(
+            this,
+            chatMsgList,
+            R.layout.chat_item,
+            from,
+            to
+        )
+
 
         //
         // UI click handlers
         //
-        // auto connect to BT device
-        btCheckAutoConnect.setOnCheckedChangeListener { buttonView, isChecked ->
-            if (isChecked) {
-                val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
-                // error: connection is not active OR no pairedDevices OR invalid device selection
-                if (btOnOffButton.isChecked == false || pairedDevices!!.isEmpty() || selectedBluetoothDeviceIndex == -1) {
-                    if (buttonView.isPressed) {
-                        btCheckAutoConnect.isChecked = false
-                    }
-                    return@setOnCheckedChangeListener
-                }
-                // error: selected device index not contained in paired list
-                if (selectedBluetoothDeviceIndex > pairedDevices.size) {
-                    if (buttonView.isPressed) {
-                        btCheckAutoConnect.isChecked = false
-                    }
-                    return@setOnCheckedChangeListener
-                }
-                // save preference
-                val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-                var spe = sharedPref.edit()
-                spe.putInt("BluetoothAutoConnectDeviceIndex", selectedBluetoothDeviceIndex)
-                spe.apply()
-            } else {
-                // remove preference
-                val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-                var spe = sharedPref.edit()
-                spe.putInt("BluetoothAutoConnectDeviceIndex", -1)
-                spe.apply()
-            }
-        }
 
         // sync ON / OFF
         btOnOffButton.setOnCheckedChangeListener { buttonView, isChecked ->
@@ -276,10 +336,60 @@ class BluetoothActivity : AppCompatActivity() {
         // after requesting a folder from remote, a message should pop up here
         btRequestFileStatusTv.addTextChangedListener(textWatcher)
 
+        // chat listview item long press clear content
+        lvChatList.setOnItemLongClickListener(AdapterView.OnItemLongClickListener { adapterView, itemView, itemPosition, itemId ->
+            val items = arrayOf<CharSequence>(getString(R.string.clear), getString(R.string.copy_clipboard))
+            var selection = 0
+            var dialog: AlertDialog?
+            val builder = AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+            builder.setTitle(getString(R.string.messages))
+            builder.setSingleChoiceItems(
+                items,
+                selection,
+                DialogInterface.OnClickListener { dlg, which ->
+                    selection = which
+                }
+            )
+            builder.setPositiveButton("Ok", DialogInterface.OnClickListener { dlg, which ->
+                when (selection) {
+                    0 -> { // clear listview
+                        chatMsgList.clear()
+                        lvChatList.adapter = CustomSimpleAdapter(
+                            this,
+                            chatMsgList,
+                            R.layout.chat_item,
+                            from,
+                            to
+                        )
+                    }
+                    1 -> { // copy listview to clipboard
+                        var text = ""
+                        chatMsgList.forEach { entry ->
+                            text += entry.texts.getValue("time") + "  "
+                            text += entry.texts.getValue("text") + "\n"
+                        }
+                        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText(getString(R.string.copiedText), text)
+                        clipboard.setPrimaryClip(clip)
+                        centeredToast(this, getString(R.string.copiedToClip), 50)
+                    }
+                }
+            })
+            builder.setNegativeButton(
+                R.string.cancel,
+                DialogInterface.OnClickListener { dlg, which ->
+                    return@OnClickListener
+                })
+            dialog = builder.create()
+            val listView = dialog.listView
+            listView.divider = ColorDrawable(Color.GRAY)
+            listView.dividerHeight = 2
+            dialog.show()
+            dialog.setCanceledOnTouchOutside(false)
+            true
+        })
+
         // initially all buttons are disabled
-        if (btCheckAutoConnect.isChecked == false) {
-            btCheckAutoConnect.isEnabled = false
-        }
         btCheckBoxVisibilty.isEnabled = false
         btSelectRemoteButton.isEnabled = false
         btRequestFileButton.isEnabled = false
@@ -304,20 +414,6 @@ class BluetoothActivity : AppCompatActivity() {
 
         // adding onBackPressed callback listener
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
-
-        // exec auto Bluetooth connect
-        if (executeAutoConnectBluetooth) {
-            // enable Bluetooth sync
-            btOnOffButton.isChecked = true
-            // start connect thread
-            val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
-            if (pairedDevices!!.isEmpty() || selectedBluetoothDeviceIndex > pairedDevices!!.size || selectedBluetoothDeviceIndex == -1) {
-                btCheckAutoConnect.isChecked = false
-                return
-            }
-            val connectThread = ConnectThread(pairedDevices!!.elementAt(selectedBluetoothDeviceIndex))
-            connectThread.start()
-        }
 
     }
 
@@ -376,7 +472,6 @@ class BluetoothActivity : AppCompatActivity() {
                 }
             }
             btSelectedRemoteTv.text = getString(R.string.nothing)
-            btStatusTv.text = getString(R.string.nothing)
             btCheckBoxVisibilty.isEnabled = false
             btSelectRemoteButton.isEnabled = false
             btSelectRemoteButton.setBackgroundColor(getResources().getColor(R.color.lightskyblue))
@@ -500,7 +595,7 @@ class BluetoothActivity : AppCompatActivity() {
         btServiceWorkThread.transmitFolder = false
         btServiceWorkThread.receiveFileSize = true
         btServiceWorkThread.receiveFile = false
-        // update status
+        // android:visibility="gone" in bluetooth_activity.xml will make it invisible, but still works
         btRequestFileStatusTv.text = getString(R.string.waiting_for_folder)
         // hold on for now
         btSendFileButton.isEnabled = false
@@ -524,6 +619,11 @@ class BluetoothActivity : AppCompatActivity() {
     // textWatcher observes messages sent from btServiceWorkThread to UI
     var textWatcher: TextWatcher = object : TextWatcher {
         override fun afterTextChanged(s: Editable?) {
+
+            // such message also goes into the chat view
+            if (s!!.startsWith("::::FINAL_HANDLING::::") == false) {
+                addTextToChatView(s.toString(), false)
+            }
 
             // after a folder is received, the receiving user has to make a decision about further data handling
             if (s!!.startsWith("::::FINAL_HANDLING::::")) {
@@ -556,6 +656,7 @@ class BluetoothActivity : AppCompatActivity() {
                     val textNew = fileName.readText(Charsets.UTF_8)
                     if (textNew.equals(textOri)) {
                         // nothing to do
+                        addTextToChatView(getString(R.string.received_and_local_are_identical_there_s_nothing_to_do), false)
                         okBox(
                             this@BluetoothActivity,
                             getString(R.string.note),
@@ -693,6 +794,12 @@ class BluetoothActivity : AppCompatActivity() {
                             getString(R.string.note),
                             getString(R.string.folder_sync_was_cancelled_nothing_happened),
                             {
+                                // cancel all file ops
+                                btServiceWorkThread.requestFolder = false
+                                btServiceWorkThread.transmitFolder = false
+                                btServiceWorkThread.receiveFileSize = false
+                                btServiceWorkThread.receiveFile = false
+                                btServiceWorkThread.transmitFolderName = ""
                                 // send transmission done
                                 btServiceWorkThread.write(("::::FILE_TRANSMISSION_DONE::::".toByteArray(Charsets.UTF_8)))
                             })
@@ -713,22 +820,75 @@ class BluetoothActivity : AppCompatActivity() {
                 var message = ""
                 val name = bluetoothAdapter?.name
                 if (msg.isEmpty()) {
-                    // any sent out standard message from button will reset the file save workflow
+                    // any sent out standard message from button will reset the file save workflow ...
                     btServiceWorkThread.receiveFileSize = false
                     btServiceWorkThread.receiveFile = false
-                    message = name + ": " + btSendMsgEt.text
+                    // ... and sends the input text to other device if not empty
+                    if (btSendMsgEt.text.isEmpty() == false) {
+                        message = name + ": " + btSendMsgEt.text
+                        // such message also goes into the chat view
+                        addTextToChatView(btSendMsgEt.text.toString(), true)
+                        // finally send message
+                        btServiceWorkThread.write(message.toByteArray(Charsets.UTF_8))
+                        // clear message input text field
+                        btSendMsgEt.setText("")
+                    } else {
+                        // send button was clicked with EditText being empty --> start input
+                        if (imeVisible == false) {
+                            btSendMsgEt.isFocusableInTouchMode = true
+                            btSendMsgEt.requestFocus()
+                            val inputMethodManager: InputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                            inputMethodManager.toggleSoftInputFromWindow(scrollView.applicationWindowToken, InputMethodManager.SHOW_FORCED, 0)
+                        }
+                    }
                 } else {
                     message = name + "::::" + msg
+                    btServiceWorkThread.write(message.toByteArray(Charsets.UTF_8))
                 }
-                btServiceWorkThread.write(message.toByteArray(Charsets.UTF_8))
             } catch (e: Exception) {
                 // ok to leave unhandled
             }
         }
     }
 
+    // bt chat listview adapter
+    class ChatMessageItem(
+        var texts: MutableMap<String, String> = emptyMap<String, String>() as MutableMap<String, String>,
+        var origin: Boolean) {
+    }
+    class CustomSimpleAdapter(
+        private val mContext: Context,
+        var chatData: MutableList<ChatMessageItem>,
+        @LayoutRes
+        res: Int,
+        from: Array<String>,
+        @IdRes
+        to: IntArray,
+    ): SimpleAdapter(mContext, chatData.map { it.texts }, res, from, to) {
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+            // get the chat item view declared in chat_item.xml
+            val view = super.getView(position, convertView, parent)
+            // colorize & format messages depending on origin
+            val cardView = view.findViewById<CardView>(R.id.card_view)
+            val mainTextView = view.findViewById<TextView>(R.id.mainTextView)
+            val subTextView = view.findViewById<TextView>(R.id.subTextView)
+            if (chatData.get(position).origin == true ) {
+                cardView.margin(15f, 0f, 0f, 0f)
+                mainTextView.setBackgroundColor(mContext.getResources().getColor(R.color.lightgreen))
+                subTextView.setBackgroundColor(mContext.getResources().getColor(R.color.lightgreen))
+            } else {
+                cardView.margin(0f, 0f, 15f, 0f)
+                mainTextView.setBackgroundColor(mContext.getResources().getColor(R.color.white))
+                subTextView.setBackgroundColor(mContext.getResources().getColor(R.color.white))
+            }
+            // return chat item view
+            return view
+        }
+    }
+
+
     //
-    // pairing of a nwe BT device:
+    // pairing of a new BT device:
     //   either on request --> select a device --> pair a new device
     //        OR
     //   at enabling sync with no paired device available
@@ -1008,10 +1168,8 @@ val timeoutBluetoothBeacon    = 300     // [s]  aka 5 min = 60s * 5
 val timeoutBluetoothDiscovery = 20000L  // [ms] 20s
 
 // UI views
-lateinit var btCheckAutoConnect:    CheckBox
 lateinit var btOnOffButton:         ToggleButton
 lateinit var btCheckBoxVisibilty:   CheckBox
-lateinit var btStatusTv:            TextView
 lateinit var btSelectRemoteButton:  Button
 lateinit var btSelectedRemoteTv:    TextView
 lateinit var btSendMsgButton:       Button
@@ -1019,6 +1177,13 @@ lateinit var btSendMsgEt:           EditText
 lateinit var btRequestFileButton:   Button
 lateinit var btRequestFileStatusTv: TextView
 lateinit var btSendFileButton:      Button
+lateinit var lvChatList:            ListView
+lateinit var scrollView:            ScrollView
+
+// chat helpers
+val from = arrayOf("text", "time")
+val to = intArrayOf(R.id.subTextView, R.id.mainTextView)
+val chatMsgList: MutableList<BluetoothActivity.ChatMessageItem> = mutableListOf()
 
 var manualVisibiltyStart = false
 
@@ -1076,9 +1241,8 @@ class ServiceBT(val handler: Handler) {
         override fun run() {
             // update connection status
             handler.postDelayed({
-                btStatusTv.text = btActivity!!.getString(R.string.ok_connected_to_device_shown_below)
+                addTextToChatView(btActivity!!.getString(R.string.connected_to_device) + ": " + mmSocket.remoteDevice.name, true)
                 btSelectedRemoteTv.text = mmSocket.remoteDevice.name
-                btCheckAutoConnect.isEnabled = true
                 btCheckBoxVisibilty.isChecked = false
                 btCheckBoxVisibilty.isEnabled = false
                 btSelectRemoteButton.isEnabled = false
@@ -1202,7 +1366,7 @@ class ServiceBT(val handler: Handler) {
                                     okBox(btActivity as Context, btActivity!!.getString(R.string.note), messageErr)
                                 } else {
                                     // go ahead with file transfer
-                                    btStatusTv.text = msg
+                                    addTextToChatView(msg, false)
                                     // ask folder provider, whether it is ok to send the requested folder
                                     decisionBox(
                                         btActivity as Context,
@@ -1219,6 +1383,12 @@ class ServiceBT(val handler: Handler) {
                                             btServiceWorkThread.write(("::::FILE_SIZE::::" + bulk.size.toString()).toByteArray(Charsets.UTF_8))
                                         },
                                         {
+                                            // cancel all file ops
+                                            requestFolder = false
+                                            transmitFolder = false
+                                            receiveFileSize = false
+                                            receiveFile = false
+                                            transmitFolderName = ""
                                             // inform remote about cancellation
                                             btServiceWorkThread.write(("::::FILE_CANCEL::::".toByteArray(Charsets.UTF_8)))
                                         }
@@ -1401,14 +1571,21 @@ class ServiceBT(val handler: Handler) {
                                 //
                                 btOnOffButton.isChecked = false
                                 Handler(Looper.getMainLooper()).postDelayed({
-                                    btStatusTv.text = msg
+                                    addTextToChatView(msg, false)
                                 }, 200)
                             } else {
                                 //
                                 // normal messages with no internal meaning or control word
                                 //
                                 if (msg.isNotEmpty()) {
-                                    centeredToast(btActivity as Context, msg, 3000)
+                                    val parts = msg.split(':')
+                                    var sender = ""
+                                    if (parts.size > 1) {
+                                        sender = parts[0]
+                                        msg = msg.substring(msg.indexOf(':') + 1)
+                                    }
+                                    // put received message into chat listview
+                                    addTextToChatView(msg.toString(), false)
                                 }
                             }
                             mmTransfer.fill(0)
@@ -1418,10 +1595,6 @@ class ServiceBT(val handler: Handler) {
                 } catch (e: IOException) {
                     // input stream got disconnected
                     handler.postDelayed({
-                        // cannot set auto connect anymore
-                        if (btCheckAutoConnect.isChecked == false) {
-                            btCheckAutoConnect.isEnabled = false
-                        }
                         // turn off all BT sync
                         btOnOffButton.isChecked = false
                     }, 0)
@@ -1436,11 +1609,7 @@ class ServiceBT(val handler: Handler) {
                 mmOutStream.write(bytes)
             } catch (e: IOException) {
                 handler.postDelayed({
-                    btStatusTv.text = btActivity!!.getString(R.string.error_remote_device_is_not_reachable)
-                    // cannot set auto connect anymore
-                    if (btCheckAutoConnect.isChecked == false) {
-                        btCheckAutoConnect.isEnabled = false
-                    }
+                    addTextToChatView(btActivity!!.getString(R.string.error_remote_device_is_not_reachable), true)
                     // allow to reconnect
                     btCheckBoxVisibilty.isEnabled = true
                     btSelectRemoteButton.isEnabled = true
@@ -1457,12 +1626,6 @@ class ServiceBT(val handler: Handler) {
         // call this method to shut down the connection.
         fun cancel() {
             try {
-                // cannot set auto connect anymore
-                handler.postDelayed({
-                    if (btCheckAutoConnect.isChecked == false) {
-                        btCheckAutoConnect.isEnabled = false
-                    }
-                }, 0)
                 mmSocket.close()
             } catch (e: IOException) {
 //                  Log.e(TAG, "Could not close the connect socket", e)
@@ -1481,7 +1644,7 @@ class AcceptThread : Thread() {
     override fun run() {
         // update connection status
         Handler(Looper.getMainLooper()).postDelayed({
-            btStatusTv.text = "waiting for accept"
+            addTextToChatView(btActivity!!.getString(R.string.wait_for_accept), true)
         }, 0)
         // keep listening until exception occurs or a socket is returned
         var shouldLoop = true
@@ -1508,12 +1671,12 @@ class AcceptThread : Thread() {
             mmServerSocket?.close()
             // update connection status
             Handler(Looper.getMainLooper()).postDelayed({
-                btStatusTv.text = "accept mode cancelled"
+                addTextToChatView(btActivity!!.getString(R.string.accept_cancelled), true)
                 btCheckBoxVisibilty.isChecked = false
             }, 0)
         } catch (e: IOException) {
             Handler(Looper.getMainLooper()).postDelayed({
-                btStatusTv.text = "accept mode exception"
+                addTextToChatView(btActivity!!.getString(R.string.accept_failure), true)
             }, 0)
         }
     }
@@ -1533,7 +1696,7 @@ class ConnectThread(device: BluetoothDevice) : Thread() {
             try {
                 // update connection status
                 Handler(Looper.getMainLooper()).postDelayed({
-                    btStatusTv.text = btActivity!!.getString(R.string.waiting_for_connect)
+                    addTextToChatView(btActivity!!.getString(R.string.waiting_for_connect), true)
                 }, 0)
                 // Connect to the remote device through the socket. This call blocks
                 // until it succeeds or throws an exception.
@@ -1544,7 +1707,7 @@ class ConnectThread(device: BluetoothDevice) : Thread() {
             } catch (e: Exception) {
                 // update status: a connection request was made from here, but remote did not answer
                 Handler(Looper.getMainLooper()).postDelayed({
-                    btStatusTv.text = btActivity!!.getString(R.string.no_answer_from_remote_device) + e.message
+                    addTextToChatView(btActivity!!.getString(R.string.no_answer_from_remote_device) + e.message, true)
                     var message = btActivity!!.getString(R.string.enable_bt_on_remote_device)
                     if (selectedBluetoothDeviceIndex != -1) {
                         message = btActivity!!.getString(R.string.enable_bt_on_remote_ok)
@@ -1560,7 +1723,7 @@ class ConnectThread(device: BluetoothDevice) : Thread() {
                                 btActivity!!.getString(R.string.note),
                                 message,
                                 {
-                                    // auto connect failed, bc remote was not activated
+                                    // connect failed, bc remote was not activated
                                     if (selectedBluetoothDeviceIndex != -1) {
                                         val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
                                         if (pairedDevices != null && pairedDevices.isNotEmpty()) {
@@ -1596,8 +1759,6 @@ class ConnectThread(device: BluetoothDevice) : Thread() {
 // proceed a list of available remote BT devices to pair with as a follow-up from BroadcastReceiver()
 @SuppressLint("MissingPermission")
 fun handleUnpairedBtDevices(devices: MutableList<DeviceBluetooth>) {
-    // no auto connect anymore
-    btCheckAutoConnect.isChecked = false
     // build a list of String for selection dialog
     val deviceArray: MutableList<String> = ArrayList()
     for (item in devices) {

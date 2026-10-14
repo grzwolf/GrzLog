@@ -460,7 +460,7 @@
     <string name="bluetooth_is_turned_on">Bluetooth is turned ON</string>
     <string name="bluetooth_was_left_in_status_on">Bluetooth was left in status ON</string>
     <string name="bluetooth_is_turned_off">Bluetooth is turned off</string>
-    <string name="ok_connected_to_device_shown_below">OK = connected to device shown below</string>
+    <string name="connected_to_device">connected to device</string>
     <string name="requested_folder_is_protected_it_needs_to_be_opened_on">"Requested folder is protected, it needs to be opened on "</string>
     <string name="requested_folder_is_not_existing_on">"Requested folder is not existing on "</string>
     <string name="remote_folder_request">Remote folder request</string>
@@ -481,8 +481,8 @@
     <string name="success_folder_received">Success: folder received \'</string>
     <string name="error_remote_device_is_not_reachable">Error: remote device is not reachable</string>
     <string name="remote_folder_sync">Remote folder sync</string>
-    <string name="synchronization_off">Synchronization == OFF</string>
-    <string name="synchronization_is_enabled">Synchronization is enabled</string>
+    <string name="synchronization_off">Connection == OFF</string>
+    <string name="synchronization_is_enabled">Connection allowed</string>
     <string name="device_visibility_check_it_after_being_told">device visibility: check it, after being told</string>
     <string name="connection_status">connection status</string>
     <string name="select_remote">Select Remote</string>
@@ -515,6 +515,12 @@
     <string name="delete_pwd">You are going to delete the current encryption password.</string>
     <string name="success_pwd_delete">Deleting encryption password succeeded.</string>
     <string name="new_pwd_equals_current">New password and current one are identical.</string>
+    <string name="messages">Messages list</string>
+    <string name="clear">clear list</string>
+    <string name="copy_clipboard">copy to clipboard</string>
+    <string name="wait_for_accept">waiting for accept</string>
+    <string name="accept_cancelled">accept cancelled</string>
+    <string name="accept_failure">accept failure</string>
     <string-array name="themeArray_Names">
         <item>@string/themeDark</item>
         <item>@string/themeLight</item>
