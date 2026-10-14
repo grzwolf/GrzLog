@@ -4631,22 +4631,28 @@ class MainActivity : AppCompatActivity(),
                     var foundPos = -1
                     for (pos in lvMain.arrayList.indices) {
                         if (lvMain.arrayList[pos].isSection) {
-                            val foundDateStr = lvMain.arrayList[pos].title!!.substring(0, 10)
-                            val foundDate = LocalDate.parse(
-                                foundDateStr,
-                                DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                            )
-                            // foundPos is SHOW_ORDER dependent
-                            if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
-                                if (foundDate.isAfter(searchDate) || foundDate.equals(searchDate)) {
-                                    foundPos = pos
-                                    break
+                            // get the GrzLog header date pattern string or the regular title of the header
+                            var title = lvMain.arrayList[pos].title!!
+                            if (title.length >= 10) {
+                                title = title.substring(0, 10)
+                            }
+                            // try to parse a date
+                            try {
+                                val foundDate = LocalDate.parse(title, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                                // foundPos is SHOW_ORDER dependent
+                                if (lvMain.showOrder == SHOW_ORDER.BOTTOM) {
+                                    if (foundDate.isAfter(searchDate) || foundDate.equals(searchDate)) {
+                                        foundPos = pos
+                                        break
+                                    }
+                                } else {
+                                    if (foundDate.isBefore(searchDate) || foundDate.equals(searchDate)) {
+                                        foundPos = pos
+                                        break
+                                    }
                                 }
-                            } else {
-                                if (foundDate.isBefore(searchDate) || foundDate.equals(searchDate)) {
-                                    foundPos = pos
-                                    break
-                                }
+                            } catch (e: DateTimeParseException) {
+                                // ok to leave unhandled -> title does not comply with a GrzLog header date pattern
                             }
                         }
                     }
