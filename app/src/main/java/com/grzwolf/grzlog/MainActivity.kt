@@ -174,7 +174,7 @@ class MainActivity : AppCompatActivity(),
         spe.apply()        
     }
 
-    @SuppressLint("ClickableViewAccessibility")
+    @SuppressLint("ClickableViewAccessibility", "WrongConstant")
     override fun onCreate(savedInstanceState: Bundle?) {
         // get preference instance and its editor
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
