@@ -6417,8 +6417,23 @@ class MainActivity : AppCompatActivity(),
             }
             // get the real file name of a "MediaStore Picker" Uri, which only provides a confusing MediaStore ID
             var uriString = uri.toString()
-            var idMediaStore = uriString.substring(uriString.lastIndexOf("/") + 1).toInt()
-            val imageInfo = GalleryInfo.getGalleryMediaInfo(this, idMediaStore)
+            var idMediaStoreString = uriString.substring(uriString.lastIndexOf("/") + 1)
+            // exclude cloud media from selection
+            var idMediaStore = idMediaStoreString.toIntOrNull()
+            if (idMediaStore == null) {
+                okBox(
+                    this@MainActivity,
+                    "Sorry",
+                    "Cloud Media cannot be selected.",
+                    {
+                        centeredToast(this, getString(R.string.photo_picker_no_media_selected), 5000)
+                        startFilePickerDialog()
+                    }
+                )
+                return@registerForActivityResult
+            }
+            // continue with a real medium
+            val imageInfo = GalleryInfo.getGalleryMediaInfo(this, idMediaStore!!)
             // handle the provided image link with fabPlus button
             fabPlus.pickAttachment = true
             // name as to be found via Gallery, Photos, TC
